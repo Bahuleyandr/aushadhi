@@ -1,0 +1,11 @@
+{
+  "name": "aushadhi",
+  "version": "0.1.0",
+  "description": "India drug reference builder — brand → composition dataset pipeline (open data + official sources + polite 1mg gap-filler)",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  }
+}
