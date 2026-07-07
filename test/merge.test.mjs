@@ -62,6 +62,21 @@ test('substitutes union dedups by name', () => {
   assert.equal(rows[0].substitutes_raw.length, 2);
 });
 
+test('detectSubstituteMismatches flags cross-group substitute pairs only', async () => {
+  const { detectSubstituteMismatches } = await import('../src/lib/merge.mjs');
+  const augmentin = gj({ substitutes_raw: [{ name: 'Moxikind-CV 625 Tablet' }, { name: 'Wrongsub Tablet' }, { name: 'Unknown Brand' }] });
+  const moxikind = gj({ brand_name: 'Moxikind-CV 625 Tablet', manufacturer: 'Mankind' }); // same molecules
+  const wrongsub = gj({
+    brand_name: 'Wrongsub Tablet', manufacturer: 'X',
+    ingredients: [{ molecule: 'azithromycin', strength_value: 500, strength_unit: 'mg', strength_raw: '500mg' }],
+  });
+  const { rows } = mergeRows([augmentin, moxikind, wrongsub]);
+  const mismatches = detectSubstituteMismatches(rows);
+  assert.equal(mismatches.length, 1);
+  assert.equal(mismatches[0].kind, 'substitute_group_mismatch');
+  assert.match(mismatches[0].b.brand, /Wrongsub/);
+});
+
 test('first_seen/last_seen span sources', () => {
   const older = gj({ seen_at: '2026-01-01' });
   const newer = gj({ source: 'onemg-live', seen_at: '2026-07-07' });

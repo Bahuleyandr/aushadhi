@@ -4,7 +4,8 @@ import { ctx } from '../lib/context.mjs';
 import { normalizeGithubJr } from '../adapters/github-jr.mjs';
 import { parseJanAushadhiText } from '../adapters/janaushadhi.mjs';
 import { loadCdscoFdcCombos } from '../adapters/cdsco-fdc.mjs';
-import { mergeRows } from '../lib/merge.mjs';
+import { readOnemgNormalized } from '../adapters/onemg.mjs';
+import { mergeRows, detectSubstituteMismatches } from '../lib/merge.mjs';
 import { emitArtifact } from '../lib/emit.mjs';
 
 export function latestSnapshot(rawRoot, source) {
@@ -59,9 +60,16 @@ if (jaDir) {
   }
 }
 
+const onemgRows = readOnemgNormalized(c.rawRoot);
+if (onemgRows.length) {
+  all.push(...onemgRows);
+  meta.sources['onemg-live'] = onemgRows.length;
+}
+
 const fdc = await loadCdscoFdcCombos(c.rawRoot);
 if (fdc.files) meta.cdsco_fdc_files = fdc.files;
 
 const { rows, conflicts } = mergeRows(all);
+conflicts.push(...detectSubstituteMismatches(rows));
 const { dir } = await emitArtifact({ distRoot: c.distRoot, date: c.date, rows, conflicts, errors, meta, fdcKeys: fdc.keys });
 console.log(`emitted ${rows.length} rows (${all.length} source rows, ${conflicts.length} conflicts, ${errors.length} errors) -> ${dir}`);

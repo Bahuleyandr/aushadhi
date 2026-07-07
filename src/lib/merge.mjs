@@ -17,6 +17,35 @@ export function moleculeSetKey(ingredients = []) {
 const molNames = (ings = []) => new Set(ings.map((i) => i.molecule));
 const isSubset = (a, b) => [...a].every((x) => b.has(x));
 
+// Cross-validation: a 1mg-substitute pair should share the same molecule-NAME set
+// (strengths legitimately differ across substitute pack sizes). A mismatch is a
+// parse-error signal on one side — flagged, never silently trusted.
+export function detectSubstituteMismatches(rows) {
+  const byBrand = new Map();
+  for (const r of rows) {
+    const k = normBrandName(r.brand_name);
+    if (!byBrand.has(k)) byBrand.set(k, r);
+  }
+  const nameSetKey = (ings) => [...molNames(ings)].sort().join('|');
+  const conflicts = [];
+  for (const r of rows) {
+    if (!r.ingredients?.length) continue;
+    for (const s of r.substitutes_raw ?? []) {
+      const other = byBrand.get(normBrandName(s.name));
+      if (!other || !other.ingredients?.length) continue;
+      if (nameSetKey(r.ingredients) !== nameSetKey(other.ingredients)) {
+        conflicts.push({
+          kind: 'substitute_group_mismatch',
+          identity_key: identityKey(r),
+          a: { brand: r.brand_name, key: nameSetKey(r.ingredients) },
+          b: { brand: other.brand_name, key: nameSetKey(other.ingredients) },
+        });
+      }
+    }
+  }
+  return conflicts;
+}
+
 export function mergeRows(allRows) {
   const groups = new Map();
   for (const r of allRows) {

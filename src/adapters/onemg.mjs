@@ -1,5 +1,24 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import * as cheerio from 'cheerio';
 import { parseComposition } from '../lib/composition.mjs';
+
+// Reads all gapfill outputs (data/raw/onemg/<date>/normalized.jsonl) for build merging.
+export function readOnemgNormalized(rawRoot) {
+  const root = path.join(rawRoot, 'onemg');
+  if (!fs.existsSync(root)) return [];
+  const rows = [];
+  for (const d of fs.readdirSync(root).sort()) {
+    const f = path.join(root, d, 'normalized.jsonl');
+    if (!fs.existsSync(f)) continue;
+    for (const line of fs.readFileSync(f, 'utf8').split('\n')) {
+      if (!line.trim()) continue;
+      try { rows.push(JSON.parse(line)); } catch { /* skip corrupt line */ }
+    }
+  }
+  // last write per identity wins (re-fetches refresh earlier rows)
+  return rows;
+}
 
 // Balanced-extracts a JSON object or array starting at text[startIdx] ('{' or '[').
 // Needed because 1mg inlines `window.__X__ = {...}; more js...` in one script tag.
