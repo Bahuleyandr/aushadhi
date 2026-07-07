@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ctx } from '../lib/context.mjs';
 import { normalizeGithubJr } from '../adapters/github-jr.mjs';
+import { parseJanAushadhiText } from '../adapters/janaushadhi.mjs';
 import { mergeRows } from '../lib/merge.mjs';
 import { emitArtifact } from '../lib/emit.mjs';
 
@@ -35,6 +36,26 @@ if (gjDir) {
     errors.push({ source: 'github-jr', reason: 'adapter failure', detail: e.message });
   }
   meta.sources['github-jr'] = n;
+}
+
+const jaDir = latestSnapshot(c.rawRoot, 'janaushadhi');
+if (jaDir) {
+  const file = path.join(jaDir, 'pmbjp.txt');
+  if (fs.existsSync(file)) {
+    try {
+      const jaRows = parseJanAushadhiText(fs.readFileSync(file, 'utf8'), path.basename(jaDir));
+      for (const row of jaRows) {
+        if (!row.brand_name) {
+          errors.push({ source: 'janaushadhi', reason: 'empty brand_name', detail: JSON.stringify(row).slice(0, 200) });
+          continue;
+        }
+        all.push(row);
+      }
+      meta.sources.janaushadhi = jaRows.length;
+    } catch (e) {
+      errors.push({ source: 'janaushadhi', reason: 'adapter failure', detail: e.message });
+    }
+  }
 }
 
 const { rows, conflicts } = mergeRows(all);
