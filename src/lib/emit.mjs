@@ -1,7 +1,7 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { stringify } from 'csv-stringify/sync';
-import { moleculeSetKey } from './merge.mjs';
+import { moleculeSetKey, moleculeNameKey } from './merge.mjs';
 
 const ingredientsToString = (ings) =>
   ings.map((i) => (i.strength_raw ? `${i.molecule} (${i.strength_raw})` : i.molecule)).join(' + ');
@@ -36,7 +36,7 @@ export async function emitArtifact({ distRoot, date, rows, conflicts, errors, me
     if (!r.ingredients.length) continue;
     const k = moleculeSetKey(r.ingredients);
     if (!comps.has(k)) {
-      const nameKey = r.ingredients.map((i) => i.molecule).sort().join('|');
+      const nameKey = moleculeNameKey(r.ingredients);
       const validated = r.ingredients.length >= 2 && fdcKeys.has(nameKey);
       if (validated) cdscoValidated++;
       comps.set(k, { composition: ingredientsToString(r.ingredients), molecule_set_key: k, brand_count: 0, cdsco_fdc_validated: validated });
@@ -48,17 +48,24 @@ export async function emitArtifact({ distRoot, date, rows, conflicts, errors, me
     stringify([...comps.values()].sort((a, b) => b.brand_count - a.brand_count), { header: true, bom: true }),
   );
 
-  const edges = rows.flatMap((r) => (r.substitutes_raw ?? []).map((s) => ({
-    brand_name: r.brand_name,
-    manufacturer: r.manufacturer,
-    substitute_name: s.name,
-    substitute_manufacturer: s.manufacturer ?? '',
-  })));
-  await fsp.writeFile(path.join(dir, 'substitute_edges.csv'), stringify(edges, { header: true, columns: ['brand_name', 'manufacturer', 'substitute_name', 'substitute_manufacturer'] }));
+  const edges = rows.flatMap((r) => {
+    const onemg = (r.sources ?? []).find((s) => s.source === 'onemg-live');
+    return (r.substitutes_raw ?? []).map((s) => ({
+      brand_name: r.brand_name,
+      manufacturer: r.manufacturer,
+      substitute_name: s.name,
+      substitute_manufacturer: s.manufacturer ?? '',
+      source_id: onemg?.source_id ?? '',
+      seen_at: onemg?.seen_at ?? r.last_seen,
+    }));
+  });
+  await fsp.writeFile(path.join(dir, 'substitute_edges.csv'), stringify(edges, { header: true, columns: ['brand_name', 'manufacturer', 'substitute_name', 'substitute_manufacturer', 'source_id', 'seen_at'] }));
   await fsp.writeFile(
     path.join(dir, 'conflicts.csv'),
     stringify(conflicts.map((c) => ({ ...c, a: JSON.stringify(c.a), b: JSON.stringify(c.b) })), { header: true, columns: ['kind', 'identity_key', 'a', 'b'] }),
   );
+  // machine-readable twin — gapfill consumes this, never the CSV
+  await fsp.writeFile(path.join(dir, 'conflicts.jsonl'), conflicts.map((c) => JSON.stringify(c)).join('\n') + (conflicts.length ? '\n' : ''));
   await fsp.writeFile(path.join(dir, 'errors.csv'), stringify(errors, { header: true, columns: ['source', 'reason', 'detail'] }));
 
   const statusCounts = {};

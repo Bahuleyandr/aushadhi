@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { parseDrugPage, parseBrowsePage, extractBalancedJson } from '../../src/adapters/onemg.mjs';
+import { parseDrugPage, parseBrowsePage, extractBalancedJson, readOnemgNormalized } from '../../src/adapters/onemg.mjs';
 
 const avastin = fs.readFileSync('test/fixtures/onemg/drug_page.html', 'utf8');
 const augmentin = fs.readFileSync('test/fixtures/onemg/drug_page_tablet.html', 'utf8');
@@ -33,6 +33,26 @@ test('parseDrugPage: Augmentin (combo + substitutes)', () => {
   assert.equal(d.ingredients.find((i) => i.molecule === 'clavulanic acid').strength_value, 125);
   assert.ok(d.substitutes_raw.some((s) => s.name === 'Novaclav 625 Tablet'));
   assert.equal(d.form_raw, 'Tablet');
+});
+
+test('readOnemgNormalized: last fetch per identity wins across dates', () => {
+  const root = 'test/.tmp-onemg';
+  fs.rmSync(root, { recursive: true, force: true });
+  const mk = (date, ingredients) => {
+    fs.mkdirSync(`${root}/onemg/${date}`, { recursive: true });
+    fs.writeFileSync(`${root}/onemg/${date}/normalized.jsonl`, JSON.stringify({
+      source: 'onemg-live', source_id: '1', seen_at: date,
+      brand_name: 'X Tablet', manufacturer: 'M', pack_label: 'strip of 10',
+      ingredients, composition_status: 'complete', substitutes_raw: [],
+    }) + '\n');
+  };
+  mk('2026-07-01', [{ molecule: 'a', strength_value: 1, strength_unit: 'mg', strength_raw: '1mg' }]);
+  mk('2026-07-07', [{ molecule: 'b', strength_value: 2, strength_unit: 'mg', strength_raw: '2mg' }]);
+  const rows = readOnemgNormalized(root);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].seen_at, '2026-07-07');
+  assert.equal(rows[0].ingredients[0].molecule, 'b');
+  fs.rmSync(root, { recursive: true, force: true });
 });
 
 test('parseBrowsePage: extracts drug links (anchor-rendered page)', () => {

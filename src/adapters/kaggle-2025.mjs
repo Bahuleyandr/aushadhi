@@ -3,7 +3,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import { unzipSync } from 'fflate';
 import { parse } from 'csv-parse/sync';
-import { parseComposition } from '../lib/composition.mjs';
+import { parseComposition, splitCompositionString } from '../lib/composition.mjs';
 
 const DATASET = 'apkaayush/india-medicines-and-drug-info-dataset';
 
@@ -37,9 +37,9 @@ export function normalizeKaggleRows(records, date) {
   for (const rec of records) {
     const compParts = [rec[cols.composition1], cols.composition2 ? rec[cols.composition2] : null]
       .filter((x) => x !== null && x !== undefined);
-    const comp = compParts.length === 1 && typeof compParts[0] === 'string' && compParts[0].includes('+')
-      ? parseComposition(compParts[0])
-      : parseComposition(compParts);
+    // every column may itself carry a '+'-joined combo — split uniformly
+    const comp = parseComposition(compParts.flatMap((p) => splitCompositionString(p)));
+    const twoSlotMaxed = Boolean(cols.composition2) && comp.ingredients.length >= 2;
     const priceRaw = cols.price ? rec[cols.price] : '';
     rows.push({
       source: 'kaggle-2025',
@@ -54,6 +54,7 @@ export function normalizeKaggleRows(records, date) {
       ingredients: comp.ingredients,
       composition_raw: comp.raw,
       composition_status: comp.status,
+      two_slot_maxed: twoSlotMaxed,
       substitutes_raw: [],
       type: cols.type ? (rec[cols.type] ?? '').toString().trim() || null : null,
     });

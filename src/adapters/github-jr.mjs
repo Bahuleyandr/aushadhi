@@ -1,21 +1,16 @@
 import fs from 'node:fs';
-import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { Readable } from 'node:stream';
 import { parse } from 'csv-parse';
 import { parseComposition } from '../lib/composition.mjs';
+import { downloadToFile } from '../lib/download.mjs';
 
 const CSV_URL = 'https://raw.githubusercontent.com/junioralive/Indian-Medicine-Dataset/main/DATA/indian_medicine_data.csv';
 const REQUIRED = ['id', 'name', 'Is_discontinued', 'manufacturer_name', 'type', 'pack_size_label', 'short_composition1', 'short_composition2'];
 
 export async function fetchGithubJr({ rawRoot, date }) {
-  const dir = path.join(rawRoot, 'github-jr', date);
-  const file = path.join(dir, 'indian_medicine_data.csv');
+  const file = path.join(rawRoot, 'github-jr', date, 'indian_medicine_data.csv');
   if (fs.existsSync(file)) return { file, cached: true };
-  await fsp.mkdir(dir, { recursive: true });
-  const res = await fetch(CSV_URL);
-  if (!res.ok) throw new Error(`github-jr download failed: ${res.status}`);
-  await fsp.writeFile(file, Readable.fromWeb(res.body));
+  await downloadToFile(CSV_URL, file);
   return { file, cached: false };
 }
 

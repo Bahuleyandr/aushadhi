@@ -30,5 +30,7 @@ test('emitArtifact writes all files + latest copy', async () => {
   assert.equal(summary.unique_compositions, 1);
   const edges = fs.readFileSync(`${dir}/2026-07-07/substitute_edges.csv`, 'utf8');
   assert.match(edges, /B 500 Tablet/);
+  assert.match(edges, /seen_at/); // provenance columns present
+  assert.ok(fs.existsSync(`${dir}/2026-07-07/conflicts.jsonl`)); // machine-readable twin
   fs.rmSync(dir, { recursive: true, force: true });
 });

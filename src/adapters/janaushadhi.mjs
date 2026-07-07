@@ -1,14 +1,13 @@
 import fs from 'node:fs';
-import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { Readable } from 'node:stream';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { normMolecule } from '../lib/normalize.mjs';
+import { downloadToFile } from '../lib/download.mjs';
+import { pdfToText } from '../lib/pdftotext.mjs';
 
-const pExecFile = promisify(execFile);
-
-const PDF_URL = 'https://static.pib.gov.in/WriteReadData/specificdocs/documents/2026/feb/doc202626781701.pdf';
+// PIB attachment URLs rot — override via env when a newer PMBJP list ships,
+// or drop a pmbjp.pdf into the snapshot dir manually (operator-drop wins).
+const PDF_URL = process.env.AUSHADHI_PMBJP_URL
+  ?? 'https://static.pib.gov.in/WriteReadData/specificdocs/documents/2026/feb/doc202626781701.pdf';
 
 const ROW_RE = /^\s*(\d+)\s+(\S+)\s{2,}(.+)$/;
 const TRAILING_UNIT_RE = /^(.*\S)\s{2,}(\S.*)$/;
@@ -82,27 +81,13 @@ export function parseJanAushadhiText(text, date) {
   });
 }
 
-async function resolvePdftotext() {
-  if (process.env.AUSHADHI_PDFTOTEXT) return process.env.AUSHADHI_PDFTOTEXT;
-  return 'pdftotext';
-}
-
 export async function fetchJanAushadhi({ rawRoot, date }) {
   const dir = path.join(rawRoot, 'janaushadhi', date);
   const pdf = path.join(dir, 'pmbjp.pdf');
   const txt = path.join(dir, 'pmbjp.txt');
   if (fs.existsSync(txt)) return { file: txt, cached: true };
-  await fsp.mkdir(dir, { recursive: true });
-  if (!fs.existsSync(pdf)) {
-    const res = await fetch(PDF_URL);
-    if (!res.ok) throw new Error(`janaushadhi download failed: ${res.status}`);
-    await fsp.writeFile(pdf, Readable.fromWeb(res.body));
-  }
-  try {
-    await pExecFile(await resolvePdftotext(), ['-enc', 'UTF-8', '-layout', pdf, txt]);
-  } catch (e) {
-    if (e.code === 'ENOENT') return { skipped: 'pdftotext not found (set AUSHADHI_PDFTOTEXT)' };
-    throw e;
-  }
+  if (!fs.existsSync(pdf)) await downloadToFile(PDF_URL, pdf); // operator-dropped pdf wins
+  const r = await pdfToText(pdf, txt);
+  if (r.skipped) return r;
   return { file: txt, cached: false };
 }

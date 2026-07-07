@@ -1,6 +1,7 @@
 import { ctx } from '../lib/context.mjs';
 import { fetchGithubJr } from '../adapters/github-jr.mjs';
 import { fetchJanAushadhi } from '../adapters/janaushadhi.mjs';
+import { fetchKaggle2025 } from '../adapters/kaggle-2025.mjs';
 
 const c = ctx();
 const results = {};
@@ -16,7 +17,6 @@ try {
   results.janaushadhi = { error: e.message };
 }
 try {
-  const { fetchKaggle2025 } = await import('../adapters/kaggle-2025.mjs');
   results['kaggle-2025'] = await fetchKaggle2025(c);
 } catch (e) {
   results['kaggle-2025'] = { error: e.message };

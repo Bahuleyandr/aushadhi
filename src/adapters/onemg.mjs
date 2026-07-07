@@ -2,22 +2,22 @@ import fs from 'node:fs';
 import path from 'node:path';
 import * as cheerio from 'cheerio';
 import { parseComposition } from '../lib/composition.mjs';
+import { readJsonlSync } from '../lib/jsonl.mjs';
+import { identityKey } from '../lib/merge.mjs';
 
-// Reads all gapfill outputs (data/raw/onemg/<date>/normalized.jsonl) for build merging.
+// Reads all gapfill outputs (data/raw/onemg/<date>/normalized.jsonl) for build
+// merging. Last write per identity wins — files are date-sorted and lines are
+// append-ordered, so a Map overwrite keeps only the freshest re-fetch (merge's
+// stable rank-sort would otherwise let the OLDEST equal-rank row win forever).
 export function readOnemgNormalized(rawRoot) {
   const root = path.join(rawRoot, 'onemg');
   if (!fs.existsSync(root)) return [];
-  const rows = [];
+  const byIdentity = new Map();
   for (const d of fs.readdirSync(root).sort()) {
     const f = path.join(root, d, 'normalized.jsonl');
-    if (!fs.existsSync(f)) continue;
-    for (const line of fs.readFileSync(f, 'utf8').split('\n')) {
-      if (!line.trim()) continue;
-      try { rows.push(JSON.parse(line)); } catch { /* skip corrupt line */ }
-    }
+    for (const row of readJsonlSync(f)) byIdentity.set(identityKey(row), row);
   }
-  // last write per identity wins (re-fetches refresh earlier rows)
-  return rows;
+  return [...byIdentity.values()];
 }
 
 // Balanced-extracts a JSON object or array starting at text[startIdx] ('{' or '[').
@@ -69,8 +69,7 @@ function jsonAtMarker(html, marker, brace) {
   return out;
 }
 
-function ldBlocks(html) {
-  const $ = cheerio.load(html);
+function ldBlocks($) {
   const blocks = [];
   $('script[type="application/ld+json"]').each((_, el) => {
     try {
@@ -84,7 +83,8 @@ function ldBlocks(html) {
 const stripTags = (s) => s.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
 export function parseDrugPage(html) {
-  const ld = ldBlocks(html);
+  const $ = cheerio.load(html);
+  const ld = ldBlocks($);
   const drug = ld.find((b) => b && b['@type'] === 'Drug') ?? null;
 
   let name = drug?.name ?? null;
@@ -115,8 +115,6 @@ export function parseDrugPage(html) {
     }
   }
 
-  const discontinued = /"(?:is_)?discontinued"\s*:\s*true/.test(html) ? true : null;
-
   return {
     brand_name: name,
     manufacturer,
@@ -125,7 +123,9 @@ export function parseDrugPage(html) {
     composition_raw: comp.raw || compositionRaw || '',
     composition_status: comp.status,
     substitutes_raw: [...new Map(subs.map((s) => [s.name, s])).values()],
-    is_discontinued: discontinued,
+    // a whole-page discontinued regex false-positives on embedded substitute
+    // SKUs — leave unknown; merge falls back to the dataset sources' value
+    is_discontinued: null,
   };
 }
 
@@ -146,7 +146,7 @@ export function parseBrowsePage(html) {
     if (node['@type'] === 'ListItem' && typeof node.url === 'string') listItems.push(node);
     for (const v of Object.values(node)) if (v && typeof v === 'object') collect(v);
   };
-  collect(ldBlocks(html));
+  collect(ldBlocks($));
   for (const li of listItems) {
     let p;
     try { p = new URL(li.url, 'https://www.1mg.com').pathname; } catch { continue; }

@@ -1,10 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { normMolecule } from '../lib/normalize.mjs';
-
-const pExecFile = promisify(execFile);
+import { pdfToText } from '../lib/pdftotext.mjs';
 
 export function comboNameKey(molecules) {
   return [...molecules].map((m) => m.toLowerCase().trim()).sort().join('|');
@@ -34,7 +31,7 @@ export function extractFdcCombos(text) {
 }
 
 // Scans operator-dropped PDFs under data/raw/cdsco-fdc/**; returns Set of comboNameKeys.
-export async function loadCdscoFdcCombos(rawRoot, pdftotext = process.env.AUSHADHI_PDFTOTEXT ?? 'pdftotext') {
+export async function loadCdscoFdcCombos(rawRoot) {
   const root = path.join(rawRoot, 'cdsco-fdc');
   if (!fs.existsSync(root)) return { keys: new Set(), files: 0 };
   const pdfs = [];
@@ -50,12 +47,12 @@ export async function loadCdscoFdcCombos(rawRoot, pdftotext = process.env.AUSHAD
   for (const pdf of pdfs) {
     const txt = pdf.replace(/\.pdf$/i, '.txt');
     try {
-      if (!fs.existsSync(txt)) await pExecFile(pdftotext, ['-enc', 'UTF-8', '-layout', pdf, txt]);
+      if (!fs.existsSync(txt)) {
+        const r = await pdfToText(pdf, txt);
+        if (r.skipped) return { keys, files: pdfs.length, skipped: r.skipped };
+      }
       for (const combo of extractFdcCombos(fs.readFileSync(txt, 'utf8'))) keys.add(comboNameKey(combo));
-    } catch (e) {
-      if (e.code === 'ENOENT') return { keys, files: pdfs.length, skipped: 'pdftotext not found' };
-      // per-file failure: continue with others
-    }
+    } catch { /* per-file failure: continue with others */ }
   }
   return { keys, files: pdfs.length };
 }

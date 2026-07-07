@@ -1,24 +1,21 @@
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { PoliteFetcher, BlockedError } from '../lib/politeness.mjs';
+import { pathToFileURL } from 'node:url';
+import { parse as parseCsvSync } from 'csv-parse/sync';
+import { BlockedError, CapReachedError } from '../lib/politeness.mjs';
+import { makeOnemgFetcher } from '../lib/onemg-fetcher.mjs';
 import { parseDrugPage, parseBrowsePage } from '../adapters/onemg.mjs';
 import { buildQueue } from '../lib/gapfill-queue.mjs';
 import { normBrandName } from '../lib/normalize.mjs';
+import { readJsonl, readJsonlSync } from '../lib/jsonl.mjs';
 import { ctx } from '../lib/context.mjs';
 
 const LABELS = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
 export function loadSlugIndex(indexFile) {
   const index = new Map();
-  if (!fs.existsSync(indexFile)) return index;
-  for (const line of fs.readFileSync(indexFile, 'utf8').split('\n')) {
-    if (!line.trim()) continue;
-    try {
-      const e = JSON.parse(line);
-      index.set(e.norm, e.path);
-    } catch { /* skip corrupt line */ }
-  }
+  for (const e of readJsonlSync(indexFile)) index.set(e.norm, e.path);
   return index;
 }
 
@@ -38,24 +35,30 @@ export async function runDiscover({ pf, maxPages, indexFile, log = console.log }
     try {
       html = await pf.get(p);
     } catch (e) {
-      if (e instanceof BlockedError) throw e;
+      // cap/block/robots problems are RUN problems, not label problems —
+      // advancing the persisted cursor on them would permanently skip labels
+      if (e instanceof BlockedError || e instanceof CapReachedError || /robots/i.test(e.message)) throw e;
       log(`discover: ${p} failed (${e.message}); moving to next label`);
       cur.label++; cur.page = 1;
       continue;
     }
     fetched++;
     const entries = parseBrowsePage(html);
-    let newHere = 0;
+    if (entries.length === 0 && pageNum === 1) {
+      // every label has drugs; an empty page 1 means the parser broke, not the catalog
+      throw new Error(`discover: label=${label} page 1 yielded 0 entries — parser/markup drift, refusing to advance cursor`);
+    }
+    const lines = [];
     for (const e of entries) {
       const norm = normBrandName(e.name);
       if (index.has(norm)) continue;
       index.set(norm, e.path);
-      await fsp.appendFile(indexFile, JSON.stringify({ norm, name: e.name, path: e.path, seen_at: new Date().toISOString().slice(0, 10) }) + '\n');
-      newHere++;
+      lines.push(JSON.stringify({ norm, name: e.name, path: e.path, seen_at: new Date().toISOString().slice(0, 10) }));
       added++;
     }
+    if (lines.length) await fsp.appendFile(indexFile, lines.join('\n') + '\n');
     if (entries.length === 0) { cur.label++; cur.page = 1; } else cur.page++;
-    log(`discover: label=${label} page=${pageNum} links=${entries.length} new=${newHere}`);
+    log(`discover: label=${label} page=${pageNum} links=${entries.length} new=${lines.length}`);
     await pf.persist();
   }
   return { fetched, added, index };
@@ -69,7 +72,7 @@ export async function runTargeted({ pf, queue, outFile, discoveryFile, knownNorm
     try {
       html = await pf.get(entry.path);
     } catch (e) {
-      if (e instanceof BlockedError) throw e;
+      if (e instanceof BlockedError || e instanceof CapReachedError) throw e;
       failed++;
       log(`gapfill: ${entry.path} failed: ${e.message}`);
       continue;
@@ -90,15 +93,14 @@ export async function runTargeted({ pf, queue, outFile, discoveryFile, knownNorm
       composition_raw: page.composition_raw,
       composition_status: page.composition_status,
       substitutes_raw: page.substitutes_raw,
-      type: 'allopathy',
+      type: null, // never fabricate a category the page did not state
     };
+    const discoveries = page.substitutes_raw
+      .filter((s) => !knownNorms.has(normBrandName(s.name)))
+      .map((s) => JSON.stringify({ name: s.name, seen_from: entry.path, seen_at: date }));
     await fsp.appendFile(outFile, JSON.stringify(row) + '\n');
+    if (discoveries.length) await fsp.appendFile(discoveryFile, discoveries.join('\n') + '\n');
     ok++;
-    for (const s of page.substitutes_raw) {
-      if (!knownNorms.has(normBrandName(s.name))) {
-        await fsp.appendFile(discoveryFile, JSON.stringify({ name: s.name, seen_from: entry.path, seen_at: date }) + '\n');
-      }
-    }
   }
   return { ok, failed };
 }
@@ -110,25 +112,24 @@ async function main() {
     const i = args.indexOf(`--${name}`);
     return i === -1 ? null : (args[i + 1]?.startsWith('--') || args[i + 1] === undefined ? true : args[i + 1]);
   };
-  const limit = Number(flag('limit') ?? 200);
+  const rawLimit = flag('limit');
+  if (rawLimit === true) throw new Error('--limit requires a number');
+  const limit = Number(rawLimit ?? 200);
+  if (!Number.isFinite(limit) || limit <= 0) throw new Error(`invalid --limit: ${rawLimit}`);
   const discover = flag('discover');
   const catalogExport = flag('catalog-export');
+  if (catalogExport === true) throw new Error('--catalog-export requires a file path');
 
-  const pkg = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
   const onemgRoot = path.join(c.rawRoot, 'onemg');
   await fsp.mkdir(path.join(onemgRoot, c.date), { recursive: true });
-  const pf = new PoliteFetcher({
-    baseUrl: 'https://www.1mg.com',
-    cacheDir: path.join(onemgRoot, 'pages'),
-    stateFile: path.join(onemgRoot, 'state.json'),
-    userAgent: `aushadhi-dataset-builder/${pkg.version} (contact: safari-oil-shelve@duck.com)`,
-  });
+  const pf = makeOnemgFetcher(c.rawRoot);
   await pf.init();
 
   const indexFile = path.join(onemgRoot, 'slug-index.jsonl');
   try {
     if (discover) {
       const maxPages = discover === true ? 50 : Number(discover);
+      if (!Number.isFinite(maxPages) || maxPages <= 0) throw new Error(`invalid --discover page count: ${discover}`);
       const r = await runDiscover({ pf, maxPages, indexFile });
       console.log(`discover done: ${r.fetched} pages fetched, ${r.added} new slugs, index size ${r.index.size}`);
       return;
@@ -136,22 +137,20 @@ async function main() {
 
     const drugsFile = 'dist/latest/drugs.jsonl';
     if (!fs.existsSync(drugsFile)) throw new Error('run `npm run build` first (dist/latest missing)');
-    const rows = fs.readFileSync(drugsFile, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
-    const conflictsCsv = 'dist/latest/conflicts.csv';
-    const conflicts = fs.existsSync(conflictsCsv)
-      ? fs.readFileSync(conflictsCsv, 'utf8').split('\n').slice(1).filter(Boolean)
-        .map((l) => ({ identity_key: l.split(',')[1] }))
-      : [];
+    const rows = [];
+    for await (const row of readJsonl(drugsFile)) rows.push(row);
+    const conflicts = readJsonlSync('dist/latest/conflicts.jsonl');
     const catalogNames = new Set();
     if (typeof catalogExport === 'string') {
-      for (const line of fs.readFileSync(catalogExport, 'utf8').split('\n').slice(1)) {
-        const name = line.split(',')[0]?.trim();
+      const records = parseCsvSync(fs.readFileSync(catalogExport), { columns: true, bom: true, relax_column_count: true });
+      for (const rec of records) {
+        const name = (rec.name ?? Object.values(rec)[0] ?? '').toString().trim();
         if (name) catalogNames.add(normBrandName(name));
       }
     }
     const slugIndex = loadSlugIndex(indexFile);
     if (!slugIndex.size) {
-      console.log('slug index empty — run `npm run gapfill -- --discover [pages]` first to build it');
+      console.log('slug index empty — run `node src/cli/gapfill.mjs --discover [pages]` first to build it');
       return;
     }
     const { queue, skipped } = buildQueue({ rows, conflicts, slugIndex, catalogNames, limit });
@@ -167,14 +166,16 @@ async function main() {
     });
     console.log(`gapfill done: ${r.ok} pages parsed, ${r.failed} failed`);
   } catch (e) {
-    if (e instanceof BlockedError) {
-      console.error(`BLOCKED: ${e.message} — state persisted, resume later`);
+    if (e instanceof BlockedError || e instanceof CapReachedError) {
+      console.error(`STOPPED: ${e.message} — state persisted, resume later`);
       process.exit(2);
     }
     throw e;
   }
 }
 
-if (process.argv[1] && import.meta.url.endsWith(path.basename(process.argv[1]))) {
+const invokedDirectly = process.argv[1]
+  && import.meta.url.toLowerCase() === pathToFileURL(path.resolve(process.argv[1])).href.toLowerCase();
+if (invokedDirectly) {
   await main();
 }
