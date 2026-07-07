@@ -138,5 +138,20 @@ export function parseBrowsePage(html) {
     const name = $(el).text().replace(/\s+/g, ' ').trim();
     out.push({ name: name || path.split('/').pop(), path });
   });
+  // Paginated variants render the list only as schema.org ItemList JSON-LD (no anchors)
+  const listItems = [];
+  const collect = (node) => {
+    if (Array.isArray(node)) { node.forEach(collect); return; }
+    if (!node || typeof node !== 'object') return;
+    if (node['@type'] === 'ListItem' && typeof node.url === 'string') listItems.push(node);
+    for (const v of Object.values(node)) if (v && typeof v === 'object') collect(v);
+  };
+  collect(ldBlocks(html));
+  for (const li of listItems) {
+    let p;
+    try { p = new URL(li.url, 'https://www.1mg.com').pathname; } catch { continue; }
+    if (!p.startsWith('/drugs/') || !/-\d+$/.test(p)) continue;
+    out.push({ name: (li.name ?? p.split('/').pop()).toString().trim(), path: p });
+  }
   return [...new Map(out.map((e) => [e.path, e])).values()];
 }

@@ -35,9 +35,18 @@ test('parseDrugPage: Augmentin (combo + substitutes)', () => {
   assert.equal(d.form_raw, 'Tablet');
 });
 
-test('parseBrowsePage: extracts drug links', () => {
+test('parseBrowsePage: extracts drug links (anchor-rendered page)', () => {
   const entries = parseBrowsePage(browse);
   assert.ok(entries.length >= 20, `got ${entries.length}`);
   assert.ok(entries.every((e) => /^\/drugs\/.+-\d+$/.test(e.path)));
   assert.ok(entries.some((e) => /augmentin/i.test(e.path)));
+});
+
+test('parseBrowsePage: extracts from JSON-LD ItemList (paginated variant, no anchors)', () => {
+  const browse2 = fs.readFileSync('test/fixtures/onemg/browse_page2.html', 'utf8');
+  const entries = parseBrowsePage(browse2);
+  assert.ok(entries.length >= 20, `got ${entries.length}`);
+  const alkasol = entries.find((e) => e.path === '/drugs/alkasol-oral-solution-4967');
+  assert.ok(alkasol, 'Alkasol entry present');
+  assert.equal(alkasol.name, 'Alkasol Oral Solution');
 });
