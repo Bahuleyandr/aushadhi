@@ -164,3 +164,22 @@ MIMS entirely; editorial content (uses/side-effects/interactions — copyright);
 | Kaggle token absent | Adapter optional, skips gracefully |
 | Brand-name collisions across manufacturers | Manufacturer in identity key |
 | Alias map wrong merge | Test-pinned, reviewed additions only; conflicts.csv surfaces disagreements |
+
+## 13. Truncation strategy (addendum, approved 2026-07-07)
+
+The primary source's 2-slot format truncates 3–4 molecule combos (TB FDCs, cold trios,
+quad creams). Measured by live audit sample: **~50% of 2-slot rows are truncated**
+(e.g. AKT-4 Kit: 2 → 4 molecules). Fix machinery:
+
+1. **Known-combos knowledge base** (`src/lib/known-combos.mjs`): every artifact row with
+   ≥3 parsed ingredients (janaushadhi + accumulated onemg-live fetches — self-growing)
+   plus the curated seed list `data-static/india-fdc-seeds.json` (TB 3/4FDC, cold/cough
+   trios, pain trios, cardio/diabetes triples, derm quads). Indexed by unordered molecule
+   pairs for O(1) subset checks. Used ONLY to prioritize verification — never to assert.
+2. **Queue priority**: catalog-matched → **likely-truncated** (pair ⊂ known combo) →
+   conflicted → missing → remaining 2-slot candidates.
+3. **`--audit-sample N`**: random-samples unverified 2-slot rows, measures the true
+   truncation rate, and fixes the sampled rows as a side effect.
+4. **Propagation flywheel**: a corrected combo page records its substitutes; stale
+   2-molecule parses of those substitutes become `substitute_group_mismatch` conflicts
+   on the next build → priority bucket → fetched → corrected.

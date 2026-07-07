@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildQueue } from '../src/lib/gapfill-queue.mjs';
+import { buildKnownCombos } from '../src/lib/known-combos.mjs';
 
 const row = (brand, status, over = {}) => ({
   brand_name: brand, manufacturer: 'M Pharma Ltd', pack_label: 'strip of 10',
@@ -46,6 +47,25 @@ test('complete rows not queued', () => {
   const rows = [row('Delta Cream', 'complete')];
   const { queue } = buildQueue({ rows, conflicts: [], slugIndex, catalogNames: new Set(), limit: 10 });
   assert.equal(queue.length, 0);
+});
+
+test('LIKELY-truncated combos (known-FDC subset) outrank conflicts and missing', () => {
+  const ing = (m) => ({ molecule: m, strength_value: null, strength_unit: null, strength_raw: null });
+  const tb = row('Alpha 10 Tablet', 'complete', {
+    two_slot_maxed: true,
+    ingredients: [ing('rifampicin'), ing('isoniazid')], // subset of seeded TB 4FDC
+    sources: [{ source: 'github-jr' }],
+  });
+  const missing = row('Gamma 20 Tablet', 'missing', { sources: [{ source: 'github-jr' }] });
+  const conflicted = row('Beta Syrup', 'complete', { sources: [{ source: 'github-jr' }] });
+  const conflicts = [{ kind: 'composition_disagreement', identity_key: 'beta syrup|m|strip of 10' }];
+  const kb = buildKnownCombos([]);
+  const { queue } = buildQueue({ rows: [missing, conflicted, tb], conflicts, slugIndex, catalogNames: new Set(), limit: 10, knownCombos: kb });
+  assert.deepEqual(queue.map((q) => q.path), [
+    '/drugs/alpha-10-tablet-101',  // likely-truncated first
+    '/drugs/beta-syrup-102',       // then conflicted
+    '/drugs/gamma-20-tablet-103',  // then missing
+  ]);
 });
 
 test('two-slot-maxed github-jr-only rows queue for truncation verification', () => {

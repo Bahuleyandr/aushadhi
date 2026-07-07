@@ -1,0 +1,33 @@
+{
+  "_comment": "Curated 3-4 molecule fixed-dose combinations common in the Indian market. Molecule names are pre-normalized (lowercase, salt-stripped — must match normMolecule output). Used ONLY to prioritize gap-fill verification of possibly-truncated 2-slot rows; never to assert a composition. Extend via review.",
+  "combos": [
+    { "molecules": ["rifampicin", "isoniazid", "pyrazinamide", "ethambutol"], "note": "TB 4FDC intensive phase (NTEP)" },
+    { "molecules": ["rifampicin", "isoniazid", "pyrazinamide"], "note": "TB 3FDC paediatric intensive" },
+    { "molecules": ["rifampicin", "isoniazid", "ethambutol"], "note": "TB 3FDC continuation" },
+    { "molecules": ["paracetamol", "phenylephrine", "chlorpheniramine"], "note": "cold trio" },
+    { "molecules": ["paracetamol", "phenylephrine", "caffeine"], "note": "cold/headache trio" },
+    { "molecules": ["paracetamol", "phenylephrine", "chlorpheniramine", "caffeine"], "note": "cold quad" },
+    { "molecules": ["paracetamol", "phenylephrine", "diphenhydramine"], "note": "night cold trio" },
+    { "molecules": ["paracetamol", "cetirizine", "phenylephrine"], "note": "cold trio (cetirizine)" },
+    { "molecules": ["dextromethorphan", "phenylephrine", "chlorpheniramine"], "note": "dry cough trio" },
+    { "molecules": ["ambroxol", "guaifenesin", "terbutaline"], "note": "wet cough trio" },
+    { "molecules": ["bromhexine", "guaifenesin", "terbutaline"], "note": "wet cough trio (bromhexine)" },
+    { "molecules": ["levosalbutamol", "ambroxol", "guaifenesin"], "note": "bronchodilator cough trio" },
+    { "molecules": ["aceclofenac", "paracetamol", "serratiopeptidase"], "note": "pain trio" },
+    { "molecules": ["diclofenac", "paracetamol", "serratiopeptidase"], "note": "pain trio" },
+    { "molecules": ["diclofenac", "paracetamol", "chlorzoxazone"], "note": "pain + muscle relaxant" },
+    { "molecules": ["aceclofenac", "paracetamol", "chlorzoxazone"], "note": "pain + muscle relaxant" },
+    { "molecules": ["ibuprofen", "paracetamol", "caffeine"], "note": "analgesic trio" },
+    { "molecules": ["glimepiride", "metformin", "voglibose"], "note": "diabetes triple" },
+    { "molecules": ["glimepiride", "metformin", "pioglitazone"], "note": "diabetes triple" },
+    { "molecules": ["atorvastatin", "aspirin", "clopidogrel"], "note": "cardio triple (capsule kits)" },
+    { "molecules": ["rosuvastatin", "aspirin", "clopidogrel"], "note": "cardio triple" },
+    { "molecules": ["telmisartan", "amlodipine", "hydrochlorothiazide"], "note": "antihypertensive triple" },
+    { "molecules": ["telmisartan", "amlodipine", "chlorthalidone"], "note": "antihypertensive triple" },
+    { "molecules": ["olmesartan", "amlodipine", "hydrochlorothiazide"], "note": "antihypertensive triple" },
+    { "molecules": ["magaldrate", "simethicone", "oxetacaine"], "note": "antacid trio" },
+    { "molecules": ["methylcobalamin", "alpha lipoic acid", "pyridoxine", "folic acid"], "note": "neuropathy quad" },
+    { "molecules": ["clobetasol", "ofloxacin", "ornidazole", "terbinafine"], "note": "quad dermatology cream" },
+    { "molecules": ["beclomethasone", "clotrimazole", "neomycin"], "note": "triple dermatology cream" }
+  ]
+}
