@@ -7,5 +7,18 @@
   "license": "MIT",
   "engines": {
     "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "fetch": "node src/cli/fetch.mjs",
+    "build": "node src/cli/build.mjs",
+    "gapfill": "node src/cli/gapfill.mjs",
+    "stats": "node src/cli/stats.mjs"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "csv-parse": "^7.0.1",
+    "csv-stringify": "^6.8.1",
+    "fflate": "^0.8.3"
   }
 }
