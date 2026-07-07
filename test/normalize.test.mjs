@@ -25,6 +25,16 @@ test('normPack strips punctuation', () => {
   assert.equal(normPack('strip of 10 tablets'), normPack('Strip of 10  Tablets.'));
 });
 
+test('normMolecule strips trailing salt suffixes, never esters or halides', () => {
+  assert.equal(normMolecule('Diclofenac Sodium'), 'diclofenac');
+  assert.equal(normMolecule('Ondansetron Hydrochloride'), 'ondansetron');
+  assert.equal(normMolecule('Atorvastatin Calcium'), 'atorvastatin');
+  assert.equal(normMolecule('Metformin Hydrochloride IP'), 'metformin');
+  assert.equal(normMolecule('Sodium Chloride'), 'sodium chloride');       // halide integral
+  assert.equal(normMolecule('Magnesium Sulphate'), 'magnesium sulphate'); // salt-word head guard
+  assert.equal(normMolecule('Fluticasone Propionate'), 'fluticasone propionate'); // ester = potency class
+});
+
 test('normMolecule applies alias map', () => {
   assert.equal(normMolecule('Amoxicillin'), 'amoxycillin');
   assert.equal(normMolecule('Acetaminophen'), 'paracetamol');

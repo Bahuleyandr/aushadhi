@@ -14,6 +14,8 @@ test('normalizes fixture rows to common schema', async () => {
   assert.equal(rows[2].composition_status, 'missing');
   assert.equal(rows[2].is_discontinued, true);
   assert.equal(rows[2].price_inr, null);
+  assert.equal(rows[0].two_slot_maxed, true);  // both slots occupied -> verify candidate
+  assert.equal(rows[1].two_slot_maxed, false); // single molecule, nothing truncated
 });
 
 test('unknown headers fail loudly', async () => {

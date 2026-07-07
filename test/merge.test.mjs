@@ -62,6 +62,29 @@ test('substitutes union dedups by name', () => {
   assert.equal(rows[0].substitutes_raw.length, 2);
 });
 
+test('strength disagreement (same molecules) is flagged, never silent', async () => {
+  const { moleculeNameKey } = await import('../src/lib/merge.mjs');
+  const p500 = gj({ ingredients: [{ molecule: 'paracetamol', strength_value: 500, strength_unit: 'mg', strength_raw: '500mg' }] });
+  const p650 = gj({ source: 'kaggle-2025', ingredients: [{ molecule: 'paracetamol', strength_value: 650, strength_unit: 'mg', strength_raw: '650mg' }] });
+  const { rows, conflicts } = mergeRows([p500, p650]);
+  assert.equal(conflicts.length, 1);
+  assert.equal(conflicts[0].kind, 'strength_disagreement');
+  assert.equal(rows[0].ingredients[0].strength_value, 650); // precedence winner kept
+  assert.equal(moleculeNameKey(p500.ingredients), 'paracetamol');
+});
+
+test('composition_raw travels with the chosen ingredients', () => {
+  const truncated = gj({
+    source: 'onemg-live',
+    ingredients: [{ molecule: 'amoxycillin', strength_value: 500, strength_unit: 'mg', strength_raw: '500mg' }],
+    composition_raw: 'Amoxycillin (500mg)',
+  });
+  const richer = gj({ source: 'kaggle-2025' }); // 2-molecule superset with its own raw
+  const { rows } = mergeRows([truncated, richer]);
+  assert.equal(rows[0].ingredients.length, 2);
+  assert.equal(rows[0].composition_raw, 'Amoxycillin (500mg) + Clavulanic Acid (125mg)');
+});
+
 test('detectSubstituteMismatches flags cross-group substitute pairs only', async () => {
   const { detectSubstituteMismatches } = await import('../src/lib/merge.mjs');
   const augmentin = gj({ substitutes_raw: [{ name: 'Moxikind-CV 625 Tablet' }, { name: 'Wrongsub Tablet' }, { name: 'Unknown Brand' }] });

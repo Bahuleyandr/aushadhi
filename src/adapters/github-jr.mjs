@@ -31,6 +31,9 @@ export async function* normalizeGithubJr(file, date) {
     }
     const priceKey = Object.keys(rec).find((k) => /^price/i.test(k));
     const comp = parseComposition([rec.short_composition1, rec.short_composition2]);
+    // both 2-slot columns occupied -> the source FORMAT may have truncated a
+    // 3+-molecule combo; flag for gap-fill verification (spec §6 refinement)
+    const twoSlotMaxed = comp.ingredients.length >= 2;
     yield {
       source: 'github-jr',
       source_id: String(rec.id),
@@ -44,6 +47,7 @@ export async function* normalizeGithubJr(file, date) {
       ingredients: comp.ingredients,
       composition_raw: comp.raw,
       composition_status: comp.status,
+      two_slot_maxed: twoSlotMaxed,
       substitutes_raw: [],
       type: rec.type?.trim() || null,
     };

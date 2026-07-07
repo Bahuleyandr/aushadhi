@@ -34,7 +34,25 @@ export const MOLECULE_ALIASES = new Map([
   ['metformin hydrochloride', 'metformin'],
 ]);
 
+// Trailing SALT suffixes only (therapeutically-equivalent forms) — never esters
+// (propionate/valerate/furoate change potency class) and never chloride/bromide/
+// iodide (integral to molecules like sodium chloride, ipratropium bromide).
+const SALT_SUFFIXES = new Set([
+  'hydrochloride', 'dihydrochloride', 'hcl', 'sodium', 'potassium', 'calcium',
+  'magnesium', 'sulphate', 'sulfate', 'maleate', 'tartrate', 'bitartrate',
+  'mesylate', 'besylate', 'besilate', 'tosylate', 'citrate', 'phosphate',
+  'hydrobromide', 'succinate', 'fumarate', 'oxalate', 'nitrate',
+  'monohydrate', 'dihydrate', 'trihydrate', 'anhydrous', 'ip', 'bp', 'usp',
+]);
+
 export function normMolecule(s) {
   const t = normText(s).replace(/[()]/g, '').trim();
-  return MOLECULE_ALIASES.get(t) ?? t;
+  const aliased = MOLECULE_ALIASES.get(t);
+  if (aliased) return aliased;
+  const words = t.split(' ');
+  while (words.length >= 2 && SALT_SUFFIXES.has(words.at(-1)) && !SALT_SUFFIXES.has(words[0])) {
+    words.pop();
+  }
+  const stripped = words.join(' ');
+  return (stripped.length >= 3 ? MOLECULE_ALIASES.get(stripped) ?? stripped : t);
 }

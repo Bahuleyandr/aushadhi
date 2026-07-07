@@ -17,7 +17,8 @@ test('extracts approved FDC molecule combos, ignores prose', () => {
   const keys = combos.map(comboNameKey);
   assert.ok(keys.includes(comboNameKey(['amoxycillin', 'clavulanic acid'])));
   assert.ok(keys.includes(comboNameKey(['amlodipine', 'telmisartan'])));
-  assert.ok(keys.includes(comboNameKey(['chlorpheniramine maleate', 'paracetamol', 'phenylephrine hydrochloride'])));
+  // salt suffixes are stripped by normMolecule on BOTH sides (combo + artifact ingredients)
+  assert.ok(keys.includes(comboNameKey(['chlorpheniramine', 'paracetamol', 'phenylephrine'])));
   assert.equal(combos.length, 3); // prose line rejected
 });
 

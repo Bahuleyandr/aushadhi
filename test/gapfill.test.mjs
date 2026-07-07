@@ -47,3 +47,15 @@ test('complete rows not queued', () => {
   const { queue } = buildQueue({ rows, conflicts: [], slugIndex, catalogNames: new Set(), limit: 10 });
   assert.equal(queue.length, 0);
 });
+
+test('two-slot-maxed github-jr-only rows queue for truncation verification', () => {
+  const suspect = row('Delta Cream', 'complete', {
+    two_slot_maxed: true, sources: [{ source: 'github-jr', source_id: '1', seen_at: '2026-07-07' }],
+  });
+  const verified = row('Beta Syrup', 'complete', {
+    two_slot_maxed: true,
+    sources: [{ source: 'github-jr' }, { source: 'onemg-live' }], // richer source already covered it
+  });
+  const { queue } = buildQueue({ rows: [suspect, verified], conflicts: [], slugIndex, catalogNames: new Set(), limit: 10 });
+  assert.deepEqual(queue.map((q) => q.path), ['/drugs/delta-cream-104']);
+});
