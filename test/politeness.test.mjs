@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { parseRobots, isAllowed, PoliteFetcher, BlockedError } from '../src/lib/politeness.mjs';
+import { parseRobots, isAllowed, PoliteFetcher, BlockedError, CapReachedError } from '../src/lib/politeness.mjs';
 
 const ROBOTS = [
   'User-agent: *',
@@ -86,6 +86,53 @@ test('PoliteFetcher: backoff retries 5xx then succeeds', async () => {
   await pf.init();
   assert.equal(await pf.get('/drugs/d-4'), 'recovered');
   assert.ok(sleeps.some((ms) => ms >= 2000), 'exponential backoff sleep');
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
+});
+
+test('parseRobots: consecutive User-agent lines form one group', () => {
+  const grouped = 'User-agent: *\nUser-agent: SomeBot\nDisallow: /private\n\nUser-agent: OtherBot\nDisallow: /other';
+  assert.deepEqual(parseRobots(grouped), ['/private']);
+});
+
+test('init fails CLOSED when robots.txt is unreachable', async () => {
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
+  const { pf } = makeFetcher([{ status: 503 }]);
+  await assert.rejects(pf.init(), /refusing to crawl/i);
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
+});
+
+test('day rollover preserves discover cursor, resets only count', async () => {
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
+  fs.mkdirSync('test/.tmp-cache', { recursive: true });
+  fs.writeFileSync('test/.tmp-cache/state.json', JSON.stringify({ date: '1969-12-01', count: 4999, discover: { label: 3, page: 7 } }));
+  const { pf } = makeFetcher([{ status: 200, body: ROBOTS }]);
+  await pf.init();
+  assert.equal(pf.state.count, 0);
+  assert.deepEqual(pf.state.discover, { label: 3, page: 7 });
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
+});
+
+test('retries respect the min-delay gate and never overshoot the daily cap', async () => {
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
+  const { pf, sleeps } = makeFetcher([
+    { status: 200, body: ROBOTS },
+    { status: 503 },
+    { status: 200, body: 'ok' },
+  ]);
+  await pf.init();
+  assert.equal(await pf.get('/drugs/retry-1'), 'ok');
+  // backoff (2000) + min-delay top-up (500) must total >= minDelayMs between attempts
+  const total = sleeps.reduce((a, b) => a + b, 0);
+  assert.ok(total >= 2500, `expected >=2500ms total spacing between attempts, got ${JSON.stringify(sleeps)}`);
+
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true }); // fresh state for the cap scenario
+  const capped = makeFetcher([
+    { status: 200, body: ROBOTS },
+    { status: 503 }, { status: 503 }, { status: 503 }, { status: 503 },
+  ], { dailyCap: 1 });
+  await capped.pf.init();
+  await assert.rejects(capped.pf.get('/drugs/cap-1'), CapReachedError);
+  assert.equal(capped.pf.state.count, 1); // retries did not increment past the cap
   fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
 });
 
