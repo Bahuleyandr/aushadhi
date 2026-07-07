@@ -68,6 +68,33 @@ test('LIKELY-truncated combos (known-FDC subset) outrank conflicts and missing',
   ]);
 });
 
+test('exhaustive mode queues complete rows too, but priority work comes first', () => {
+  const rows = [
+    row('Delta Cream', 'complete', { sources: [{ source: 'github-jr' }] }),   // complete, unverified -> exhaustive tail
+    row('Gamma 20 Tablet', 'missing', { sources: [{ source: 'github-jr' }] }), // missing -> priority
+  ];
+  const { queue } = buildQueue({ rows, conflicts: [], slugIndex, catalogNames: new Set(), limit: 10, exhaustive: true });
+  assert.deepEqual(queue.map((q) => q.path), [
+    '/drugs/gamma-20-tablet-103',  // priority (missing) first
+    '/drugs/delta-cream-104',      // exhaustive tail (complete) last
+  ]);
+});
+
+test('exhaustive mode skips rows already verified by onemg-live (fetch each page once)', () => {
+  const rows = [
+    row('Delta Cream', 'complete', { sources: [{ source: 'github-jr' }, { source: 'onemg-live' }] }),
+    row('Alpha 10 Tablet', 'complete', { sources: [{ source: 'github-jr' }] }),
+  ];
+  const { queue } = buildQueue({ rows, conflicts: [], slugIndex, catalogNames: new Set(), limit: 10, exhaustive: true });
+  assert.deepEqual(queue.map((q) => q.path), ['/drugs/alpha-10-tablet-101']); // Delta already onemg-verified -> skipped
+});
+
+test('non-exhaustive mode unchanged: complete unverified rows still skipped', () => {
+  const rows = [row('Delta Cream', 'complete', { sources: [{ source: 'github-jr' }] })];
+  const { queue } = buildQueue({ rows, conflicts: [], slugIndex, catalogNames: new Set(), limit: 10 });
+  assert.equal(queue.length, 0);
+});
+
 test('two-slot-maxed github-jr-only rows queue for truncation verification', () => {
   const suspect = row('Delta Cream', 'complete', {
     two_slot_maxed: true, sources: [{ source: 'github-jr', source_id: '1', seen_at: '2026-07-07' }],

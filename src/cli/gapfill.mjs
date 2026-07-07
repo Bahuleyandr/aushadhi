@@ -191,6 +191,7 @@ async function main() {
   const catalogExport = flag('catalog-export');
   if (catalogExport === true) throw new Error('--catalog-export requires a file path');
   const auditSample = flag('audit-sample');
+  const exhaustive = flag('all') === true; // fetch EVERY slugged drug page, not just needs-work
 
   const onemgRoot = path.join(c.rawRoot, 'onemg');
   await fsp.mkdir(path.join(onemgRoot, c.date), { recursive: true });
@@ -241,8 +242,8 @@ async function main() {
       return;
     }
 
-    const { queue, skipped } = buildQueue({ rows, conflicts, slugIndex, catalogNames, limit, knownCombos: kb });
-    console.log(`queue: ${queue.length} pages (${skipped} rows skipped, no slug; KB: ${kb.combos} known 3+ combos)`);
+    const { queue, skipped } = buildQueue({ rows, conflicts, slugIndex, catalogNames, limit, knownCombos: kb, exhaustive });
+    console.log(`queue: ${queue.length} pages${exhaustive ? ' [EXHAUSTIVE]' : ''} (${skipped} rows skipped, no slug; KB: ${kb.combos} known 3+ combos)`);
     const r = await runTargeted({
       pf,
       queue,
