@@ -7,6 +7,7 @@ import { loadCdscoFdcCombos } from '../adapters/cdsco-fdc.mjs';
 import { readOnemgNormalized } from '../adapters/onemg.mjs';
 import { readKaggleRows } from '../adapters/kaggle-2025.mjs';
 import { mergeRows, detectSubstituteMismatches } from '../lib/merge.mjs';
+import { buildKnownCombos, likelyTruncated } from '../lib/known-combos.mjs';
 import { emitArtifact } from '../lib/emit.mjs';
 
 export function latestSnapshot(rawRoot, source) {
@@ -93,5 +94,10 @@ if (fdc.files) meta.cdsco_fdc_files = fdc.files;
 
 const { rows, conflicts } = mergeRows(all);
 conflicts.push(...detectSubstituteMismatches(rows));
+
+// visibility: how many 2-slot rows sit inside a KNOWN 3+ molecule combo
+const kb = buildKnownCombos(rows);
+meta.known_combos = kb.combos;
+meta.likely_truncated = rows.filter((r) => likelyTruncated(r, kb)).length;
 const { dir } = await emitArtifact({ distRoot: c.distRoot, date: c.date, rows, conflicts, errors, meta, fdcKeys: fdc.keys });
 console.log(`emitted ${rows.length} rows (${all.length} source rows, ${conflicts.length} conflicts, ${errors.length} errors) -> ${dir}`);
