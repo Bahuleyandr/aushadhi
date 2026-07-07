@@ -1,0 +1,23 @@
+Annexure
+
+The list of 2110 generic medicines under PMBJP till 31.12.2025
+
+S. No.   Drug      Generic Name of Item                                        Unit Size
+         Code
+
+1        1         Aceclofenac 100mg and Paracetamol 325mg Tablets             10's
+
+2        2         Aceclofenac Tablets IP 100 mg                               10's
+
+3        3         Pregabalin Capsules IP 75 mg                                10's
+
+4        5         Aspirin Gastro-resistant Tablets IP 150 mg                  14's
+
+5        6         Chlorzoxazone 500mg, Diclofenac 50mg and Paracetamol        10's
+                   325mg Tablets
+
+6        7         Diclofenac Gel IP 1.16%w/w (Diclofenac Diethylamine)        15 g
+
+7        9         Diclofenac Sodium Injection IP 25mg per ml                  3 ml
+
+42
