@@ -3,6 +3,7 @@ import path from 'node:path';
 import { ctx } from '../lib/context.mjs';
 import { normalizeGithubJr } from '../adapters/github-jr.mjs';
 import { parseJanAushadhiText } from '../adapters/janaushadhi.mjs';
+import { loadCdscoFdcCombos } from '../adapters/cdsco-fdc.mjs';
 import { mergeRows } from '../lib/merge.mjs';
 import { emitArtifact } from '../lib/emit.mjs';
 
@@ -58,6 +59,9 @@ if (jaDir) {
   }
 }
 
+const fdc = await loadCdscoFdcCombos(c.rawRoot);
+if (fdc.files) meta.cdsco_fdc_files = fdc.files;
+
 const { rows, conflicts } = mergeRows(all);
-const { dir } = await emitArtifact({ distRoot: c.distRoot, date: c.date, rows, conflicts, errors, meta });
+const { dir } = await emitArtifact({ distRoot: c.distRoot, date: c.date, rows, conflicts, errors, meta, fdcKeys: fdc.keys });
 console.log(`emitted ${rows.length} rows (${all.length} source rows, ${conflicts.length} conflicts, ${errors.length} errors) -> ${dir}`);

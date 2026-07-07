@@ -6,7 +6,7 @@ import { moleculeSetKey } from './merge.mjs';
 const ingredientsToString = (ings) =>
   ings.map((i) => (i.strength_raw ? `${i.molecule} (${i.strength_raw})` : i.molecule)).join(' + ');
 
-export async function emitArtifact({ distRoot, date, rows, conflicts, errors, meta }) {
+export async function emitArtifact({ distRoot, date, rows, conflicts, errors, meta, fdcKeys = new Set() }) {
   const dir = path.join(distRoot, date);
   await fsp.mkdir(dir, { recursive: true });
 
@@ -31,10 +31,16 @@ export async function emitArtifact({ distRoot, date, rows, conflicts, errors, me
   await fsp.writeFile(path.join(dir, 'drugs.jsonl'), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
 
   const comps = new Map();
+  let cdscoValidated = 0;
   for (const r of rows) {
     if (!r.ingredients.length) continue;
     const k = moleculeSetKey(r.ingredients);
-    if (!comps.has(k)) comps.set(k, { composition: ingredientsToString(r.ingredients), molecule_set_key: k, brand_count: 0 });
+    if (!comps.has(k)) {
+      const nameKey = r.ingredients.map((i) => i.molecule).sort().join('|');
+      const validated = r.ingredients.length >= 2 && fdcKeys.has(nameKey);
+      if (validated) cdscoValidated++;
+      comps.set(k, { composition: ingredientsToString(r.ingredients), molecule_set_key: k, brand_count: 0, cdsco_fdc_validated: validated });
+    }
     comps.get(k).brand_count++;
   }
   await fsp.writeFile(
@@ -64,6 +70,7 @@ export async function emitArtifact({ distRoot, date, rows, conflicts, errors, me
     composition_status: statusCounts,
     conflicts: conflicts.length,
     errors: errors.length,
+    cdsco_validated: cdscoValidated,
     ...meta,
   };
   await fsp.writeFile(path.join(dir, 'summary.json'), JSON.stringify(summary, null, 2));
