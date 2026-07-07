@@ -60,6 +60,18 @@ if (jaDir) {
   }
 }
 
+const kgDir = latestSnapshot(c.rawRoot, 'kaggle-2025');
+if (kgDir) {
+  try {
+    const { readKaggleRows } = await import('../adapters/kaggle-2025.mjs');
+    const kgRows = readKaggleRows(kgDir, path.basename(kgDir)).filter((r) => r.brand_name);
+    all.push(...kgRows);
+    meta.sources['kaggle-2025'] = kgRows.length;
+  } catch (e) {
+    errors.push({ source: 'kaggle-2025', reason: 'adapter failure', detail: e.message });
+  }
+}
+
 const onemgRows = readOnemgNormalized(c.rawRoot);
 if (onemgRows.length) {
   all.push(...onemgRows);
