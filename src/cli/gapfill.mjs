@@ -31,7 +31,9 @@ export async function runDiscover({ pf, maxPages, indexFile, log = console.log }
   let added = 0;
   while (fetched < maxPages && cur.label < LABELS.length) {
     const label = LABELS[cur.label];
-    const p = `/drugs-all-medicines?label=${label}&page=${cur.page}`;
+    const pageNum = cur.page;
+    // page 1 must be the bare label URL — 1mg serves an empty listing for &page=1
+    const p = `/drugs-all-medicines?label=${label}${pageNum > 1 ? `&page=${pageNum}` : ''}`;
     let html;
     try {
       html = await pf.get(p);
@@ -53,7 +55,7 @@ export async function runDiscover({ pf, maxPages, indexFile, log = console.log }
       added++;
     }
     if (entries.length === 0) { cur.label++; cur.page = 1; } else cur.page++;
-    log(`discover: label=${label} page=${cur.page - 1} links=${entries.length} new=${newHere}`);
+    log(`discover: label=${label} page=${pageNum} links=${entries.length} new=${newHere}`);
     await pf.persist();
   }
   return { fetched, added, index };

@@ -60,7 +60,7 @@ test('runDiscover: builds slug index from browse pages, advances cursor', async 
   fs.rmSync(TMP, { recursive: true, force: true });
   fs.mkdirSync(TMP, { recursive: true });
   const pf = fakeFetcher((p) => {
-    if (p === '/drugs-all-medicines?label=a&page=1') return browseHtml;
+    if (p === '/drugs-all-medicines?label=a') return browseHtml; // page 1 = bare label URL
     return '<html><body>no links here</body></html>';
   });
   await pf.init();
