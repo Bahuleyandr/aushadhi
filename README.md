@@ -14,7 +14,11 @@ Primary consumer: VH Health composition drug search (`drug_compositions` import 
 npm run fetch     # download source snapshots (idempotent, cached)
 npm run build     # normalize -> merge -> emit dist/<date>/
 npm run stats     # summary of latest dist
-npm test          # node:test suite (50 tests)
+npm test          # node:test suite
+
+# local, read-only interaction check (current dist is private/internal)
+# call Node directly on PowerShell because npm 11 consumes repeated --drug flags
+node src/cli/interactions.mjs --profile internal-evaluation --drug "Augmentin 625 Duo Tablet" --drug "Azithral 500 Tablet"
 
 # gap-filler: call node directly (PowerShell eats `--` before npm flags)
 node src/cli/gapfill.mjs --discover 50            # build/extend the slug index (A-Z browse)
@@ -25,6 +29,30 @@ node src/cli/gapfill.mjs --audit-sample 50        # measure the 2-slot truncatio
 
 NEVER run two gapfill/discover processes at once — the politeness rate limiter
 and state file are per-process.
+
+## Interaction checker
+
+The interaction checker resolves exact products, expands fixed-dose
+combinations, and checks every unique cross-product ingredient pair against a
+versioned clinician-reviewed rule pack. It never treats a missing rule as proof
+of safety: the committed open rule pack currently declares coverage as
+`unknown` and contains no invented clinical rules.
+
+Every run requires an explicit release profile. `production-open` accepts only
+sources whose licences and storage zones are approved for redistribution.
+`internal-evaluation` may read the existing `dist/latest` artifact, which
+contains restricted Jan Aushadhi and Tata 1mg provenance and must not be
+redistributed. Ambiguous products and lossy legacy ingredient names are
+reported as unresolved instead of being auto-selected or silently mapped.
+
+Structured disambiguation is accepted as JSON, for example:
+
+```
+--drug '{"brand_name":"Example","manufacturer":"Maker","strengths":["10 mg"],"form_raw":"tablet","pack_label":"strip of 10 tablets"}'
+```
+
+See [the interaction evidence plan](docs/plans/2026-07-10-aushadhi-interaction-evidence-layer.md)
+and [the source/licence manifest](data-static/interaction-sources.json).
 
 ## Truncation
 
@@ -42,12 +70,12 @@ isoniazid + pyrazinamide + ethambutol).
 | source | rows | notes |
 |---|---|---|
 | github-jr | 253,973 | MIT dataset; primary bulk |
-| janaushadhi | 2,111 | PIB PDF via pdftotext (official generics) |
-| kaggle-2025 | optional | needs `KAGGLE_USERNAME`/`KAGGLE_KEY` env |
-| cdsco-fdc | validation | drop CDSCO PDFs into `data/raw/cdsco-fdc/` |
-| onemg-live | gap-fill | polite fetcher: robots.txt-honoring, 1 req/2.5-3s, daily cap 5000, hard abort on 403/429, resumable |
+| janaushadhi | 2,111 | official list; internal/restricted until reuse permission is cleared |
+| kaggle-2025 | optional | disabled for interaction artifacts while its dataset licence is unknown |
+| cdsco-fdc | validation | internal/restricted until reuse permission is cleared |
+| onemg-live | gap-fill | private/internal only; non-redistributable |
 
-Current artifact: **255,894 drugs, 12,338 unique compositions** (`dist/latest/`).
+Current artifact: **255,894 drugs, 12,148 unique compositions** (`dist/latest/`).
 
 The gap-filler is two-stage: `--discover` builds a brand→URL slug index from the A–Z
 browse pages (both server-rendering variants handled: anchors + JSON-LD ItemList);

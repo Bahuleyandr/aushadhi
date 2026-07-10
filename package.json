@@ -18,7 +18,8 @@
     "netmeds": "node src/cli/netmeds.mjs",
     "stats": "node src/cli/stats.mjs",
     "report": "node src/cli/report.mjs",
-    "fleet": "node src/cli/fleet-status.mjs"
+    "fleet": "node src/cli/fleet-status.mjs",
+    "interactions": "node src/cli/interactions.mjs"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
