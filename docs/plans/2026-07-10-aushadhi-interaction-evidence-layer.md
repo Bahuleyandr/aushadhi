@@ -1,7 +1,7 @@
 # Aushadhi open interaction evidence layer implementation plan
 
-**Status:** Approved direction, implementation starting 2026-07-10  
-**Repository:** `D:\Dev\Projects\aushadhi`  
+**Status:** Approved direction, implementation starting 2026-07-10
+**Repository:** `D:\Dev\Projects\aushadhi`
 **Branch:** `feat/interaction-evidence`
 
 ## Goal
@@ -354,4 +354,3 @@ clinical completeness and does not alter the disclaimer.
 6. Prove restricted/unknown sources cannot enter `production-open` outputs.
 7. Confirm generated data remains untracked.
 8. Make cohesive local commits only; do not push or deploy.
-
