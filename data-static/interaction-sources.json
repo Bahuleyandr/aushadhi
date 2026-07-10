@@ -1,0 +1,488 @@
+{
+  "schema_version": 1,
+  "policy_reviewed_at": "2026-07-10",
+  "uses": [
+    "catalogue",
+    "ingredient-index",
+    "product-resolution",
+    "identity",
+    "interaction-evidence",
+    "rule-structure",
+    "interaction-rules"
+  ],
+  "profiles": {
+    "production-open": {
+      "redistributable": true,
+      "allowed_licence_classes": [
+        "open",
+        "open-sharealike",
+        "public-domain"
+      ],
+      "allowed_uses": [
+        "catalogue",
+        "ingredient-index",
+        "product-resolution",
+        "identity",
+        "interaction-evidence",
+        "rule-structure",
+        "interaction-rules"
+      ],
+      "default_storage_zone": "data/interaction/production-open"
+    },
+    "internal-evaluation": {
+      "redistributable": false,
+      "allowed_licence_classes": [
+        "open",
+        "open-sharealike",
+        "public-domain",
+        "restricted",
+        "non-commercial",
+        "user-supplied"
+      ],
+      "allowed_uses": [
+        "catalogue",
+        "ingredient-index",
+        "product-resolution",
+        "identity",
+        "interaction-evidence",
+        "rule-structure",
+        "interaction-rules"
+      ],
+      "default_storage_zone": "data/interaction/internal-evaluation"
+    }
+  },
+  "sources": {
+    "hl7-pddi-cds": {
+      "name": "HL7 PDDI-CDS",
+      "homepage": "https://github.com/HL7/PDDI-CDS",
+      "licence": {
+        "id": "CC0-1.0",
+        "class": "open",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://github.com/HL7/PDDI-CDS/blob/master/LICENSE"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "open-core",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["rule-structure"],
+      "required_storage_zones": {
+        "production-open": ["data-static", "data/interaction/production-open"],
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "disabled_reasons": []
+    },
+    "openfda-labels": {
+      "name": "openFDA drug labels",
+      "homepage": "https://open.fda.gov/apis/drug/label/",
+      "licence": {
+        "id": "CC0-1.0",
+        "class": "public-domain",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://open.fda.gov/terms/"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "open-core",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["interaction-evidence"],
+      "required_storage_zones": {
+        "production-open": ["data/interaction/production-open"],
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "disabled_reasons": []
+    },
+    "fda-cyp-transporter": {
+      "name": "FDA CYP enzyme and transporter tables",
+      "homepage": "https://www.fda.gov/drugs/drug-interactions-labeling/drug-development-and-drug-interactions-table-substrates-inhibitors-and-inducers",
+      "licence": {
+        "id": "US-PUBLIC-DOMAIN",
+        "class": "public-domain",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.fda.gov/about-fda/about-website/website-policies"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "open-core",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["interaction-evidence"],
+      "required_storage_zones": {
+        "production-open": ["data/interaction/production-open"],
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "disabled_reasons": []
+    },
+    "who-inn": {
+      "name": "WHO International Nonproprietary Names",
+      "homepage": "https://www.who.int/teams/health-product-and-policy-standards/inn",
+      "licence": {
+        "id": "WHO-INN-PUBLIC-NAME",
+        "class": "open",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.who.int/teams/health-product-and-policy-standards/inn/guidance-on-inn"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "open-core",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["identity"],
+      "required_storage_zones": {
+        "production-open": ["data/interaction/production-open"],
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "disabled_reasons": []
+    },
+    "rxnorm": {
+      "name": "RxNorm",
+      "homepage": "https://www.nlm.nih.gov/research/umls/rxnorm/",
+      "licence": {
+        "id": "NLM-RXNORM-TERMS",
+        "class": "open",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.nlm.nih.gov/research/umls/rxnorm/docs/termsofservice.html"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "open-core",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["identity"],
+      "required_storage_zones": {
+        "production-open": ["data/interaction/production-open"],
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "disabled_reasons": []
+    },
+    "fda-gsrs-unii": {
+      "name": "FDA GSRS/UNII",
+      "homepage": "https://precision.fda.gov/uniisearch",
+      "licence": {
+        "id": "US-PUBLIC-DOMAIN",
+        "class": "public-domain",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.fda.gov/about-fda/about-website/website-policies"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "open-core",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["identity"],
+      "required_storage_zones": {
+        "production-open": ["data/interaction/production-open"],
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "disabled_reasons": []
+    },
+    "aushadhi-open-clinician-rules": {
+      "name": "Aushadhi open clinician-reviewed interaction rules",
+      "homepage": "https://github.com/Bahuleyandr/aushadhi",
+      "licence": {
+        "id": "CC-BY-4.0",
+        "class": "open",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://creativecommons.org/licenses/by/4.0/legalcode"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "open-core",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["interaction-rules"],
+      "required_storage_zones": {
+        "production-open": ["data-static", "data/interaction/production-open"],
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "disabled_reasons": []
+    },
+    "github-jr": {
+      "name": "Indian Medicine Dataset",
+      "homepage": "https://github.com/junioralive/Indian-Medicine-Dataset",
+      "licence": {
+        "id": "MIT",
+        "class": "open",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://github.com/junioralive/Indian-Medicine-Dataset/blob/main/LICENSE"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "open-core",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["catalogue", "ingredient-index", "product-resolution"],
+      "required_storage_zones": {
+        "production-open": ["data/interaction/production-open"],
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "read_only_input_zones": {
+        "internal-evaluation": ["dist"]
+      },
+      "disabled_reasons": []
+    },
+    "drugcentral": {
+      "name": "DrugCentral",
+      "homepage": "https://drugcentral.org/",
+      "licence": {
+        "id": "CC-BY-SA-4.0",
+        "class": "open-sharealike",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://drugcentral.org/download"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "drugcentral-sharealike",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["identity"],
+      "required_storage_zones": {
+        "production-open": ["data/interaction/production-open/drugcentral-sharealike"],
+        "internal-evaluation": ["data/interaction/internal-evaluation/drugcentral-sharealike"]
+      },
+      "disabled_reasons": []
+    },
+    "cdci-snomed-ct": {
+      "name": "Common Drug Codes for India / SNOMED CT India Drug Extension",
+      "homepage": "https://www.nrces.in/",
+      "licence": {
+        "id": "SNOMED-CT-AFFILIATE",
+        "class": "user-supplied",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.snomed.org/snomed-ct/get-snomed"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": false,
+      "artifact_pack": "user-licensed",
+      "allowed_profiles": ["internal-evaluation"],
+      "allowed_uses": ["identity"],
+      "required_storage_zones": {
+        "internal-evaluation": ["data/restricted/cdci"]
+      },
+      "disabled_reasons": []
+    },
+    "janaushadhi": {
+      "name": "Pradhan Mantri Bhartiya Janaushadhi Pariyojana product list",
+      "homepage": "https://www.janaushadhi.gov.in/",
+      "licence": {
+        "id": "NOT-CLEARED-FOR-REDISTRIBUTION",
+        "class": "restricted",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.janaushadhi.gov.in/copyright"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": false,
+      "artifact_pack": "internal-restricted",
+      "allowed_profiles": ["internal-evaluation"],
+      "allowed_uses": ["catalogue", "ingredient-index", "product-resolution"],
+      "required_storage_zones": {
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "read_only_input_zones": {
+        "internal-evaluation": ["dist"]
+      },
+      "disabled_reasons": []
+    },
+    "kaggle-2025": {
+      "name": "Kaggle India medicines and drug information dataset",
+      "homepage": "https://www.kaggle.com/datasets/apkaayush/india-medicines-and-drug-info-dataset",
+      "licence": {
+        "id": "UNKNOWN",
+        "class": "unknown",
+        "verification_status": "unknown",
+        "verified_at": null,
+        "terms_url": "https://www.kaggle.com/terms"
+      },
+      "enabled": false,
+      "ingestion_forbidden": false,
+      "redistributable": false,
+      "artifact_pack": "unknown",
+      "allowed_profiles": [],
+      "allowed_uses": [],
+      "required_storage_zones": {},
+      "disabled_reasons": ["dataset licence has not been verified; unknown licences fail closed"]
+    },
+    "cdsco-fdc": {
+      "name": "CDSCO fixed-dose combination material",
+      "homepage": "https://cdsco.gov.in/",
+      "licence": {
+        "id": "REUSE-PERMISSION-REQUIRED",
+        "class": "restricted",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.cdsco.gov.in/opencms/opencms/en/Copyright-Policy/"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": false,
+      "artifact_pack": "internal-restricted",
+      "allowed_profiles": ["internal-evaluation"],
+      "allowed_uses": ["catalogue", "ingredient-index", "product-resolution"],
+      "required_storage_zones": {
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "read_only_input_zones": {
+        "internal-evaluation": ["dist"]
+      },
+      "disabled_reasons": []
+    },
+    "onemg-live": {
+      "name": "Tata 1mg live product pages",
+      "homepage": "https://www.1mg.com/",
+      "licence": {
+        "id": "PROPRIETARY",
+        "class": "restricted",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.1mg.com/terms_conditions"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": false,
+      "artifact_pack": "internal-restricted",
+      "allowed_profiles": ["internal-evaluation"],
+      "allowed_uses": ["catalogue", "ingredient-index", "product-resolution"],
+      "required_storage_zones": {
+        "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "read_only_input_zones": {
+        "internal-evaluation": ["dist"]
+      },
+      "disabled_reasons": []
+    },
+    "ddinter-2": {
+      "name": "DDInter 2.0",
+      "homepage": "https://ddinter2.scbdd.com/",
+      "licence": {
+        "id": "CC-BY-NC-SA-4.0",
+        "class": "non-commercial",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://ddinter.scbdd.com/terms/"
+      },
+      "enabled": false,
+      "ingestion_forbidden": false,
+      "redistributable": false,
+      "artifact_pack": "internal-restricted",
+      "allowed_profiles": ["internal-evaluation"],
+      "allowed_uses": ["interaction-evidence"],
+      "required_storage_zones": {
+        "internal-evaluation": ["data/restricted/ddinter"]
+      },
+      "disabled_reasons": [
+        "official endpoint TLS certificate is not currently valid",
+        "exact snapshot SHA-256 has not been verified"
+      ]
+    },
+    "drugs-com-manual": {
+      "name": "Drugs.com manual interaction checker",
+      "homepage": "https://www.drugs.com/drug_interactions.html",
+      "licence": {
+        "id": "PROPRIETARY-WEB",
+        "class": "restricted",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.drugs.com/terms.html"
+      },
+      "enabled": false,
+      "ingestion_forbidden": true,
+      "redistributable": false,
+      "artifact_pack": "manual-reference-only",
+      "allowed_profiles": [],
+      "allowed_uses": [],
+      "required_storage_zones": {},
+      "disabled_reasons": ["manual reference surface; automated ingestion is forbidden"]
+    },
+    "medscape-manual": {
+      "name": "Medscape manual interaction checker",
+      "homepage": "https://reference.medscape.com/drug-interactionchecker",
+      "licence": {
+        "id": "PROPRIETARY-WEB",
+        "class": "restricted",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.medscape.com/public/terms"
+      },
+      "enabled": false,
+      "ingestion_forbidden": true,
+      "redistributable": false,
+      "artifact_pack": "manual-reference-only",
+      "allowed_profiles": [],
+      "allowed_uses": [],
+      "required_storage_zones": {},
+      "disabled_reasons": ["manual reference surface; automated ingestion is forbidden"]
+    },
+    "webmd-manual": {
+      "name": "WebMD manual interaction checker",
+      "homepage": "https://www.webmd.com/interaction-checker/default.htm",
+      "licence": {
+        "id": "PROPRIETARY-WEB",
+        "class": "restricted",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://www.webmd.com/about-webmd-policies/about-terms-and-conditions-of-use"
+      },
+      "enabled": false,
+      "ingestion_forbidden": true,
+      "redistributable": false,
+      "artifact_pack": "manual-reference-only",
+      "allowed_profiles": [],
+      "allowed_uses": [],
+      "required_storage_zones": {},
+      "disabled_reasons": ["manual reference surface; automated ingestion is forbidden"]
+    },
+    "drugbank-web-manual": {
+      "name": "DrugBank free web interaction checker",
+      "homepage": "https://go.drugbank.com/drug-interaction-checker",
+      "licence": {
+        "id": "PROPRIETARY-WEB",
+        "class": "restricted",
+        "verification_status": "verified",
+        "verified_at": "2026-07-10",
+        "terms_url": "https://go.drugbank.com/legal/terms_of_use"
+      },
+      "enabled": false,
+      "ingestion_forbidden": true,
+      "redistributable": false,
+      "artifact_pack": "manual-reference-only",
+      "allowed_profiles": [],
+      "allowed_uses": [],
+      "required_storage_zones": {},
+      "disabled_reasons": ["manual reference surface; automated ingestion is forbidden"]
+    },
+    "unknown-source-example": {
+      "name": "Unknown source example",
+      "homepage": "https://example.invalid/unknown-source",
+      "licence": {
+        "id": "UNKNOWN",
+        "class": "unknown",
+        "verification_status": "unknown",
+        "verified_at": null,
+        "terms_url": "https://example.invalid/unknown-source/terms"
+      },
+      "enabled": false,
+      "ingestion_forbidden": false,
+      "redistributable": false,
+      "artifact_pack": "unknown",
+      "allowed_profiles": [],
+      "allowed_uses": [],
+      "required_storage_zones": {},
+      "disabled_reasons": ["licence is unknown; unknown licences fail closed"]
+    }
+  }
+}
