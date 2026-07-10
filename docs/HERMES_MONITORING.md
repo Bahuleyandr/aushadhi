@@ -72,7 +72,12 @@ The ALERT line already carries service state, nrestarts, count/cap, and the last
 - Optional, safe: for a **wedged** alert only (#3), you may run
   `systemctl restart aushadhi-crawl` once, then still notify us.
 - For a **block** alert (#2): do **not** restart in a loop (it would re-hit the block).
-  Just notify — we decide whether to back off.
+  Just notify — we decide whether to back off. **Most likely cause now:** the
+  ProtonVPN split-tunnel rules dropped, so 1mg is hit via Proton's Cloudflare-blocked
+  exit IP again. Quick check: `ip rule show | grep 0xa05` (should be present while
+  running) and `curl -s https://api.ipify.org` (host default should be the Proton IP).
+  A `systemctl restart aushadhi-crawl` re-installs the split-tunnel via ExecStartPre —
+  safe to try once for a block alert, then notify. See `deploy/dalekdefender/README.md`.
 
 ## Suggested cadence
 

@@ -1,0 +1,17 @@
+[Unit]
+Description=aushadhi exhaustive 1mg crawler (polite, single-instance)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/aushadhi
+Environment=AUSHADHI_DAILY_CAP=12000
+ExecStart=/usr/bin/bash /root/aushadhi/scripts/crawl-loop.sh
+Restart=always
+RestartSec=30
+StandardOutput=append:/root/aushadhi/logs/crawl.log
+StandardError=append:/root/aushadhi/logs/crawl.log
+
+[Install]
+WantedBy=multi-user.target
