@@ -8,7 +8,7 @@ const augmentinHtml = fs.readFileSync('test/fixtures/onemg/drug_page_tablet.html
 const browseHtml = fs.readFileSync('test/fixtures/onemg/browse_page.html', 'utf8');
 const TMP = 'test/.tmp-gapfill';
 
-function fakeFetcher(routes) {
+function fakeFetcher(routes, robots = 'User-agent: *\nDisallow: /nothing') {
   return new PoliteFetcher({
     baseUrl: 'https://fake.test',
     cacheDir: `${TMP}/pages`,
@@ -17,7 +17,7 @@ function fakeFetcher(routes) {
     userAgent: 'aushadhi-test',
     fetchImpl: async (url) => {
       const p = url.replace('https://fake.test', '');
-      const body = p === '/robots.txt' ? 'User-agent: *\nDisallow: /nothing' : routes(p);
+      const body = p === '/robots.txt' ? robots : routes(p);
       return { ok: body !== null, status: body !== null ? 200 : 404, text: async () => body ?? '' };
     },
     now: (() => { let t = 1_000_000; return () => (t += 5000); })(),
@@ -53,6 +53,27 @@ test('runTargeted: writes normalized row with target identity + harvests unknown
   assert.ok(row.substitutes_raw.some((s) => s.name === 'Novaclav 625 Tablet'));
   const disc = fs.readFileSync(`${TMP}/discovery-queue.jsonl`, 'utf8');
   assert.match(disc, /Novaclav 625 Tablet/);
+  fs.rmSync(TMP, { recursive: true, force: true });
+});
+
+test('runTargeted: robots refusal aborts the phase instead of being counted as a page failure', async () => {
+  fs.rmSync(TMP, { recursive: true, force: true });
+  fs.mkdirSync(TMP, { recursive: true });
+  const pf = fakeFetcher(() => augmentinHtml, 'User-agent: *\nDisallow: /drugs/');
+  await pf.init();
+  const queue = [{
+    identity_key: 'k', brand_name: 'Blocked Tablet', manufacturer: 'M Pharma',
+    pack_label: 'strip of 10', path: '/drugs/blocked-tablet-123',
+  }];
+  await assert.rejects(runTargeted({
+    pf, queue,
+    outFile: `${TMP}/normalized.jsonl`,
+    discoveryFile: `${TMP}/discovery-queue.jsonl`,
+    knownNorms: new Set(),
+    date: '2026-07-10',
+    log: () => {},
+  }), /robots/i);
+  assert.equal(fs.existsSync(`${TMP}/normalized.jsonl`), false);
   fs.rmSync(TMP, { recursive: true, force: true });
 });
 

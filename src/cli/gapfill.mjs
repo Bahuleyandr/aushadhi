@@ -14,6 +14,16 @@ import { ctx } from '../lib/context.mjs';
 
 const LABELS = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
+export function isRobotsFailure(error) {
+  return /robots/i.test(error?.message ?? '');
+}
+
+export function crawlerExitCode(error, distinctBlockExit = process.env.AUSHADHI_DISTINCT_EXIT_CODES === '1') {
+  if (error instanceof CapReachedError) return 2;
+  if (error instanceof BlockedError || isRobotsFailure(error)) return distinctBlockExit ? 3 : 2;
+  return 1;
+}
+
 export function loadSlugIndex(indexFile) {
   const index = new Map();
   for (const e of readJsonlSync(indexFile)) index.set(e.norm, e.path);
@@ -73,7 +83,7 @@ export async function runTargeted({ pf, queue, outFile, discoveryFile, knownNorm
     try {
       html = await pf.get(entry.path);
     } catch (e) {
-      if (e instanceof BlockedError || e instanceof CapReachedError) throw e;
+      if (e instanceof BlockedError || e instanceof CapReachedError || isRobotsFailure(e)) throw e;
       failed++;
       log(`gapfill: ${entry.path} failed: ${e.message}`);
       continue;
@@ -135,7 +145,7 @@ export async function runAuditSample({ pf, rows, slugIndex, n, outFile, discover
     try {
       html = await pf.get(entry.path);
     } catch (e) {
-      if (e instanceof BlockedError || e instanceof CapReachedError) throw e;
+      if (e instanceof BlockedError || e instanceof CapReachedError || isRobotsFailure(e)) throw e;
       log(`audit: ${entry.path} failed: ${e.message}`);
       continue;
     }
@@ -196,10 +206,10 @@ async function main() {
   const onemgRoot = path.join(c.rawRoot, 'onemg');
   await fsp.mkdir(path.join(onemgRoot, c.date), { recursive: true });
   const pf = makeOnemgFetcher(c.rawRoot);
-  await pf.init();
 
   const indexFile = path.join(onemgRoot, 'slug-index.jsonl');
   try {
+    await pf.init();
     if (discover) {
       const maxPages = discover === true ? 50 : Number(discover);
       if (!Number.isFinite(maxPages) || maxPages <= 0) throw new Error(`invalid --discover page count: ${discover}`);
@@ -254,9 +264,10 @@ async function main() {
     });
     console.log(`gapfill done: ${r.ok} pages parsed, ${r.failed} failed`);
   } catch (e) {
-    if (e instanceof BlockedError || e instanceof CapReachedError) {
+    const code = crawlerExitCode(e);
+    if (code === 2 || code === 3) {
       console.error(`STOPPED: ${e.message} — state persisted, resume later`);
-      process.exit(2);
+      process.exit(code);
     }
     throw e;
   }
