@@ -16,7 +16,9 @@ set -uo pipefail
 SVC=aushadhi-crawl.service
 LOG=/root/aushadhi/logs/crawl.log
 STATE=/root/aushadhi/data/raw/onemg/state.json
-CAP="${AUSHADHI_DAILY_CAP:-12000}"
+# derive the real cap from the running unit so this never drifts from the service
+CAP="${AUSHADHI_DAILY_CAP:-$(systemctl show aushadhi-crawl -p Environment --value 2>/dev/null | tr ' ' '\n' | sed -n 's/^AUSHADHI_DAILY_CAP=//p')}"
+CAP="${CAP:-12000}"
 STALE_SECS="${AUSHADHI_STALE_SECS:-1800}"   # 30m of log silence BELOW cap = wedged
 now=$(date -u +%s)
 

@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/root/aushadhi
-Environment=AUSHADHI_DAILY_CAP=12000
+Environment=AUSHADHI_DAILY_CAP=20000
 ExecStart=/usr/bin/bash /root/aushadhi/scripts/crawl-loop.sh
 Restart=always
 RestartSec=30
