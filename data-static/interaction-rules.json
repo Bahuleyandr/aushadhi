@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "pack_id": "aushadhi-open-interactions",
+  "pack_version": "0.1.0",
+  "profile": "production-open",
+  "licence": "CC-BY-4.0",
+  "source_ids": [
+    "aushadhi-open-clinician-rules"
+  ],
+  "declared_coverage": "unknown",
+  "rules": []
+}
