@@ -65,6 +65,21 @@ test('PoliteFetcher: rate limits, caches, refuses disallowed', async () => {
   fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
 });
 
+test('PoliteFetcher: fresh get bypasses a cached page and refreshes it', async () => {
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
+  const { pf, calls } = makeFetcher([
+    { status: 200, body: ROBOTS },
+    { status: 200, body: 'stale-page' },
+    { status: 200, body: 'fresh-page' },
+  ]);
+  await pf.init();
+  assert.equal(await pf.get('/drugs/fresh-1'), 'stale-page');
+  assert.equal(await pf.get('/drugs/fresh-1', { fresh: true }), 'fresh-page');
+  assert.equal(await pf.get('/drugs/fresh-1'), 'fresh-page');
+  assert.equal(calls.length, 3); // robots + stale page + explicitly fresh page
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
+});
+
 test('PoliteFetcher: hard abort after 3 consecutive 403', async () => {
   fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
   const { pf } = makeFetcher([

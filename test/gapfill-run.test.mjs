@@ -8,7 +8,7 @@ const augmentinHtml = fs.readFileSync('test/fixtures/onemg/drug_page_tablet.html
 const browseHtml = fs.readFileSync('test/fixtures/onemg/browse_page.html', 'utf8');
 const TMP = 'test/.tmp-gapfill';
 
-function fakeFetcher(routes) {
+function fakeFetcher(routes, robots = 'User-agent: *\nDisallow: /nothing') {
   return new PoliteFetcher({
     baseUrl: 'https://fake.test',
     cacheDir: `${TMP}/pages`,
@@ -17,7 +17,7 @@ function fakeFetcher(routes) {
     userAgent: 'aushadhi-test',
     fetchImpl: async (url) => {
       const p = url.replace('https://fake.test', '');
-      const body = p === '/robots.txt' ? 'User-agent: *\nDisallow: /nothing' : routes(p);
+      const body = p === '/robots.txt' ? robots : routes(p);
       return { ok: body !== null, status: body !== null ? 200 : 404, text: async () => body ?? '' };
     },
     now: (() => { let t = 1_000_000; return () => (t += 5000); })(),
@@ -56,6 +56,27 @@ test('runTargeted: writes normalized row with target identity + harvests unknown
   fs.rmSync(TMP, { recursive: true, force: true });
 });
 
+test('runTargeted: robots refusal aborts the phase instead of being counted as a page failure', async () => {
+  fs.rmSync(TMP, { recursive: true, force: true });
+  fs.mkdirSync(TMP, { recursive: true });
+  const pf = fakeFetcher(() => augmentinHtml, 'User-agent: *\nDisallow: /drugs/');
+  await pf.init();
+  const queue = [{
+    identity_key: 'k', brand_name: 'Blocked Tablet', manufacturer: 'M Pharma',
+    pack_label: 'strip of 10', path: '/drugs/blocked-tablet-123',
+  }];
+  await assert.rejects(runTargeted({
+    pf, queue,
+    outFile: `${TMP}/normalized.jsonl`,
+    discoveryFile: `${TMP}/discovery-queue.jsonl`,
+    knownNorms: new Set(),
+    date: '2026-07-10',
+    log: () => {},
+  }), /robots/i);
+  assert.equal(fs.existsSync(`${TMP}/normalized.jsonl`), false);
+  fs.rmSync(TMP, { recursive: true, force: true });
+});
+
 test('runDiscover: builds slug index from browse pages, advances cursor', async () => {
   fs.rmSync(TMP, { recursive: true, force: true });
   fs.mkdirSync(TMP, { recursive: true });
@@ -72,4 +93,54 @@ test('runDiscover: builds slug index from browse pages, advances cursor', async 
   // second page had no links -> cursor moved to next label
   assert.equal(pf.state.discover.label, 1);
   fs.rmSync(TMP, { recursive: true, force: true });
+});
+
+test('runDiscover: requests browse pages fresh to avoid stale cached listings', async () => {
+  fs.rmSync(TMP, { recursive: true, force: true });
+  fs.mkdirSync(TMP, { recursive: true });
+  let request;
+  const pf = {
+    state: { discover: { label: 22, page: 1 } }, // w, first page
+    get: async (p, options) => {
+      request = { p, options };
+      return browseHtml;
+    },
+    persist: async () => {},
+  };
+
+  try {
+    const r = await runDiscover({ pf, maxPages: 1, indexFile: `${TMP}/slug-index.jsonl`, log: () => {} });
+    assert.ok(r.added >= 20, `added ${r.added}`);
+    assert.equal(request.p, '/drugs-all-medicines?label=w');
+    assert.deepEqual(request.options, { fresh: true });
+  } finally {
+    fs.rmSync(TMP, { recursive: true, force: true });
+  }
+});
+
+test('runDiscover: empty first browse page preserves cursor as a classified source anomaly', async () => {
+  fs.rmSync(TMP, { recursive: true, force: true });
+  fs.mkdirSync(TMP, { recursive: true });
+  const pf = fakeFetcher((p) => {
+    if (p === '/drugs-all-medicines?label=w') return '<html><body>temporary empty response</body></html>';
+    return null;
+  });
+  await pf.init();
+  pf.state.discover = { label: 22, page: 1 }; // w, first page
+
+  try {
+    await assert.rejects(
+      runDiscover({ pf, maxPages: 1, indexFile: `${TMP}/slug-index.jsonl`, log: () => {} }),
+      (error) => {
+        assert.equal(error.name, 'DiscoveryAnomalyError');
+        assert.equal(error.code, 'DISCOVERY_PAGE_EMPTY');
+        assert.match(error.message, /label=w page 1 yielded 0 entries/i);
+        return true;
+      },
+    );
+    assert.deepEqual(pf.state.discover, { label: 22, page: 1 });
+    assert.equal(fs.existsSync(`${TMP}/slug-index.jsonl`), false);
+  } finally {
+    fs.rmSync(TMP, { recursive: true, force: true });
+  }
 });
