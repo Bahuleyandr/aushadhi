@@ -77,10 +77,12 @@ export class PoliteFetcher {
     if (wait > 0) await this.sleep(wait);
   }
 
-  async get(p) {
+  async get(p, { fresh = false } = {}) {
     if (!isAllowed(this.disallow, p)) throw new Error(`robots.txt disallows ${p}`);
-    const hit = this.cached(p);
-    if (hit !== null) return hit;
+    if (!fresh) {
+      const hit = this.cached(p);
+      if (hit !== null) return hit;
+    }
     let attempt = 0;
     while (true) {
       // cap + min-delay are enforced per ATTEMPT — retries must not speed up or overshoot

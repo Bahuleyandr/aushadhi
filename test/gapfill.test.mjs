@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildQueue } from '../src/lib/gapfill-queue.mjs';
 import { buildKnownCombos } from '../src/lib/known-combos.mjs';
-import { crawlerExitCode } from '../src/cli/gapfill.mjs';
+import { crawlerExitCode, DiscoveryAnomalyError } from '../src/cli/gapfill.mjs';
 import { BlockedError, CapReachedError } from '../src/lib/politeness.mjs';
 
 const row = (brand, status, over = {}) => ({
@@ -113,6 +113,7 @@ test('crawler exit contract distinguishes cap, block/robots, and ordinary errors
   assert.equal(crawlerExitCode(new CapReachedError('daily cap reached')), 2);
   assert.equal(crawlerExitCode(new BlockedError('aborting after 3 consecutive 429 responses'), true), 3);
   assert.equal(crawlerExitCode(new Error('robots.txt fetch failed (403) — refusing to crawl'), true), 3);
+  assert.equal(crawlerExitCode(new DiscoveryAnomalyError('w', 1), true), 4);
   assert.equal(crawlerExitCode(new BlockedError('legacy wrapper compatibility'), false), 2);
   assert.equal(crawlerExitCode(new Error('parser drift')), 1);
 });

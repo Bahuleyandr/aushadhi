@@ -69,6 +69,11 @@ if [ "$outputage" -lt 0 ]; then outputage=0; fi
 # Read the newest relevant status event in file order. This lets a later HEALTHY
 # marker clear an earlier phase error or block without keeping local state.
 status_marker=$(grep -Ei "crawl-loop (ERROR|HEALTHY):|aborting after|consecutive (403|429)|refusing to crawl|blocked/robots refused" "$LOG" 2>/dev/null | tail -n1 || true)
+# A later successful discovery line proves a previous phase anomaly recovered in
+# the same service run. Do not keep alerting on a historical marker after that.
+if echo "$last" | grep -Eiq "^discover: label=.* links=[1-9][0-9]*|crawl-loop HEALTHY:"; then
+  status_marker=""
+fi
 if echo "$status_marker" | grep -Eiq "aborting after|consecutive (403|429)|refusing to crawl|blocked/robots refused"; then
   echo "ALERT: aushadhi-crawl hit a 1mg BLOCK / robots failure (count=${count}/${CAP}, nrestarts=$restarts). marker='$status_marker' last='$last'"
   exit 1

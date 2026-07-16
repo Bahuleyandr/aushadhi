@@ -90,7 +90,7 @@ export function readKaggleRows(dir, date) {
   const rows = [];
   for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.csv'))) {
     const records = parse(fs.readFileSync(path.join(dir, f)), { columns: true, bom: true, relax_column_count: true });
-    rows.push(...normalizeKaggleRows(records, date));
+    for (const row of normalizeKaggleRows(records, date)) rows.push(row); // loop, not spread (dataset-scale → arg limit)
   }
   return rows;
 }

@@ -18,8 +18,19 @@ export function isRobotsFailure(error) {
   return /robots/i.test(error?.message ?? '');
 }
 
+export class DiscoveryAnomalyError extends Error {
+  constructor(label, page) {
+    super(`discover: label=${label} page ${page} yielded 0 entries — parser/markup drift, refusing to advance cursor`);
+    this.name = 'DiscoveryAnomalyError';
+    this.code = 'DISCOVERY_PAGE_EMPTY';
+    this.label = label;
+    this.page = page;
+  }
+}
+
 export function crawlerExitCode(error, distinctBlockExit = process.env.AUSHADHI_DISTINCT_EXIT_CODES === '1') {
   if (error instanceof CapReachedError) return 2;
+  if (error instanceof DiscoveryAnomalyError) return 4;
   if (error instanceof BlockedError || isRobotsFailure(error)) return distinctBlockExit ? 3 : 2;
   return 1;
 }
@@ -44,7 +55,7 @@ export async function runDiscover({ pf, maxPages, indexFile, log = console.log }
     const p = `/drugs-all-medicines?label=${label}${pageNum > 1 ? `&page=${pageNum}` : ''}`;
     let html;
     try {
-      html = await pf.get(p);
+      html = await pf.get(p, { fresh: true });
     } catch (e) {
       // cap/block/robots problems are RUN problems, not label problems —
       // advancing the persisted cursor on them would permanently skip labels
@@ -57,7 +68,7 @@ export async function runDiscover({ pf, maxPages, indexFile, log = console.log }
     const entries = parseBrowsePage(html);
     if (entries.length === 0 && pageNum === 1) {
       // every label has drugs; an empty page 1 means the parser broke, not the catalog
-      throw new Error(`discover: label=${label} page 1 yielded 0 entries — parser/markup drift, refusing to advance cursor`);
+      throw new DiscoveryAnomalyError(label, pageNum);
     }
     const lines = [];
     for (const e of entries) {
@@ -265,7 +276,7 @@ async function main() {
     console.log(`gapfill done: ${r.ok} pages parsed, ${r.failed} failed`);
   } catch (e) {
     const code = crawlerExitCode(e);
-    if (code === 2 || code === 3) {
+    if (code === 2 || code === 3 || code === 4) {
       console.error(`STOPPED: ${e.message} — state persisted, resume later`);
       process.exit(code);
     }

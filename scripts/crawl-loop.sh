@@ -35,6 +35,12 @@ while true; do
     echo "$(date -u '+%FT%TZ') crawl-loop ERROR: discovery blocked/robots refused — holding indefinitely for human review"
     exec sleep infinity
   fi
+  if [ "$dc" -eq 4 ]; then
+    echo "$(date -u '+%FT%TZ') crawl-loop ERROR: discovery anomaly — cursor preserved; sleeping 1h before retry without gapfill"
+    sleep 3600
+    continue
+  fi
+
   if [ "$dc" -eq 2 ]; then
     echo "$(date -u '+%FT%TZ') discovery stopped at daily cap — sleeping 1h"
     sleep 3600

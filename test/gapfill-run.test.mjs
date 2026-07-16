@@ -94,3 +94,53 @@ test('runDiscover: builds slug index from browse pages, advances cursor', async 
   assert.equal(pf.state.discover.label, 1);
   fs.rmSync(TMP, { recursive: true, force: true });
 });
+
+test('runDiscover: requests browse pages fresh to avoid stale cached listings', async () => {
+  fs.rmSync(TMP, { recursive: true, force: true });
+  fs.mkdirSync(TMP, { recursive: true });
+  let request;
+  const pf = {
+    state: { discover: { label: 22, page: 1 } }, // w, first page
+    get: async (p, options) => {
+      request = { p, options };
+      return browseHtml;
+    },
+    persist: async () => {},
+  };
+
+  try {
+    const r = await runDiscover({ pf, maxPages: 1, indexFile: `${TMP}/slug-index.jsonl`, log: () => {} });
+    assert.ok(r.added >= 20, `added ${r.added}`);
+    assert.equal(request.p, '/drugs-all-medicines?label=w');
+    assert.deepEqual(request.options, { fresh: true });
+  } finally {
+    fs.rmSync(TMP, { recursive: true, force: true });
+  }
+});
+
+test('runDiscover: empty first browse page preserves cursor as a classified source anomaly', async () => {
+  fs.rmSync(TMP, { recursive: true, force: true });
+  fs.mkdirSync(TMP, { recursive: true });
+  const pf = fakeFetcher((p) => {
+    if (p === '/drugs-all-medicines?label=w') return '<html><body>temporary empty response</body></html>';
+    return null;
+  });
+  await pf.init();
+  pf.state.discover = { label: 22, page: 1 }; // w, first page
+
+  try {
+    await assert.rejects(
+      runDiscover({ pf, maxPages: 1, indexFile: `${TMP}/slug-index.jsonl`, log: () => {} }),
+      (error) => {
+        assert.equal(error.name, 'DiscoveryAnomalyError');
+        assert.equal(error.code, 'DISCOVERY_PAGE_EMPTY');
+        assert.match(error.message, /label=w page 1 yielded 0 entries/i);
+        return true;
+      },
+    );
+    assert.deepEqual(pf.state.discover, { label: 22, page: 1 });
+    assert.equal(fs.existsSync(`${TMP}/slug-index.jsonl`), false);
+  } finally {
+    fs.rmSync(TMP, { recursive: true, force: true });
+  }
+});
