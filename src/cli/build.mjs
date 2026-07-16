@@ -85,7 +85,9 @@ if (kgDir) {
 
 const onemgRows = readOnemgNormalized(c.rawRoot);
 if (onemgRows.length) {
-  all.push(...onemgRows);
+  // NOT all.push(...onemgRows): the spread passes every element as a function
+  // arg and blows the ~125k argument limit once the crawl grows large (RangeError).
+  for (const row of onemgRows) all.push(row);
   meta.sources['onemg-live'] = onemgRows.length;
 }
 
@@ -93,7 +95,7 @@ const fdc = await loadCdscoFdcCombos(c.rawRoot);
 if (fdc.files) meta.cdsco_fdc_files = fdc.files;
 
 const { rows, conflicts } = mergeRows(all);
-conflicts.push(...detectSubstituteMismatches(rows));
+for (const m of detectSubstituteMismatches(rows)) conflicts.push(m); // loop, not spread (dataset-scale)
 
 // visibility: how many 2-slot rows sit inside a KNOWN 3+ molecule combo
 const kb = buildKnownCombos(rows);
