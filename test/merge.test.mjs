@@ -100,6 +100,39 @@ test('detectSubstituteMismatches flags cross-group substitute pairs only', async
   assert.match(mismatches[0].b.brand, /Wrongsub/);
 });
 
+test('confidence tier: single source -> single_source', () => {
+  const { rows } = mergeRows([gj()]);
+  assert.equal(rows[0].confidence, 'single_source');
+  assert.equal(rows[0].source_count, 1);
+});
+
+test('confidence tier: two sources agreeing on molecules -> multi_source', () => {
+  const live = gj({ source: 'onemg-live', source_id: 'x' });
+  const { rows } = mergeRows([gj(), live]);
+  assert.equal(rows[0].confidence, 'multi_source');
+  assert.equal(rows[0].source_count, 2);
+});
+
+test('confidence tier: superset composition counts as agreement, not conflict', () => {
+  const threeMol = gj({
+    source: 'onemg-live',
+    ingredients: [...gj().ingredients,
+      { molecule: 'lactobacillus', strength_value: null, strength_unit: null, strength_raw: null }],
+  });
+  const { rows } = mergeRows([gj(), threeMol]);
+  assert.equal(rows[0].confidence, 'multi_source');
+});
+
+test('confidence tier: molecule-set disagreement -> conflict', () => {
+  const other = gj({
+    source: 'kaggle-2025',
+    ingredients: [{ molecule: 'azithromycin', strength_value: 500, strength_unit: 'mg', strength_raw: '500mg' }],
+  });
+  const { rows } = mergeRows([gj(), other]);
+  assert.equal(rows[0].confidence, 'conflict');
+  assert.equal(rows[0].source_count, 2);
+});
+
 test('first_seen/last_seen span sources', () => {
   const older = gj({ seen_at: '2026-01-01' });
   const newer = gj({ source: 'onemg-live', seen_at: '2026-07-07' });

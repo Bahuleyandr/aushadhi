@@ -24,6 +24,9 @@ export async function emitArtifact({ distRoot, date, rows, conflicts, errors, me
     ingredients_json: JSON.stringify(r.ingredients),
     n_substitutes: (r.substitutes_raw ?? []).length,
     sources: r.sources.map((s) => s.source).join(';'),
+    source_count: r.source_count ?? 1,
+    confidence: r.confidence ?? 'single_source',
+    atc_codes: (r.atc_codes ?? []).join(';'),
     first_seen: r.first_seen,
     last_seen: r.last_seen,
   }));
@@ -69,12 +72,17 @@ export async function emitArtifact({ distRoot, date, rows, conflicts, errors, me
   await fsp.writeFile(path.join(dir, 'errors.csv'), stringify(errors, { header: true, columns: ['source', 'reason', 'detail'] }));
 
   const statusCounts = {};
-  for (const r of rows) statusCounts[r.composition_status] = (statusCounts[r.composition_status] ?? 0) + 1;
+  const confidenceCounts = {};
+  for (const r of rows) {
+    statusCounts[r.composition_status] = (statusCounts[r.composition_status] ?? 0) + 1;
+    confidenceCounts[r.confidence ?? 'single_source'] = (confidenceCounts[r.confidence ?? 'single_source'] ?? 0) + 1;
+  }
   const summary = {
     date,
     total_rows: rows.length,
     unique_compositions: comps.size,
     composition_status: statusCounts,
+    confidence: confidenceCounts,
     conflicts: conflicts.length,
     errors: errors.length,
     cdsco_validated: cdscoValidated,

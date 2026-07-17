@@ -75,6 +75,7 @@ export function mergeRows(allRows) {
     }
     // composition: best-rank wins unless a lower rank is a strict molecule superset
     let chosen = best;
+    let compositionConflict = false;
     for (const r of group.slice(1)) {
       const a = molNames(chosen.ingredients);
       const b = molNames(r.ingredients);
@@ -88,6 +89,7 @@ export function mergeRows(allRows) {
             a: { source: chosen.source, key: moleculeSetKey(chosen.ingredients) },
             b: { source: r.source, key: moleculeSetKey(r.ingredients) },
           });
+          compositionConflict = true;
         } else if (moleculeNameKey(chosen.ingredients) === moleculeNameKey(r.ingredients)) {
           // same molecules, different strengths — never silently resolved (spec §7)
           conflicts.push({
@@ -108,6 +110,16 @@ export function mergeRows(allRows) {
       group.flatMap((r) => r.substitutes_raw ?? []).map((s) => [normBrandName(s.name), s]),
     ).values()];
     out.sources = group.map((r) => ({ source: r.source, source_id: r.source_id ?? null, seen_at: r.seen_at }));
+    // per-row trust signal from cross-source agreement on the molecule set:
+    // 'conflict' if sources named different molecules (composition_disagreement),
+    // 'multi_source' if >=2 distinct sources corroborate (superset counts as
+    // agreement), else 'single_source'. Consumers can treat conflict/single_source
+    // as review-worthy. Strength-only disagreements stay multi_source (molecules
+    // agree) and remain visible in conflicts.jsonl.
+    const distinctSources = new Set(group.map((r) => r.source)).size;
+    out.source_count = distinctSources;
+    out.confidence = compositionConflict ? 'conflict'
+      : distinctSources >= 2 ? 'multi_source' : 'single_source';
     const dates = group.map((r) => r.seen_at).sort();
     out.first_seen = dates[0];
     out.last_seen = dates.at(-1);
