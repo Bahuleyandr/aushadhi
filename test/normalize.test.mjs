@@ -41,3 +41,22 @@ test('normMolecule applies alias map', () => {
   assert.equal(normMolecule('Clavulanate Potassium'), 'clavulanic acid');
   assert.equal(normMolecule('Dolo-molecule-unknown'), 'dolo-molecule-unknown');
 });
+
+test('normMolecule strips leading/trailing punctuation artifacts, keeps internal', () => {
+  assert.equal(normMolecule('Menthol -'), 'menthol');
+  assert.equal(normMolecule('Niacinamide-'), 'niacinamide');
+  assert.equal(normMolecule('- Arteether'), 'arteether');
+  assert.equal(normMolecule('Co-Trimoxazole'), 'co-trimoxazole'); // internal hyphen preserved
+  assert.equal(normMolecule('Vitamin K2-7'), 'vitamin k2-7');     // internal digit-hyphen preserved
+});
+
+test('normMolecule canonicalizes spelling and format variants', () => {
+  assert.equal(normMolecule('Guaiphenesin'), 'guaifenesin');       // ph spelling
+  assert.equal(normMolecule('Tazobactum'), 'tazobactam');          // -um misspelling
+  assert.equal(normMolecule('Cephalexin'), 'cefalexin');           // ceph->cef
+  assert.equal(normMolecule('Sulphadoxine'), 'sulfadoxine');       // sulph->sulf
+  assert.equal(normMolecule('Methyl Prednisolone'), 'methylprednisolone'); // space split
+  assert.equal(normMolecule('Levo-Carnitine'), 'levocarnitine');   // hyphen split
+  assert.equal(normMolecule('Vitamin B6 Pyridoxine'), 'pyridoxine'); // vitamin-name compound
+  assert.equal(normMolecule('Sodium Picosulphate'), 'sodium picosulfate');
+});

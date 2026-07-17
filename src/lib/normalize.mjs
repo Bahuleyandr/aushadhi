@@ -23,6 +23,10 @@ export function normPack(s) {
 }
 
 // Spelling/salt-name variants ONLY (no therapeutic equivalence). Grows via reviewed additions.
+// The spelling/format group below was derived from a near-duplicate cluster scan
+// over the live ~2,800-molecule vocabulary (2026-07-17): British/American and
+// Indian-market spelling variants, space/hyphen splits, and vitamin-name compounds
+// that were fragmenting the same molecule across several identity strings.
 export const MOLECULE_ALIASES = new Map([
   ['amoxicillin', 'amoxycillin'],
   ['acetaminophen', 'paracetamol'],
@@ -32,6 +36,33 @@ export const MOLECULE_ALIASES = new Map([
   ['vitamin d3', 'cholecalciferol'],
   ['cetirizine hydrochloride', 'cetirizine'],
   ['metformin hydrochloride', 'metformin'],
+  // ph/f + ceph/cef + -um misspellings + oe/e
+  ['guaiphenesin', 'guaifenesin'],
+  ['tazobactum', 'tazobactam'],
+  ['sulbactum', 'sulbactam'],
+  ['cephalexin', 'cefalexin'],
+  ['cephadroxil', 'cefadroxil'],
+  ['sulphadoxine', 'sulfadoxine'],
+  ['sulphacetamide', 'sulfacetamide'],
+  ['etophylline', 'etofylline'],
+  ['frusemide', 'furosemide'],
+  ['beclomethasone', 'beclometasone'],
+  ['clomiphene', 'clomifene'],
+  // space / hyphen splits of a single molecule
+  ['methyl prednisolone', 'methylprednisolone'],
+  ['methyl ergometrine', 'methylergometrine'],
+  ['levo-carnitine', 'levocarnitine'],
+  ['ethinyl estradiol', 'ethinylestradiol'],
+  ['povidone-iodine', 'povidone iodine'],
+  ['sodium picosulphate', 'sodium picosulfate'],
+  ['silver sulphadiazine', 'silver sulfadiazine'],
+  // vitamin-number + chemical-name compounds -> the chemical name
+  ['vitamin b6 pyridoxine', 'pyridoxine'],
+  ['vitamin b1 thiamine', 'thiamine'],
+  ['thiamine vitamin b1', 'thiamine'],
+  ['thiaminevitamin b1', 'thiamine'],
+  ['vitamin b12 methylcobalamin', 'methylcobalamin'],
+  ['vitamin b3 niacinamide', 'niacinamide'],
 ]);
 
 // Trailing SALT suffixes only (therapeutically-equivalent forms) — never esters
@@ -46,7 +77,10 @@ const SALT_SUFFIXES = new Set([
 ]);
 
 export function normMolecule(s) {
-  const t = normText(s).replace(/[()]/g, '').trim();
+  // strip parens, then leading/trailing punctuation artifacts ("menthol -",
+  // "niacinamide-", "- arteether") while preserving internal hyphens/digits
+  // (co-trimoxazole, vitamin k2-7, s-amlodipine)
+  const t = normText(s).replace(/[()]/g, '').replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '').replace(WS, ' ').trim();
   const aliased = MOLECULE_ALIASES.get(t);
   if (aliased) return aliased;
   const words = t.split(' ');

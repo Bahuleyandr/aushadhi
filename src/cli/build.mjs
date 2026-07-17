@@ -13,6 +13,7 @@ import { mergeRows, detectSubstituteMismatches } from '../lib/merge.mjs';
 import { buildKnownCombos, likelyTruncated } from '../lib/known-combos.mjs';
 import { loadAtcMap, atcForMolecules } from '../adapters/atc.mjs';
 import { loadNppaRows } from '../adapters/nppa.mjs';
+import { normMolecule } from '../lib/normalize.mjs';
 import { emitArtifact } from '../lib/emit.mjs';
 
 export function latestSnapshot(rawRoot, source) {
@@ -122,6 +123,23 @@ if (nppaRows.length) {
 
 const fdc = await loadCdscoFdcCombos(c.rawRoot);
 if (fdc.files) meta.cdsco_fdc_files = fdc.files;
+
+// Re-run every molecule through the CURRENT normalizer before merge. Rows in the
+// per-source snapshots were normalized whenever they were crawled, so alias-map
+// and punctuation improvements would otherwise only reach freshly-fetched data.
+// normMolecule is idempotent, so this canonicalizes retroactively without a
+// re-crawl (fixes fragmented identities like guaiphenesin/guaifenesin and lifts
+// the ATC join), and drops molecules that normalize to empty ("-" artifacts).
+let renormalized = 0;
+for (const r of all) {
+  if (!r.ingredients?.length) continue;
+  const before = r.ingredients.map((i) => i.molecule).join('|');
+  r.ingredients = r.ingredients
+    .map((i) => ({ ...i, molecule: normMolecule(i.molecule) }))
+    .filter((i) => i.molecule);
+  if (r.ingredients.map((i) => i.molecule).join('|') !== before) renormalized++;
+}
+meta.renormalized_rows = renormalized;
 
 const { rows, conflicts } = mergeRows(all);
 for (const m of detectSubstituteMismatches(rows)) conflicts.push(m); // loop, not spread (dataset-scale)
