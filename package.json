@@ -15,6 +15,7 @@
     "gapfill": "node src/cli/gapfill.mjs",
     "apollo": "node src/cli/apollo.mjs",
     "pharmeasy": "node src/cli/pharmeasy.mjs",
+    "netmeds": "node src/cli/netmeds.mjs",
     "stats": "node src/cli/stats.mjs"
   },
   "dependencies": {

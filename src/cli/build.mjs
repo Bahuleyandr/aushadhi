@@ -7,6 +7,7 @@ import { loadCdscoFdcCombos } from '../adapters/cdsco-fdc.mjs';
 import { readOnemgNormalized } from '../adapters/onemg.mjs';
 import { readApolloNormalized } from '../adapters/apollo.mjs';
 import { readPharmeasyNormalized } from '../adapters/pharmeasy.mjs';
+import { readNetmedsNormalized } from '../adapters/netmeds.mjs';
 import { readKaggleRows } from '../adapters/kaggle-2025.mjs';
 import { mergeRows, detectSubstituteMismatches } from '../lib/merge.mjs';
 import { buildKnownCombos, likelyTruncated } from '../lib/known-combos.mjs';
@@ -103,6 +104,12 @@ const pharmeasyRows = readPharmeasyNormalized(c.rawRoot);
 if (pharmeasyRows.length) {
   for (const row of pharmeasyRows) all.push(row);
   meta.sources.pharmeasy = pharmeasyRows.length;
+}
+
+const netmedsRows = readNetmedsNormalized(c.rawRoot);
+if (netmedsRows.length) {
+  for (const row of netmedsRows) all.push(row);
+  meta.sources.netmeds = netmedsRows.length;
 }
 
 const fdc = await loadCdscoFdcCombos(c.rawRoot);
