@@ -23,6 +23,18 @@ test('loadAtcMap: operator-dropped reference merges (csv + tsv, aliased columns)
   fs.rmSync(root, { recursive: true, force: true });
 });
 
+test('loadAtcMap: WHO ATC CSV (atc_code,atc_name) drops in — name maps to code', () => {
+  const root = 'test/.tmp-atc-who';
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.mkdirSync(`${root}/atc`, { recursive: true });
+  // fabkury/atcd and similar WHO scrapes use atc_code,atc_name column order.
+  // Use a molecule absent from the bundled seed so this tests the CSV, not the seed.
+  fs.writeFileSync(`${root}/atc/who.csv`, 'atc_code,atc_name,ddd,uom,adm_r,note\nZ99ZZ99,madeupzumab,2,g,O,\n');
+  const m = loadAtcMap(root);
+  assert.ok((m.get('madeupzumab') ?? new Set()).has('Z99ZZ99'), 'atc_name column should map to atc_code');
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
 test('atcForMolecules: union across a composition, sorted; unknowns absent', () => {
   const m = loadAtcMap('data/raw');
   assert.deepEqual(atcForMolecules(['paracetamol', 'metformin'], m), ['A10BA02', 'N02BE01']);

@@ -19,7 +19,10 @@ export function loadAtcMap(rawRoot = 'data/raw', staticDir = 'data-static') {
     } catch { return; }
     for (const r of records) {
       const vals = Object.values(r);
-      const mol = normMolecule(r.molecule ?? r.name ?? r.molecule_name ?? r.drug ?? vals[0] ?? '');
+      // `atc_name`/`substance` cover the common WHO-scrape CSVs (fabkury/atcd,
+      // WHOCC exports) where the substance name sits in a column literally called
+      // atc_name — without these it would fall through to vals[0] (the code).
+      const mol = normMolecule(r.molecule ?? r.name ?? r.molecule_name ?? r.drug ?? r.atc_name ?? r.substance ?? vals[0] ?? '');
       const code = (r.atc_code ?? r.atc ?? r.code ?? vals[1] ?? '').toString().trim().toUpperCase();
       if (mol && /^[A-Z]\d[A-Z0-9]*$/.test(code)) {
         if (!map.has(mol)) map.set(mol, new Set());
