@@ -1,7 +1,18 @@
-Annexure — Ceiling Prices of Scheduled Formulations under DPCO
+                                                 All Drugs Ceiling Prices
+SL No   NLEM Version          Formulation              Dosage & Strength      SO Number    SO Date      Ceiling Price (
+                                                                                                          Excluding
+                                                                                                            Taxes)
 
-Sl. No.   Name of the Formulation                     Strength        Unit    Ceiling Price (Rs.)
-1         Aceclofenac Tablets IP                       100 mg          10's    9.29
-2         Amoxycillin + Clavulanic Acid Tablets        500mg+125mg     6's     78.45
-3         Metformin Tablets IP                         500 mg          10's    3.12
-This is a prose footnote line and should be ignored.
+1       2011           Acetylsalicylic acid           Tablet 300 mg           1582(E)     25-Mar-2026   ¹ 0.28(1 Tablet)
+
+3       2011           Condom                         CONDOM                  1582(E)     25-Mar-2026   ¹ 11.65(1 Condom)
+
+14      2015           Anti-D Immunoglobulin          Injection 300 mcg       1581(E)     25-Mar-2026   ¹ 2721.28(Each Pack)
+
+20      2015           Bare Metal Stents              DEVICE --               1587(E)     25-Mar-2026   ¹ 10762.15(1 Unit)
+
+21      2015           Benzoyl Peroxide               Cream 2.50%             1581(E)     25-Mar-2026   ¹ 2.97(1 GM)
+
+26      2015           Calcium Carbonate              Tablet 500 mg           1581(E)     25-Mar-2026   ¹ 2.20(1 Tablet)
+
+31      2015           Cefixime                       Capsule 400 mg          1581(E)     25-Mar-2026   ¹ 37.28(1 Capsule)
