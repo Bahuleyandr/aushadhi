@@ -6,7 +6,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-export AUSHADHI_NETMEDS_CAP="${AUSHADHI_NETMEDS_CAP:-10000}"
+export AUSHADHI_NETMEDS_CAP="${AUSHADHI_NETMEDS_CAP:-20000}"
 echo "$(date -u '+%FT%TZ') netmeds-loop start (cap=${AUSHADHI_NETMEDS_CAP}/day, spacing=2.5s)"
 
 while true; do

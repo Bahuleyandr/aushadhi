@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/root/aushadhi
-Environment=AUSHADHI_NETMEDS_CAP=10000
+Environment=AUSHADHI_NETMEDS_CAP=20000
 ExecStart=/usr/bin/bash /root/aushadhi/scripts/netmeds-loop.sh
 Restart=always
 RestartSec=30
