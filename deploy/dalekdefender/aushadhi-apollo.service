@@ -1,0 +1,17 @@
+[Unit]
+Description=aushadhi Apollo Pharmacy crawler (polite, single-instance)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/aushadhi
+Environment=AUSHADHI_APOLLO_CAP=10000
+ExecStart=/usr/bin/bash /root/aushadhi/scripts/apollo-loop.sh
+Restart=always
+RestartSec=30
+StandardOutput=append:/root/aushadhi/logs/apollo.log
+StandardError=append:/root/aushadhi/logs/apollo.log
+
+[Install]
+WantedBy=multi-user.target
