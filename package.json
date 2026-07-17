@@ -11,7 +11,7 @@
   "scripts": {
     "test": "node --test",
     "fetch": "node src/cli/fetch.mjs",
-    "build": "node src/cli/build.mjs",
+    "build": "node --max-old-space-size=4096 src/cli/build.mjs",
     "gapfill": "node src/cli/gapfill.mjs",
     "apollo": "node src/cli/apollo.mjs",
     "pharmeasy": "node src/cli/pharmeasy.mjs",

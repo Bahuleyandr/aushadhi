@@ -5,6 +5,6 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 echo "$(date -u '+%FT%TZ') nightly-build start"
-node src/cli/build.mjs
-node src/cli/report.mjs
+npm run build   # heap ceiling (--max-old-space-size) lives in the package.json script
+npm run report
 echo "$(date -u '+%FT%TZ') nightly-build done"
