@@ -1,0 +1,10 @@
+[Unit]
+Description=aushadhi nightly build timer (rebuild dist + REPORT.md)
+
+[Timer]
+# 03:30 daily (system TZ = IST on DD) — quiet hours; Persistent catches missed runs
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

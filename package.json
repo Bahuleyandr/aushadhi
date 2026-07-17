@@ -16,7 +16,9 @@
     "apollo": "node src/cli/apollo.mjs",
     "pharmeasy": "node src/cli/pharmeasy.mjs",
     "netmeds": "node src/cli/netmeds.mjs",
-    "stats": "node src/cli/stats.mjs"
+    "stats": "node src/cli/stats.mjs",
+    "report": "node src/cli/report.mjs",
+    "fleet": "node src/cli/fleet-status.mjs"
   },
   "dependencies": {
     "cheerio": "^1.2.0",

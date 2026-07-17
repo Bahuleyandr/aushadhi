@@ -1,0 +1,10 @@
+[Unit]
+Description=aushadhi nightly rebuild + quality report
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/aushadhi
+ExecStart=/usr/bin/bash /root/aushadhi/scripts/nightly-build.sh
+StandardOutput=append:/root/aushadhi/logs/build.log
+StandardError=append:/root/aushadhi/logs/build.log
