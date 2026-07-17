@@ -4,7 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { BlockedError, CapReachedError } from '../lib/politeness.mjs';
 import { makeEcomFetcher } from '../lib/ecom-fetcher.mjs';
-import { parseNetmedsProduct, parseSitemapLocs } from '../adapters/netmeds.mjs';
+import { parseNetmedsProduct, parseSitemapLocs, isLikelyDrugSlug } from '../adapters/netmeds.mjs';
 import { readJsonlSync } from '../lib/jsonl.mjs';
 import { ctx } from '../lib/context.mjs';
 
@@ -28,6 +28,7 @@ export async function main(log = console.log) {
   try {
     if (!fs.existsSync(indexFile)) {
       const products = new Set();
+      let prefiltered = 0;
       const queue = ['/sitemap.xml'];
       const seen = new Set(queue);
       while (queue.length) {
@@ -37,14 +38,27 @@ export async function main(log = console.log) {
         for (const u of parseSitemapLocs(xml)) {
           const p = toPath(u);
           if (!p) continue;
-          if (isProduct(p)) products.add(p);
+          if (isProduct(p)) { if (isLikelyDrugSlug(p)) products.add(p); else prefiltered++; } // skip cosmetics/devices up front
           else if (isProductSitemap(p) && !seen.has(p)) { seen.add(p); queue.push(p); }
         }
       }
       await fsp.writeFile(indexFile, [...products].map((p) => JSON.stringify({ path: p })).join('\n') + '\n');
-      log(`netmeds: discovered ${products.size} products`);
+      log(`netmeds: discovered ${products.size} drug-like products (${prefiltered} non-drug SKUs pre-filtered)`);
     }
-    const products = readJsonlSync(indexFile).map((e) => e.path);
+    let products = readJsonlSync(indexFile).map((e) => e.path);
+    // migrate an index built before the pre-filter existed: drop the non-drug SKUs
+    // in place and restart the cursor (positions shift). `done` (built next from
+    // normalized.jsonl) guarantees no already-fetched drug is re-fetched — the
+    // re-scan only skips known ids in memory and fetches genuinely new drug pages.
+    const drugLike = products.filter(isLikelyDrugSlug);
+    if (drugLike.length < products.length) {
+      await fsp.writeFile(indexFile, drugLike.map((p) => JSON.stringify({ path: p })).join('\n') + '\n');
+      pf.state.netmeds ??= { cursor: 0 };
+      pf.state.netmeds.cursor = 0;
+      await pf.persist();
+      log(`netmeds: pre-filtered index ${products.length} -> ${drugLike.length} (dropped ${products.length - drugLike.length} non-drug SKUs); cursor reset`);
+      products = drugLike;
+    }
 
     const done = new Set();
     for (const d of fs.readdirSync(root)) {

@@ -65,6 +65,26 @@ export function parseSitemapLocs(xml) {
   return [...String(xml ?? '').matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)].map((m) => m[1]);
 }
 
+// Discovery-time pre-filter. Netmeds lists masses of cosmetics/devices that each
+// cost a wasted fetch before parseNetmedsProduct returns null. A drug slug almost
+// always names a dosage form or an mg/mcg/iu strength; failing that we keep
+// anything that is NOT a recognized cosmetic/device — so medicated creams, gels
+// and lotions (which share words with cosmetics) are never pre-dropped. A short
+// Rx-dermatology active list rescues medicated shampoos/soaps a cosmetic word
+// would otherwise drop. The bias is deliberately toward KEEPING: a false keep
+// costs one fetch (the composition check then skips it), a false drop silently
+// loses a real drug — fatal for a completeness dataset. `ml` is intentionally NOT
+// a strength signal here (cosmetics are dosed in ml too); `kit`/`trio` are NOT
+// non-drug markers (drug combi-packs are named "…-kit").
+const DRUG_FORM = /(tablets?|caplets?|capsules?|\bcaps?\b|respicaps?|rotacaps?|redicaps?|aerocaps?|rotahaler|revolizer|multihaler|inhalers?|injections?|\binj\b|\bpfs\b|prefilled|syrups?|suspensions?|\bsusp\b|\bdrops?\b|eye-?drops?|ear-?drops?|nasal|respules?|\bspray\b|sachets?|granules?|\bpowder\b|suppositor(?:y|ies)|pessar(?:y|ies)|\benema\b|mouthwash|gargle|lozenges?|\bvials?\b|ampoules?|\bpatch(?:es)?\b|elixir|linctus|ointments?|\d+\s?mg\b|\d+\s?mcg\b|\d+\s?iu\b|\bmg\b|\bmcg\b|\biu\b)/i;
+const RX_ACTIVE = /(ketoconazole|ciclopirox|selenium-sulfide|zinc-pyrithione|coal-tar|salicylic|mupirocin|clobetasol|mometasone|betamethasone|permethrin|benzoyl-peroxide|clotrimazole|luliconazole|terbinafine|povidone-iodine|chlorhexidine)/i;
+const NON_DRUG = /(\bmask\b|thermometer|glucomet|glucose-monitor|bp-monitor|nebuli[sz]er|oximeter|weighing|test-strips?|\blancets?\b|diapers?|sanitary|\bcondoms?\b|pregnancy-test|ovulation|wheelchair|walker|\bcrutch|gloves?|\bcotton\b|bandage|gauze|wipes?|sanitizer|hand-?wash|shampoo|conditioner|face-?wash|body-?wash|body-?lotion|body-?butter|shower-?gel|\bsoap\b|toothbrush|toothpaste|perfume|parfum|\beau-?de\b|cologne|deodorant|\broll-?on\b|sunscreen|moisturi[sz]er|lipstick|lip-?balm|lip-?gloss|lip-?liner|lip-?tint|\bblush\b|mascara|eye-?liner|eye-?shadow|\bkajal\b|foundation|concealer|\bcompact\b|highlighter|bronzer|\bprimer\b|\bcontour\b|make-?up|\btoner\b|micellar|\bcleanser\b|nail-?polish|nail-?paint|nail-?enamel|hair-?colou?r|hair-?fiber|hair-?serum|hair-?mask|\bmousse\b|face-?serum|face-?mask|sheet-?mask|shaving|\brazor\b|\btrimmer\b|epilator|\bbrace\b|tester|\bgift-?set\b|\bscrub\b|body-?mist|\bpalette\b|talcum|\bwax\b)/i;
+
+export function isLikelyDrugSlug(pathOrSlug) {
+  const s = String(pathOrSlug ?? '').toLowerCase().replace(/^\/product\//, '');
+  return DRUG_FORM.test(s) || RX_ACTIVE.test(s) || !NON_DRUG.test(s);
+}
+
 export function readNetmedsNormalized(rawRoot) {
   const root = path.join(rawRoot, 'netmeds');
   if (!fs.existsSync(root)) return [];
