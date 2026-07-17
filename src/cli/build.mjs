@@ -6,6 +6,7 @@ import { parseJanAushadhiText } from '../adapters/janaushadhi.mjs';
 import { loadCdscoFdcCombos } from '../adapters/cdsco-fdc.mjs';
 import { readOnemgNormalized } from '../adapters/onemg.mjs';
 import { readApolloNormalized } from '../adapters/apollo.mjs';
+import { readPharmeasyNormalized } from '../adapters/pharmeasy.mjs';
 import { readKaggleRows } from '../adapters/kaggle-2025.mjs';
 import { mergeRows, detectSubstituteMismatches } from '../lib/merge.mjs';
 import { buildKnownCombos, likelyTruncated } from '../lib/known-combos.mjs';
@@ -96,6 +97,12 @@ const apolloRows = readApolloNormalized(c.rawRoot);
 if (apolloRows.length) {
   for (const row of apolloRows) all.push(row);
   meta.sources.apollo = apolloRows.length;
+}
+
+const pharmeasyRows = readPharmeasyNormalized(c.rawRoot);
+if (pharmeasyRows.length) {
+  for (const row of pharmeasyRows) all.push(row);
+  meta.sources.pharmeasy = pharmeasyRows.length;
 }
 
 const fdc = await loadCdscoFdcCombos(c.rawRoot);
