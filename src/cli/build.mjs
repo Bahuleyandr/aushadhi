@@ -11,6 +11,7 @@ import { readNetmedsNormalized } from '../adapters/netmeds.mjs';
 import { readKaggleRows } from '../adapters/kaggle-2025.mjs';
 import { mergeRows, detectSubstituteMismatches } from '../lib/merge.mjs';
 import { buildKnownCombos, likelyTruncated } from '../lib/known-combos.mjs';
+import { loadAtcMap, atcForMolecules } from '../adapters/atc.mjs';
 import { emitArtifact } from '../lib/emit.mjs';
 
 export function latestSnapshot(rawRoot, source) {
@@ -122,5 +123,16 @@ for (const m of detectSubstituteMismatches(rows)) conflicts.push(m); // loop, no
 const kb = buildKnownCombos(rows);
 meta.known_combos = kb.combos;
 meta.likely_truncated = rows.filter((r) => likelyTruncated(r, kb)).length;
+
+// ATC enrichment: attach classification codes to every row (molecule-level join)
+const atcMap = loadAtcMap(c.rawRoot);
+let atcCovered = 0;
+for (const r of rows) {
+  r.atc_codes = atcForMolecules(r.ingredients.map((i) => i.molecule), atcMap);
+  if (r.atc_codes.length) atcCovered++;
+}
+meta.atc_molecules = atcMap.size;
+meta.atc_coverage_rows = atcCovered;
+
 const { dir } = await emitArtifact({ distRoot: c.distRoot, date: c.date, rows, conflicts, errors, meta, fdcKeys: fdc.keys });
 console.log(`emitted ${rows.length} rows (${all.length} source rows, ${conflicts.length} conflicts, ${errors.length} errors) -> ${dir}`);
