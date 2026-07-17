@@ -1,5 +1,9 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import * as cheerio from 'cheerio';
 import { normMolecule } from '../lib/normalize.mjs';
+import { readJsonlSync } from '../lib/jsonl.mjs';
+import { identityKey } from '../lib/merge.mjs';
 
 // Apollo product Drug ld+json states composition as
 //   "AMOXICILLIN-500MG+CLAVULANIC ACID-125MG"
@@ -75,4 +79,28 @@ export function parseApolloSaltPage(html) {
     if (/^\/medicine\/[a-z0-9-]+$/.test(p)) paths.add(p);
   });
   return [...paths];
+}
+
+// Parse the /salts directory page -> every /salt/<slug> path (crawl seed).
+export function parseApolloSaltDirectory(html) {
+  const $ = cheerio.load(html);
+  const paths = new Set();
+  $('a[href^="/salt/"]').each((_, el) => {
+    const p = ($(el).attr('href') ?? '').split('?')[0];
+    if (/^\/salt\/[a-z0-9-]+$/.test(p)) paths.add(p);
+  });
+  return [...paths];
+}
+
+// Read all apollo crawl outputs (data/raw/apollo/<date>/normalized.jsonl) for
+// the build merge — last write per identity wins (mirrors readOnemgNormalized).
+export function readApolloNormalized(rawRoot) {
+  const root = path.join(rawRoot, 'apollo');
+  if (!fs.existsSync(root)) return [];
+  const byIdentity = new Map();
+  for (const d of fs.readdirSync(root).sort()) {
+    const f = path.join(root, d, 'normalized.jsonl');
+    if (fs.existsSync(f)) for (const row of readJsonlSync(f)) byIdentity.set(identityKey(row), row);
+  }
+  return [...byIdentity.values()];
 }

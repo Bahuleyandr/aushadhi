@@ -5,6 +5,7 @@ import { normalizeGithubJr } from '../adapters/github-jr.mjs';
 import { parseJanAushadhiText } from '../adapters/janaushadhi.mjs';
 import { loadCdscoFdcCombos } from '../adapters/cdsco-fdc.mjs';
 import { readOnemgNormalized } from '../adapters/onemg.mjs';
+import { readApolloNormalized } from '../adapters/apollo.mjs';
 import { readKaggleRows } from '../adapters/kaggle-2025.mjs';
 import { mergeRows, detectSubstituteMismatches } from '../lib/merge.mjs';
 import { buildKnownCombos, likelyTruncated } from '../lib/known-combos.mjs';
@@ -89,6 +90,12 @@ if (onemgRows.length) {
   // arg and blows the ~125k argument limit once the crawl grows large (RangeError).
   for (const row of onemgRows) all.push(row);
   meta.sources['onemg-live'] = onemgRows.length;
+}
+
+const apolloRows = readApolloNormalized(c.rawRoot);
+if (apolloRows.length) {
+  for (const row of apolloRows) all.push(row);
+  meta.sources.apollo = apolloRows.length;
 }
 
 const fdc = await loadCdscoFdcCombos(c.rawRoot);

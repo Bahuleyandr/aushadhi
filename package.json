@@ -13,6 +13,7 @@
     "fetch": "node src/cli/fetch.mjs",
     "build": "node src/cli/build.mjs",
     "gapfill": "node src/cli/gapfill.mjs",
+    "apollo": "node src/cli/apollo.mjs",
     "stats": "node src/cli/stats.mjs"
   },
   "dependencies": {
