@@ -1,0 +1,7 @@
+Annexure — Ceiling Prices of Scheduled Formulations under DPCO
+
+Sl. No.   Name of the Formulation                     Strength        Unit    Ceiling Price (Rs.)
+1         Aceclofenac Tablets IP                       100 mg          10's    9.29
+2         Amoxycillin + Clavulanic Acid Tablets        500mg+125mg     6's     78.45
+3         Metformin Tablets IP                         500 mg          10's    3.12
+This is a prose footnote line and should be ignored.

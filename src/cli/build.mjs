@@ -12,6 +12,7 @@ import { readKaggleRows } from '../adapters/kaggle-2025.mjs';
 import { mergeRows, detectSubstituteMismatches } from '../lib/merge.mjs';
 import { buildKnownCombos, likelyTruncated } from '../lib/known-combos.mjs';
 import { loadAtcMap, atcForMolecules } from '../adapters/atc.mjs';
+import { loadNppaRows } from '../adapters/nppa.mjs';
 import { emitArtifact } from '../lib/emit.mjs';
 
 export function latestSnapshot(rawRoot, source) {
@@ -111,6 +112,12 @@ const netmedsRows = readNetmedsNormalized(c.rawRoot);
 if (netmedsRows.length) {
   for (const row of netmedsRows) all.push(row);
   meta.sources.netmeds = netmedsRows.length;
+}
+
+const nppaRows = await loadNppaRows(c.rawRoot);
+if (nppaRows.length) {
+  for (const row of nppaRows) all.push(row);
+  meta.sources.nppa = nppaRows.length;
 }
 
 const fdc = await loadCdscoFdcCombos(c.rawRoot);

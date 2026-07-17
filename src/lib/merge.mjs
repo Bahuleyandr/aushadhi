@@ -1,6 +1,6 @@
 import { normBrandName, normManufacturer, normPack } from './normalize.mjs';
 
-export const SOURCE_PRECEDENCE = ['onemg-live', 'apollo', 'pharmeasy', 'netmeds', 'kaggle-2025', 'janaushadhi', 'github-jr', 'cdsco-fdc'];
+export const SOURCE_PRECEDENCE = ['onemg-live', 'apollo', 'pharmeasy', 'netmeds', 'nppa', 'kaggle-2025', 'janaushadhi', 'github-jr', 'cdsco-fdc'];
 const rank = (s) => {
   const i = SOURCE_PRECEDENCE.indexOf(s);
   return i === -1 ? SOURCE_PRECEDENCE.length : i;
