@@ -107,3 +107,18 @@ The checker gains an **optional** patient context; rules evaluate against it whe
 - `colchicine__strong_cyp3a4_pgp_inhibitor`: base `major`; modifier {renal `egfr_lt_30` or hepatic impaired → `contraindicated`, `on_unknown:escalate`}. Renal unknown → shows *contraindicated*, no caveat text. eGFR 80 supplied → *major* + "interrupt/dose-reduce per inhibitor label."
 - `nsaid__acei_arb` (+diuretic = triple whammy): base `moderate`; modifier {renal impaired → `major`, `on_unknown:base` (escalate only if impairment reported)}. Renal unknown → *moderate*, clean. eGFR 35 supplied → *major* + AKI monitoring.
 - Predicates use a fixed vocabulary: `egfr_lt_15|lt_30|lt_60|ge_60`, `crcl_lt_30|...`, `hepatic_impaired|child_pugh_b|child_pugh_c`.
+
+---
+
+## v2 structural fix — `on_unknown: escalate` semantics (engine contract)
+
+Applied to batch-01-v2 after the verifier pass exposed unsafe encodings:
+
+- **Escalate lifts BOTH severity and action.** Each `context_modifier` with `on_unknown: escalate` carries a **top-level `severity` AND `dispense_action`** (not buried in `management_override`). When the factor is **absent**, the engine applies the **worst** escalate modifier's `severity` + `dispense_action`.
+- **No caveat-text leakage.** On the escalate-on-absence path the engine shows the rule's **base `management`** (which is kept neutral — no "in renal/hepatic impairment", no eGFR/CrCl/Child-Pugh). The impairment-specific prose lives in `management_override`, shown **only** when the factor is confirmed present and the `when` predicate matches.
+- **Inert modifiers removed.** A modifier that changed neither severity nor action nor text (28 of them, mostly no-op hepatic branches) was dropped.
+- Result on batch-01-v2: 20 escalate modifiers normalized, 28 inert dropped, 3 base-management leaks neutralized (colchicine, rivaroxaban-moderate, methotrexate+NSAID), 0 residual.
+
+**One clinician policy flag:** `metformin__iodinated_contrast_media` was changed from `on_unknown: escalate` to `base` — unknown renal now yields base `major` ("hold peri-procedure") rather than `contraindicated` (which only applies at eGFR<30, uncommon and would over-alert). Confirm.
+
+**Known engine-phase limitations (not this fix):** context vocabulary is renal/hepatic only — age-dependent risks (e.g. spironolactone+trimethoprim sudden-death in the elderly) can't be machine-enforced yet and live in `high_risk_members`/prose; evidence anchors are US-only while `jurisdiction` asserts US/UK/IN (UK/IN anchors added at promotion); all citations remain `<verify>`.
