@@ -1,3 +1,5 @@
+> ⚠ **SUPERSEDED (2026-07-22).** This doc was generated from the workflow agents' pre-reconciliation narration and does NOT match the committed JSONL or the current engine (the clinician review caught the drift). Use the authoritative, JSONL-derived packet instead: **[2026-07-22-section-A-reconciled.md](2026-07-22-section-A-reconciled.md)**. Kept only for history.
+
 # Batch 1 v2 — Section A applied (12 warfarin/DOAC edits)
 
 Generated 2026-07-22 from an adversarially-verified workflow (Edit -> Clinical-verify -> Schema-verify -> Reconcile, 48 agents). **Draft proposals for clinician sign-off — NOT promoted.** All citations remain `<verify>`. Author + independent approver still required (Task 7).
