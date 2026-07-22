@@ -21,8 +21,8 @@ const ACT_RANK = {
 };
 // Narrower predicate = more specific (wins within a factor).
 const SPECIFICITY = {
-  egfr_lt_15: 4, crcl_lt_15: 4, egfr_lt_30: 3, crcl_lt_30: 3, egfr_lt_60: 2, crcl_lt_60: 2,
-  egfr_ge_60: 2, child_pugh_c: 3, child_pugh_b: 2, hepatic_impaired: 1,
+  egfr_lt_15: 4, crcl_lt_15: 4, egfr_lt_30: 3, crcl_lt_30: 3, crcl_30_to_50: 3, egfr_lt_60: 2,
+  crcl_lt_50: 2, crcl_lt_60: 2, egfr_ge_60: 2, child_pugh_c: 3, child_pugh_b: 2, hepatic_impaired: 1,
 };
 
 function factorPresent(factor, ctx) {
@@ -41,7 +41,9 @@ function predicateMatches(when, ctx) {
     case 'egfr_ge_60': return egfr != null && egfr >= 60;
     case 'crcl_lt_15': return crcl != null && crcl < 15;
     case 'crcl_lt_30': return crcl != null && crcl < 30;
+    case 'crcl_lt_50': return crcl != null && crcl < 50;
     case 'crcl_lt_60': return crcl != null && crcl < 60;
+    case 'crcl_30_to_50': return crcl != null && crcl >= 30 && crcl < 50;
     case 'hepatic_impaired': return h.flag === 'impaired' || h.child_pugh === 'B' || h.child_pugh === 'C';
     case 'child_pugh_b': return h.child_pugh === 'B';
     case 'child_pugh_c': return h.child_pugh === 'C';
@@ -133,10 +135,17 @@ export function resolveRule(rule, patientContext = {}) {
 // ── Matching + collision suppression (#4, #6) ──────────────────────────────
 
 function classMembers(ref, memberSets) {
-  const set = memberSets[ref.class] || {};
-  const strengths = ref.strength && ref.strength.length ? ref.strength : Object.keys(set);
-  const names = strengths.flatMap((s) => set[s] || []);
   const excluded = new Set(ref.member_exceptions || []);
+  // An inline members[] allowlist pins matching to exactly those drugs (still minus
+  // member_exceptions), letting a rule scope a class without editing the global set.
+  let names;
+  if (Array.isArray(ref.members) && ref.members.length) {
+    names = ref.members;
+  } else {
+    const set = memberSets[ref.class] || {};
+    const strengths = ref.strength && ref.strength.length ? ref.strength : Object.keys(set);
+    names = strengths.flatMap((s) => set[s] || []);
+  }
   return new Set(names.filter((n) => !excluded.has(n)));
 }
 
@@ -164,6 +173,21 @@ function ruleSpecificity(rule) {
   return ruleSides(rule).reduce((n, ref) => n + (ref && (ref.drug || ref.substance) ? 1 : 0), 0);
 }
 
+// An indication-constrained rule matches only when the patient indication is one of the
+// listed indications. An UNKNOWN patient indication does not exclude it (the finding then
+// carries indication_scope so the pharmacist can see which indication it applies to).
+function indicationMatches(rule, patientContext) {
+  const ind = rule.applicability?.indication;
+  if (!Array.isArray(ind) || ind.length === 0) return true;
+  if (patientContext?.indication == null) return true;
+  return ind.includes(patientContext.indication);
+}
+
+function indicationScope(rule) {
+  const ind = rule.applicability?.indication;
+  return Array.isArray(ind) && ind.length ? { indication_scope: ind } : {};
+}
+
 /**
  * Check one drug pair against a rule pack. Applies generic-vs-specific collision
  * suppression (most-specific matching rule wins) and resolves each survivor's
@@ -171,12 +195,14 @@ function ruleSpecificity(rule) {
  */
 export function checkPair({ subjects, rules, memberSets = {}, patientContext = {} }) {
   const [a, b] = subjects;
-  const matched = rules.filter((r) => ruleMatchesPair(r, a, b, memberSets));
+  const matched = rules
+    .filter((r) => ruleMatchesPair(r, a, b, memberSets))
+    .filter((r) => indicationMatches(r, patientContext));
   if (!matched.length) return [];
   const maxSpec = Math.max(...matched.map(ruleSpecificity));
   return matched
     .filter((r) => ruleSpecificity(r) === maxSpec)
-    .map((r) => ({ rule_id: r.rule_id, ...resolveRule(r, patientContext) }));
+    .map((r) => ({ rule_id: r.rule_id, ...indicationScope(r), ...resolveRule(r, patientContext) }));
 }
 
 // ── n-ary (all_of_present combination) matching ────────────────────────────
@@ -250,8 +276,9 @@ export function checkInteractions({ subjects, rules, memberSets = {}, patientCon
     }
   }
   for (const rule of naryRules) {
+    if (!indicationMatches(rule, patientContext)) continue;
     const matched = matchNaryRule(rule, subjects, memberSets);
-    if (matched) findings.push({ subjects: matched, rule_id: rule.rule_id, ...resolveRule(rule, patientContext) });
+    if (matched) findings.push({ subjects: matched, rule_id: rule.rule_id, ...indicationScope(rule), ...resolveRule(rule, patientContext) });
   }
   const referenced = new Set();
   for (const r of rules) for (const ref of ruleSides(r)) refClasses(ref, referenced);

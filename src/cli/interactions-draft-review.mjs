@@ -63,6 +63,8 @@ export function parseArgs(argv) {
         if (v === 'b' || v === 'c') (patientContext.hepatic ||= {}).child_pugh = v.toUpperCase();
         else if (v === 'impaired') (patientContext.hepatic ||= {}).flag = 'impaired';
         else throw new Error(`--hepatic must be B, C, or impaired, got "${value}"`);
+      } else if (flag === 'indication') {
+        patientContext.indication = value.trim();
       } else {
         throw new Error(`unknown argument --${flag}`);
       }
@@ -84,7 +86,8 @@ function describeContext(patientContext) {
   let hepStr = 'not provided';
   if (hep.child_pugh) hepStr = `Child-Pugh ${hep.child_pugh}`;
   else if (hep.flag === 'impaired') hepStr = 'impaired (grade unspecified)';
-  return [`  renal:   ${renalStr}`, `  hepatic: ${hepStr}`];
+  const indStr = patientContext.indication || 'not provided';
+  return [`  renal:      ${renalStr}`, `  hepatic:    ${hepStr}`, `  indication: ${indStr}`];
 }
 
 export function formatReport({ subjects, patientContext = {}, result }) {
@@ -109,6 +112,9 @@ export function formatReport({ subjects, patientContext = {}, result }) {
     lines.push('');
     findings.forEach((f, i) => {
       lines.push(`${i + 1}. [${f.severity.toUpperCase()}] ${f.subjects.join(' + ')}`);
+      if (Array.isArray(f.indication_scope)) {
+        lines.push(`      indication scope: ${f.indication_scope.join(', ')}`);
+      }
       const targetSuffix = f.action_target ? `  (withhold/clarify the: ${f.action_target})` : '';
       lines.push(`      dispense action : ${f.dispense_action ?? '(none)'}${targetSuffix}`);
       if (Array.isArray(f.do_not_interrupt) && f.do_not_interrupt.length) {

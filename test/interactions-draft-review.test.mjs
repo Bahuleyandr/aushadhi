@@ -37,6 +37,24 @@ test('parseArgs collects drug names and renal/hepatic flags', () => {
   assert.equal(a.patientContext.hepatic.child_pugh, 'B');
 });
 
+test('parseArgs captures --indication into patientContext', () => {
+  const a = parseArgs(['dabigatran', 'ketoconazole', '--indication=non_valvular_atrial_fibrillation']);
+  assert.equal(a.patientContext.indication, 'non_valvular_atrial_fibrillation');
+});
+
+test('report shows the indication scope of an indication-constrained finding', () => {
+  const res = {
+    findings: [{
+      subjects: ['dabigatran', 'ketoconazole'], rule_id: 'r', severity: 'major', dispense_action: 'confirm_and_monitor',
+      indication_scope: ['non_valvular_atrial_fibrillation'], management: {}, basis: 'base',
+    }],
+    pairs_checked: 1,
+    coverage: { rules_total: 158, classes_referenced: 92, classes_missing_members: [] },
+  };
+  const out = formatReport({ subjects: ['dabigatran', 'ketoconazole'], patientContext: {}, result: res });
+  assert.match(out, /non_valvular_atrial_fibrillation/);
+});
+
 test('parseArgs accepts CrCl and a free-text hepatic "impaired" flag', () => {
   const a = parseArgs(['a', 'b', '--renal-crcl=40', '--hepatic=impaired']);
   assert.equal(a.patientContext.renal.crcl, 40);

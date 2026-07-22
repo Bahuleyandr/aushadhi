@@ -36,6 +36,29 @@ test('absent factor with an escalate modifier drives a restrictive OPERATIONAL a
   assert.equal(r.management.prescriber_action, 'Withhold and clarify (neutral base).'); // neutral base still shown
 });
 
+test('CrCl band predicates crcl_30_to_50 and crcl_lt_50 gate the exact dabigatran renal bands', () => {
+  const rule = {
+    rule_id: 'd', severity: 'moderate', management: { dispense_action: 'confirm_and_monitor' },
+    context_modifiers: [
+      { factor: 'renal', when: 'crcl_lt_30', severity: 'contraindicated', dispense_action: 'withhold_and_clarify', on_unknown: 'escalate', management_override: { prescriber_action: 'avoid' } },
+      { factor: 'renal', when: 'crcl_30_to_50', severity: 'major', dispense_action: 'confirm_and_monitor', on_unknown: 'base', management_override: { prescriber_action: 'reduce to 75 mg BID' } },
+    ],
+  };
+  assert.equal(resolveRule(rule, { renal: { crcl: 40 } }).severity, 'major');
+  assert.equal(resolveRule(rule, { renal: { crcl: 40 } }).management.prescriber_action, 'reduce to 75 mg BID');
+  assert.equal(resolveRule(rule, { renal: { crcl: 20 } }).severity, 'contraindicated');
+  assert.equal(resolveRule(rule, { renal: { crcl: 70 } }).severity, 'moderate'); // base, no band matches
+});
+
+test('crcl_lt_50 gates a VTE/prophylaxis-style avoid threshold', () => {
+  const rule = {
+    rule_id: 'v', severity: 'moderate', management: { dispense_action: 'confirm_and_monitor' },
+    context_modifiers: [{ factor: 'renal', when: 'crcl_lt_50', severity: 'contraindicated', dispense_action: 'withhold_and_clarify', on_unknown: 'escalate' }],
+  };
+  assert.equal(resolveRule(rule, { renal: { crcl: 40 } }).severity, 'contraindicated');
+  assert.equal(resolveRule(rule, { renal: { crcl: 60 } }).severity, 'moderate');
+});
+
 test('action_target and do_not_interrupt are surfaced from the winning management', () => {
   const rule = {
     rule_id: 'x', severity: 'major',
@@ -106,6 +129,17 @@ test('a class-ref rule matches a member of the class (#4)', () => {
   const f = checkPair({ subjects: ['colchicine', 'clarithromycin'], rules: [generic], memberSets: MEMBERS });
   assert.equal(f.length, 1);
   assert.equal(f[0].rule_id, 'colchicine__strong');
+});
+
+test('an inline members[] allowlist on a class ref pins matching to exactly those members', () => {
+  const rule = {
+    rule_id: 'r', object: { drug: 'dabigatran' },
+    perpetrator: { class: 'pgp_inhibitor', members: ['dronedarone', 'ketoconazole'], strength: [] },
+    severity: 'major', management: { dispense_action: 'confirm_and_monitor' }, context_modifiers: [],
+  };
+  const ms = { pgp_inhibitor: { strong: ['dronedarone', 'ketoconazole', 'verapamil', 'amiodarone'] } };
+  assert.equal(checkInteractions({ subjects: ['dabigatran', 'ketoconazole'], rules: [rule], memberSets: ms }).findings.length, 1);
+  assert.equal(checkInteractions({ subjects: ['dabigatran', 'verapamil'], rules: [rule], memberSets: ms }).findings.length, 0);
 });
 
 test('a named member exception is NOT matched (#4)', () => {
@@ -195,6 +229,21 @@ test('all_of_present combination members and perpetrator can be class refs resol
   // one drug cannot satisfy two distinct required roles: aspirin alone can't stand in for the P2Y12
   const short = checkInteractions({ subjects: ['aspirin', 'apixaban'], rules: [rule], memberSets: ms });
   assert.equal(short.findings.length, 0);
+});
+
+test('a rule constrained to an indication matches only when the patient indication matches (unknown does not exclude)', () => {
+  const nvaf = {
+    rule_id: 'nvaf', object: { drug: 'dabigatran' }, perpetrator: { drug: 'ketoconazole' },
+    applicability: { indication: ['non_valvular_atrial_fibrillation'] },
+    severity: 'major', management: { dispense_action: 'confirm_and_monitor' }, context_modifiers: [],
+  };
+  const hit = checkInteractions({ subjects: ['dabigatran', 'ketoconazole'], rules: [nvaf], patientContext: { indication: 'non_valvular_atrial_fibrillation' } });
+  assert.equal(hit.findings.length, 1);
+  assert.deepEqual(hit.findings[0].indication_scope, ['non_valvular_atrial_fibrillation']);
+  const miss = checkInteractions({ subjects: ['dabigatran', 'ketoconazole'], rules: [nvaf], patientContext: { indication: 'venous_thromboembolism' } });
+  assert.equal(miss.findings.length, 0);
+  const unknown = checkInteractions({ subjects: ['dabigatran', 'ketoconazole'], rules: [nvaf], patientContext: {} });
+  assert.equal(unknown.findings.length, 1); // unknown indication does not exclude — fires with its scope shown
 });
 
 test('coverage scan sees classes nested inside a combination object', () => {
