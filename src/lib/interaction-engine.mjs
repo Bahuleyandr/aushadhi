@@ -2,13 +2,18 @@
 //
 // Evaluates a rich interaction rule (optional renal/hepatic context modifiers) and
 // enforces the clinician-mandated safety invariants. Resolution order:
-//   1. per factor: if the factor's value is present, take the MOST-SPECIFIC matching
-//      predicate (its severity + impairment-specific management_override); if the
-//      factor is absent, an `on_unknown: escalate` modifier contributes its severity +
-//      action but with the NEUTRAL base management (never a "go find a lab" caveat).
-//   2. across factors + base: HIGHEST severity wins, then MOST-RESTRICTIVE action.
-//   3. invariant: a resolved `contraindicated` severity ALWAYS yields
+//   1. per factor PRESENT: take the MOST-SPECIFIC matching predicate (its severity +
+//      impairment-specific management_override). This is the ONLY thing that raises
+//      clinical severity — a contraindication is a property of a CONFIRMED state.
+//   2. per factor ABSENT with `on_unknown: escalate`: does NOT change clinical severity;
+//      instead it makes the OPERATIONAL dispense_action more restrictive and records a
+//      `data_required` entry (what to obtain, and what the severity WOULD be if confirmed).
+//   3. clinical severity = highest among base + present-matched (spec breaks ties);
+//      operational dispense_action = most restrictive of the winner + any absent-data action.
+//   4. invariant: a CONFIRMED `contraindicated` severity ALWAYS yields
 //      `withhold_and_clarify`, computed here — never inherited from the row.
+//   Output also carries `action_target` + `do_not_interrupt` (which medicine to withhold /
+//   never interrupt) and `data_required` (missing renal/hepatic data to obtain).
 
 const SEV_RANK = { minor: 1, moderate: 2, major: 3, contraindicated: 4 };
 const ACT_RANK = {
@@ -52,12 +57,17 @@ function predicateMatches(when, ctx) {
  */
 export function resolveRule(rule, patientContext = {}) {
   const base = rule.management || {};
-  // spec ranks candidate relevance for tie-breaking: a present+matched factor (2) is
-  // strictly more specific than an escalate-on-absence contribution (1), which outranks
-  // the neutral base (0). Only used when severity AND action are otherwise tied.
-  const candidates = [{
+  // CLINICAL candidates only (base + present-matched). A confirmed present factor is the
+  // only thing that can raise clinical severity. spec breaks severity+action ties: a
+  // present+matched factor (2) is strictly more specific than base (0).
+  const clinical = [{
     severity: rule.severity, action: base.dispense_action ?? null, management: base, source: 'base', spec: 0,
   }];
+  // Missing data does NOT change clinical severity — it drives a restrictive OPERATIONAL
+  // action and records what to obtain. (A contraindication is a property of a confirmed
+  // state, never of absent information.)
+  const dataRequired = [];
+  const absentActions = [];
 
   const byFactor = {};
   for (const mod of rule.context_modifiers || []) (byFactor[mod.factor] ||= []).push(mod);
@@ -69,7 +79,7 @@ export function resolveRule(rule, patientContext = {}) {
         .sort((a, b) => (SPECIFICITY[b.when] || 0) - (SPECIFICITY[a.when] || 0));
       if (matching.length) {
         const m = matching[0];
-        candidates.push({
+        clinical.push({
           severity: m.severity ?? rule.severity,
           action: m.management_override?.dispense_action ?? m.dispense_action ?? base.dispense_action ?? null,
           management: { ...base, ...(m.management_override || {}) },
@@ -79,33 +89,45 @@ export function resolveRule(rule, patientContext = {}) {
       }
       // present but no predicate matches => reassuring => no candidate; base stands.
     } else {
-      // factor absent: worst escalate modifier contributes severity+action with NEUTRAL base management.
+      // factor absent: an escalate modifier makes the operational action more restrictive and
+      // records data_required, but never raises the clinical severity.
       const esc = mods
         .filter((m) => m.on_unknown === 'escalate')
         .sort((a, b) => (SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0));
       if (esc.length) {
         const m = esc[0];
-        candidates.push({
-          severity: m.severity ?? rule.severity,
-          action: m.dispense_action ?? base.dispense_action ?? null,
-          management: base, // neutral — no impairment/lab caveat when escalating on absence
-          source: `escalate-absent:${factor}`,
-          spec: 1,
+        const escAction = m.dispense_action
+          ?? (m.severity === 'contraindicated' ? 'withhold_and_clarify' : (base.dispense_action ?? null));
+        absentActions.push(escAction);
+        const metric = factor === 'renal' ? (String(m.when).startsWith('crcl') ? 'CrCl' : 'eGFR') : 'Child-Pugh';
+        dataRequired.push({
+          factor, metric, would_be_severity: m.severity ?? rule.severity, when: m.when,
         });
       }
     }
   }
 
-  candidates.sort((a, b) =>
+  clinical.sort((a, b) =>
     ((SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0)) ||
     ((ACT_RANK[b.action] || 0) - (ACT_RANK[a.action] || 0)) ||
     ((b.spec || 0) - (a.spec || 0)));
 
-  const win = candidates[0];
+  const win = clinical[0];
+  // operational action = most restrictive of the clinical winner and any missing-data escalation.
   let dispense_action = win.action;
-  if (win.severity === 'contraindicated') dispense_action = 'withhold_and_clarify'; // invariant
+  for (const a of absentActions) if ((ACT_RANK[a] || 0) > (ACT_RANK[dispense_action] || 0)) dispense_action = a;
+  if (win.severity === 'contraindicated') dispense_action = 'withhold_and_clarify'; // confirmed-state invariant
 
-  return { severity: win.severity, dispense_action, management: win.management, basis: win.source };
+  const mgmt = win.management;
+  return {
+    severity: win.severity,
+    dispense_action,
+    management: mgmt,
+    basis: win.source,
+    action_target: mgmt.action_target ?? base.action_target ?? null,
+    do_not_interrupt: mgmt.do_not_interrupt ?? base.do_not_interrupt ?? [],
+    data_required: dataRequired,
+  };
 }
 
 // ── Matching + collision suppression (#4, #6) ──────────────────────────────

@@ -80,6 +80,24 @@ test('report renders ALL agents of an n-ary (3-drug) finding, not just the first
   assert.match(out, /aspirin \+ clopidogrel \+ warfarin/);
 });
 
+test('report surfaces action_target, do_not_interrupt, and data_required when present', () => {
+  const res = {
+    findings: [{
+      subjects: ['warfarin', 'ibuprofen'], rule_id: 'r', severity: 'major', dispense_action: 'withhold_and_clarify',
+      action_target: 'newly_added_perpetrator', do_not_interrupt: ['warfarin'],
+      data_required: [{ factor: 'renal', metric: 'CrCl', would_be_severity: 'contraindicated' }],
+      management: {}, basis: 'base',
+    }],
+    pairs_checked: 1,
+    coverage: { rules_total: 158, classes_referenced: 92, classes_missing_members: [] },
+  };
+  const out = formatReport({ subjects: ['warfarin', 'ibuprofen'], patientContext: {}, result: res });
+  assert.match(out, /newly_added_perpetrator/);
+  assert.match(out, /do NOT interrupt.*warfarin/i);
+  assert.match(out, /CrCl/);
+  assert.match(out, /would be contraindicated/i);
+});
+
 test('report ALWAYS carries the blank-is-not-safe disclaimer, even with findings', () => {
   const out = formatReport({ subjects: ['warfarin', 'ibuprofen'], patientContext: {}, result: RESULT_ONE });
   assert.match(out, /does not establish that a combination is safe/);

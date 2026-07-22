@@ -26,11 +26,44 @@ const COLCHICINE = {
   ],
 };
 
-test('escalate modifier on ABSENT factor lifts severity+action but shows NEUTRAL base management', () => {
+test('absent factor with an escalate modifier drives a restrictive OPERATIONAL action + data_required WITHOUT falsifying clinical severity', () => {
   const r = resolveRule(COLCHICINE, {}); // no renal value
-  assert.equal(r.severity, 'contraindicated');
-  assert.equal(r.dispense_action, 'withhold_and_clarify');
-  assert.equal(r.management.prescriber_action, 'Withhold and clarify (neutral base).');
+  assert.equal(r.severity, 'major'); // clinical severity stays at the confirmed-state (base) tier
+  assert.equal(r.dispense_action, 'withhold_and_clarify'); // operational: restrictive because data is missing
+  const renal = r.data_required.find((d) => d.factor === 'renal');
+  assert.ok(renal, 'data_required must name the missing factor');
+  assert.equal(renal.would_be_severity, 'contraindicated'); // "would be contraindicated if confirmed"
+  assert.equal(r.management.prescriber_action, 'Withhold and clarify (neutral base).'); // neutral base still shown
+});
+
+test('action_target and do_not_interrupt are surfaced from the winning management', () => {
+  const rule = {
+    rule_id: 'x', severity: 'major',
+    management: { dispense_action: 'withhold_and_clarify', action_target: 'newly_added_perpetrator', do_not_interrupt: ['object_drug'] },
+    context_modifiers: [],
+  };
+  const r = resolveRule(rule, {});
+  assert.equal(r.action_target, 'newly_added_perpetrator');
+  assert.deepEqual(r.do_not_interrupt, ['object_drug']);
+});
+
+test('missing data never yields a contraindicated CLINICAL severity — only a restrictive operational action', () => {
+  const rule = {
+    rule_id: 'x', severity: 'moderate',
+    management: { dispense_action: 'confirm_and_monitor' },
+    context_modifiers: [
+      { factor: 'renal', when: 'crcl_lt_30', severity: 'contraindicated', dispense_action: 'withhold_and_clarify', on_unknown: 'escalate' },
+    ],
+  };
+  const unknown = resolveRule(rule, {});
+  assert.equal(unknown.severity, 'moderate'); // NOT contraindicated
+  assert.equal(unknown.dispense_action, 'withhold_and_clarify'); // restrictive because CrCl unknown
+  assert.equal(unknown.data_required[0].factor, 'renal');
+  assert.equal(unknown.data_required[0].metric, 'CrCl');
+  const confirmed = resolveRule(rule, { renal: { crcl: 20 } });
+  assert.equal(confirmed.severity, 'contraindicated'); // confirmed state => real contraindication
+  assert.equal(confirmed.dispense_action, 'withhold_and_clarify');
+  assert.equal(confirmed.data_required.length, 0);
 });
 
 test('factor PRESENT and predicate matches applies the impairment-specific override', () => {

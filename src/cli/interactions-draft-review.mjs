@@ -109,7 +109,16 @@ export function formatReport({ subjects, patientContext = {}, result }) {
     lines.push('');
     findings.forEach((f, i) => {
       lines.push(`${i + 1}. [${f.severity.toUpperCase()}] ${f.subjects.join(' + ')}`);
-      lines.push(`      dispense action : ${f.dispense_action ?? '(none)'}`);
+      const targetSuffix = f.action_target ? `  (withhold/clarify the: ${f.action_target})` : '';
+      lines.push(`      dispense action : ${f.dispense_action ?? '(none)'}${targetSuffix}`);
+      if (Array.isArray(f.do_not_interrupt) && f.do_not_interrupt.length) {
+        lines.push(`      do NOT interrupt: ${f.do_not_interrupt.join(', ')}`);
+      }
+      if (Array.isArray(f.data_required) && f.data_required.length) {
+        for (const d of f.data_required) {
+          lines.push(`      data needed     : ${d.metric || d.factor} (would be ${d.would_be_severity} if confirmed impaired)`);
+        }
+      }
       const m = f.management || {};
       if (m.prescriber_action) lines.push(`      prescriber      : ${m.prescriber_action}`);
       if (m.monitoring) lines.push(`      monitoring      : ${m.monitoring}`);
