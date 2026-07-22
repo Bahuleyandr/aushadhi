@@ -67,6 +67,19 @@ test('report renders each finding with severity, both drugs, and the dispense ac
   assert.match(out, /Prefer paracetamol\./);
 });
 
+test('report renders ALL agents of an n-ary (3-drug) finding, not just the first two', () => {
+  const res = {
+    findings: [{
+      subjects: ['aspirin', 'clopidogrel', 'warfarin'], rule_id: 'triple', severity: 'major',
+      dispense_action: 'confirm_and_monitor', management: {}, basis: 'base',
+    }],
+    pairs_checked: 3,
+    coverage: { rules_total: 158, classes_referenced: 92, classes_missing_members: [] },
+  };
+  const out = formatReport({ subjects: ['aspirin', 'clopidogrel', 'warfarin'], patientContext: {}, result: res });
+  assert.match(out, /aspirin \+ clopidogrel \+ warfarin/);
+});
+
 test('report ALWAYS carries the blank-is-not-safe disclaimer, even with findings', () => {
   const out = formatReport({ subjects: ['warfarin', 'ibuprofen'], patientContext: {}, result: RESULT_ONE });
   assert.match(out, /does not establish that a combination is safe/);

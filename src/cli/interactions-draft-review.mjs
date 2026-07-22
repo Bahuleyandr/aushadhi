@@ -108,8 +108,7 @@ export function formatReport({ subjects, patientContext = {}, result }) {
     lines.push(`${findings.length} draft rule(s) flagged:`);
     lines.push('');
     findings.forEach((f, i) => {
-      const [a, b] = f.subjects;
-      lines.push(`${i + 1}. [${f.severity.toUpperCase()}] ${a} + ${b}`);
+      lines.push(`${i + 1}. [${f.severity.toUpperCase()}] ${f.subjects.join(' + ')}`);
       lines.push(`      dispense action : ${f.dispense_action ?? '(none)'}`);
       const m = f.management || {};
       if (m.prescriber_action) lines.push(`      prescriber      : ${m.prescriber_action}`);

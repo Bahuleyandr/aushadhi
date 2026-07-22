@@ -52,8 +52,11 @@ function predicateMatches(when, ctx) {
  */
 export function resolveRule(rule, patientContext = {}) {
   const base = rule.management || {};
+  // spec ranks candidate relevance for tie-breaking: a present+matched factor (2) is
+  // strictly more specific than an escalate-on-absence contribution (1), which outranks
+  // the neutral base (0). Only used when severity AND action are otherwise tied.
   const candidates = [{
-    severity: rule.severity, action: base.dispense_action ?? null, management: base, source: 'base',
+    severity: rule.severity, action: base.dispense_action ?? null, management: base, source: 'base', spec: 0,
   }];
 
   const byFactor = {};
@@ -71,6 +74,7 @@ export function resolveRule(rule, patientContext = {}) {
           action: m.management_override?.dispense_action ?? m.dispense_action ?? base.dispense_action ?? null,
           management: { ...base, ...(m.management_override || {}) },
           source: `present:${m.when}`,
+          spec: 2,
         });
       }
       // present but no predicate matches => reassuring => no candidate; base stands.
@@ -86,6 +90,7 @@ export function resolveRule(rule, patientContext = {}) {
           action: m.dispense_action ?? base.dispense_action ?? null,
           management: base, // neutral — no impairment/lab caveat when escalating on absence
           source: `escalate-absent:${factor}`,
+          spec: 1,
         });
       }
     }
@@ -93,7 +98,8 @@ export function resolveRule(rule, patientContext = {}) {
 
   candidates.sort((a, b) =>
     ((SEV_RANK[b.severity] || 0) - (SEV_RANK[a.severity] || 0)) ||
-    ((ACT_RANK[b.action] || 0) - (ACT_RANK[a.action] || 0)));
+    ((ACT_RANK[b.action] || 0) - (ACT_RANK[a.action] || 0)) ||
+    ((b.spec || 0) - (a.spec || 0)));
 
   const win = candidates[0];
   let dispense_action = win.action;
@@ -151,25 +157,82 @@ export function checkPair({ subjects, rules, memberSets = {}, patientContext = {
     .map((r) => ({ rule_id: r.rule_id, ...resolveRule(r, patientContext) }));
 }
 
+// ── n-ary (all_of_present combination) matching ────────────────────────────
+// Some rules require N>2 agents present at once (e.g. triple antithrombotic therapy:
+// aspirin AND a P2Y12 inhibitor AND an oral anticoagulant). These cannot be expressed
+// as unordered pairs; they are matched against the whole subject set, requiring a
+// DISTINCT subject for each combination member and for the other side.
+
+function isNaryRule(rule) {
+  return [rule.object, rule.perpetrator].some(
+    (s) => s && Array.isArray(s.combination) && s.combination.length > 1,
+  );
+}
+
+function refClasses(ref, out) {
+  if (!ref) return;
+  if (ref.class) out.add(ref.class);
+  if (Array.isArray(ref.combination)) for (const m of ref.combination) refClasses(m, out);
+}
+
+// Assign a distinct subject to each ref (backtracking); returns the assignment or null.
+function assignDistinct(refs, subjects, memberSets) {
+  const chosen = new Array(refs.length).fill(null);
+  const used = new Set();
+  const backtrack = (i) => {
+    if (i === refs.length) return true;
+    for (let s = 0; s < subjects.length; s += 1) {
+      if (used.has(s)) continue;
+      if (satisfies(subjects[s], refs[i], memberSets)) {
+        used.add(s);
+        chosen[i] = subjects[s];
+        if (backtrack(i + 1)) return true;
+        used.delete(s);
+        chosen[i] = null;
+      }
+    }
+    return false;
+  };
+  return backtrack(0) ? chosen : null;
+}
+
+function matchNaryRule(rule, subjects, memberSets) {
+  const comboSide = [rule.object, rule.perpetrator].find(
+    (s) => s && Array.isArray(s.combination) && s.combination.length > 1,
+  );
+  const otherSide = comboSide === rule.object ? rule.perpetrator : rule.object;
+  const refs = [...comboSide.combination];
+  if (otherSide) refs.push(otherSide);
+  return assignDistinct(refs, subjects, memberSets);
+}
+
 /**
- * Evaluate every unordered pair among the entered drugs against the rule pack.
- * Reports honest coverage — including rule classes with no member data (which can
- * therefore never match) so callers never present a gap as "no interaction".
+ * Evaluate the entered drugs against the rule pack: every unordered pair against the
+ * pairwise rules, plus each n-ary (all_of_present combination) rule against the whole
+ * set. Reports honest coverage — including rule classes with no member data (which can
+ * therefore never match), recursing into combination members, so callers never present
+ * a gap as "no interaction".
  */
 export function checkInteractions({ subjects, rules, memberSets = {}, patientContext = {} }) {
+  const naryRules = rules.filter(isNaryRule);
+  const pairwiseRules = rules.filter((r) => !isNaryRule(r));
   const findings = [];
   let pairs_checked = 0;
   for (let i = 0; i < subjects.length; i += 1) {
     for (let j = i + 1; j < subjects.length; j += 1) {
       pairs_checked += 1;
       const pair = [subjects[i], subjects[j]];
-      for (const f of checkPair({ subjects: pair, rules, memberSets, patientContext })) {
+      for (const f of checkPair({ subjects: pair, rules: pairwiseRules, memberSets, patientContext })) {
         findings.push({ subjects: pair, ...f });
       }
     }
   }
+  for (const rule of naryRules) {
+    const matched = matchNaryRule(rule, subjects, memberSets);
+    if (matched) findings.push({ subjects: matched, rule_id: rule.rule_id, ...resolveRule(rule, patientContext) });
+  }
   const referenced = new Set();
-  for (const r of rules) for (const ref of ruleSides(r)) if (ref?.class) referenced.add(ref.class);
+  for (const r of rules) for (const ref of ruleSides(r)) refClasses(ref, referenced);
   const classes_missing_members = [...referenced].filter((c) => !memberSets[c]).sort();
   return {
     findings,

@@ -25,6 +25,8 @@
     "herbal_enzyme_inducer": { "inducer_variable_hyperforin": ["st john's wort"] },
     "nsaid": { "any": ["ibuprofen", "diclofenac", "naproxen", "ketorolac", "indomethacin", "piroxicam", "meloxicam", "aceclofenac", "mefenamic acid", "etoricoxib", "celecoxib", "ketoprofen", "nimesulide", "flurbiprofen"] },
     "nsaid_or_antiplatelet": { "any": ["ibuprofen", "diclofenac", "naproxen", "aspirin", "clopidogrel", "ticagrelor", "prasugrel", "ketorolac"] },
+    "p2y12_inhibitor": { "any": ["clopidogrel", "ticagrelor", "prasugrel", "ticlopidine"] },
+    "oral_anticoagulant": { "any": ["warfarin", "acenocoumarol", "phenindione", "dabigatran", "rivaroxaban", "apixaban", "edoxaban"] },
     "macrolide_cyp3a_inhibitor": { "moderate/strong": ["clarithromycin", "erythromycin"] },
     "macrolide_qt": { "any": ["clarithromycin", "erythromycin", "azithromycin"] },
     "azole_antifungal_systemic": { "moderate": ["fluconazole"], "strong": ["ketoconazole", "itraconazole", "voriconazole", "posaconazole"] },

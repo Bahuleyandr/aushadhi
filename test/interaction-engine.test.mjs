@@ -117,3 +117,59 @@ test('each finding is tagged with the actual drug pair that matched it', () => {
   assert.equal(res.findings.length, 1);
   assert.deepEqual(res.findings[0].subjects, ['a', 'b']);
 });
+
+test('a present, matched modifier surfaces its override text even when severity+action tie the base', () => {
+  // engine fix: a present, matched context factor is strictly more specific than base,
+  // so on a severity+action tie it must win and show its impairment-specific management.
+  const rule = {
+    rule_id: 'r', severity: 'major',
+    management: { dispense_action: 'confirm_and_monitor', prescriber_action: 'base text' },
+    context_modifiers: [
+      { factor: 'renal', when: 'crcl_lt_60', severity: 'major', dispense_action: 'confirm_and_monitor',
+        management_override: { prescriber_action: 'renal-band text' }, on_unknown: 'base' },
+    ],
+  };
+  const r = resolveRule(rule, { renal: { crcl: 40 } });
+  assert.equal(r.severity, 'major');
+  assert.equal(r.dispense_action, 'confirm_and_monitor');
+  assert.equal(r.management.prescriber_action, 'renal-band text');
+  // when the factor is absent (on_unknown:base), the base text still shows.
+  assert.equal(resolveRule(rule, {}).management.prescriber_action, 'base text');
+});
+
+test('an all_of_present combination rule fires only when EVERY combination member AND the perpetrator are present', () => {
+  const rule = {
+    rule_id: 'triple', object: { combination: [{ drug: 'aspirin' }, { drug: 'clopidogrel' }], match_semantics: 'all_of_present' },
+    perpetrator: { drug: 'warfarin' }, severity: 'major', management: { dispense_action: 'confirm_and_monitor' }, context_modifiers: [],
+  };
+  const fire = checkInteractions({ subjects: ['aspirin', 'clopidogrel', 'warfarin'], rules: [rule] });
+  assert.equal(fire.findings.length, 1);
+  assert.equal(fire.findings[0].rule_id, 'triple');
+  assert.deepEqual([...fire.findings[0].subjects].sort(), ['aspirin', 'clopidogrel', 'warfarin']);
+  // missing the P2Y12 member => must NOT fire
+  const noFire = checkInteractions({ subjects: ['aspirin', 'warfarin'], rules: [rule] });
+  assert.equal(noFire.findings.length, 0);
+});
+
+test('all_of_present combination members and perpetrator can be class refs resolved via member sets', () => {
+  const rule = {
+    rule_id: 'triple2', object: { combination: [{ drug: 'aspirin' }, { class: 'p2y12_inhibitor' }], match_semantics: 'all_of_present' },
+    perpetrator: { class: 'oral_anticoagulant' }, severity: 'major', management: { dispense_action: 'confirm_and_monitor' }, context_modifiers: [],
+  };
+  const ms = { p2y12_inhibitor: { any: ['clopidogrel', 'ticagrelor', 'prasugrel'] }, oral_anticoagulant: { any: ['warfarin', 'apixaban'] } };
+  const res = checkInteractions({ subjects: ['aspirin', 'ticagrelor', 'apixaban'], rules: [rule], memberSets: ms });
+  assert.equal(res.findings.length, 1);
+  // one drug cannot satisfy two distinct required roles: aspirin alone can't stand in for the P2Y12
+  const short = checkInteractions({ subjects: ['aspirin', 'apixaban'], rules: [rule], memberSets: ms });
+  assert.equal(short.findings.length, 0);
+});
+
+test('coverage scan sees classes nested inside a combination object', () => {
+  const rule = {
+    rule_id: 'triple3', object: { combination: [{ drug: 'aspirin' }, { class: 'p2y12_inhibitor' }], match_semantics: 'all_of_present' },
+    perpetrator: { class: 'oral_anticoagulant' }, severity: 'major', management: {}, context_modifiers: [],
+  };
+  const res = checkInteractions({ subjects: ['aspirin'], rules: [rule], memberSets: {} });
+  assert.ok(res.coverage.classes_missing_members.includes('p2y12_inhibitor'));
+  assert.ok(res.coverage.classes_missing_members.includes('oral_anticoagulant'));
+});
