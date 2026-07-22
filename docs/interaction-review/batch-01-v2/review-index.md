@@ -1,6 +1,6 @@
-# Batch 1 v2 - Review Index (context-aware, post-QA, escalate-semantics fixed)
+# Batch 1 v2 - Review Index (post index-review fixes)
 
-165 rules. Full objects: batch-01-v2.jsonl. Mark A/E/R per row. context col = factor:when->sev/action(on_unknown).
+158 rules (7 R removed; contraindication->withhold enforced). context = factor:when->sev/action(on_unknown).
 
 ## A. Anticoagulant/antiplatelet
 
@@ -31,7 +31,7 @@
 | `clopidogrel__cyp2c19_inhibiting_ppi` | clopidogrel <-> cyp2c19_inhibiting_ppi | pk_perpetrator | moderate | - | confirm_and_monitor | H |
 | `aspirin_ld_ir__ibuprofen_timing` | aspirin <-> ibuprofen | additive_pd | moderate | - | space_doses | H |
 | `aspirin__nsaid_additive_gi_bleeding` | aspirin <-> nsaid | additive_pd | moderate | renal:egfr_lt_30->moderate/-(base) | supply_with_counselling | H |
-| `dual_antiplatelet__oral_anticoagulant_triple_therapy` | {"combination": [{"drug": "aspirin"}, {" <-> anticoagulant | additive_pd | major | renal:egfr_lt_30->major/-(base); hepatic:child_pugh_b->major/-(base) | confirm_and_monitor | H |
+| `dual_antiplatelet__oral_anticoagulant_triple_therapy` | aspirin+clopidogrel <-> anticoagulant | additive_pd | major | renal:egfr_lt_30->major/-(base); hepatic:child_pugh_b->major/-(base) | confirm_and_monitor | H |
 | `ssri_snri__nsaid_additive_gi_bleeding` | ssri_snri <-> nsaid | additive_pd | moderate | renal:egfr_lt_30->moderate/-(base) | supply_with_counselling | H |
 | `heparin_lmwh__nsaid_or_antiplatelet_bleeding` | heparin_lmwh <-> nsaid_or_antiplatelet | additive_pd | major | renal:crcl_lt_30->major/-(base) | confirm_and_monitor | H |
 
@@ -74,7 +74,7 @@
 | `dextromethorphan__ssri_snri` | dextromethorphan <-> ssri_or_snri | additive_pd | moderate | - | supply_with_counselling | M |
 | `opioid__benzodiazepine_cns_depressant` | opioid <-> benzodiazepine_or_other_cns_depressant | additive_pd | major | hepatic:hepatic_impaired->major/-(base) | confirm_and_monitor | H |
 | `opioid__gabapentinoid` | opioid <-> gabapentinoid | additive_pd | major | renal:egfr_lt_30->major/-(base) | confirm_and_monitor | H |
-| `benzodiazepine_zdrug__alcohol` | benzodiazepine_or_z_drug <-> {"substance": "alcohol", "route": ["oral | additive_pd | major | hepatic:hepatic_impaired->major/-(base) | supply_with_counselling | H |
+| `benzodiazepine_zdrug__alcohol` | benzodiazepine_or_z_drug <-> alcohol | additive_pd | major | hepatic:hepatic_impaired->major/-(base) | supply_with_counselling | H |
 | `maoi_nonselective__sympathomimetic` | maoi_nonselective <-> sympathomimetic_direct_and_indirect | contraindication | contraindicated | - | withhold_and_clarify | H |
 | `lithium__ssri_snri` | lithium <-> ssri_or_snri | additive_pd | moderate | renal:egfr_lt_60->moderate/-(base); renal:egfr_lt_30->major/-(base) | supply_with_counselling | M |
 | `bupropion__maoi_nonselective` | bupropion <-> maoi_nonselective | contraindication | contraindicated | - | withhold_and_clarify | H |
@@ -84,12 +84,11 @@
 
 | id | <-> | basis | sev | context | dispense | conf |
 |--|--|--|--|--|--|--|
-| `multiple_qt_prolonging_drugs` | qt_prolonging_drug <-> qt_prolonging_drug | additive_pd | major | renal:egfr_lt_30->major/-(base); hepatic:hepatic_impaired->major/-(base) | confirm_and_monitor | M |
 | `qt_macrolide__qt_prolonging_drug` | macrolide_qt <-> qt_prolonging_drug | additive_pd | major | - | confirm_and_monitor | H |
 | `citalopram__qt_prolonging_drug` | citalopram <-> qt_prolonging_drug | additive_pd | major | hepatic:hepatic_impaired->major/-(base) | confirm_and_monitor | H |
 | `escitalopram__qt_prolonging_drug` | escitalopram <-> qt_prolonging_drug | additive_pd | major | hepatic:hepatic_impaired->major/-(base) | confirm_and_monitor | H |
-| `domperidone__potent_cyp3a4_inhibitor` | domperidone <-> cyp3a4_inhibitor [potent] | contraindication | contraindicated | hepatic:hepatic_impaired->contraindicated/-(base) | withhold_and_clarify | H |
-| `domperidone__qt_prolonging_drug` | domperidone <-> qt_prolonging_drug | contraindication | contraindicated | hepatic:hepatic_impaired->contraindicated/-(base) | withhold_and_clarify | H |
+| `domperidone__potent_cyp3a4_inhibitor` | domperidone <-> cyp3a4_inhibitor [potent] | contraindication | contraindicated | hepatic:hepatic_impaired->contraindicated/withhold_and_clarify(base) | withhold_and_clarify | H |
+| `domperidone__qt_prolonging_drug` | domperidone <-> qt_prolonging_drug | contraindication | contraindicated | hepatic:hepatic_impaired->contraindicated/withhold_and_clarify(base) | withhold_and_clarify | H |
 | `ondansetron__apomorphine` | ondansetron <-> apomorphine | contraindication | contraindicated | - | withhold_and_clarify | H |
 | `ondansetron__qt_prolonging_drug` | ondansetron <-> qt_prolonging_drug | additive_pd | major | hepatic:hepatic_impaired->major/-(base) | confirm_and_monitor | H |
 | `haloperidol_parenteral_or_high_dose__qt_prolonging_drug` | haloperidol <-> qt_prolonging_drug | additive_pd | major | - | confirm_and_monitor | H |
@@ -110,27 +109,25 @@
 | `digoxin__dronedarone` | digoxin <-> dronedarone | pk_perpetrator | major | renal:egfr_lt_30->major/withhold_and_clarify(escalate) | confirm_and_monitor | H |
 | `digoxin__clarithromycin` | digoxin <-> clarithromycin | pk_perpetrator | major | renal:egfr_lt_30->major/withhold_and_clarify(escalate) | confirm_and_monitor | H |
 | `digoxin__potassium_wasting_diuretic` | digoxin <-> potassium_wasting_diuretic | additive_pd | major | renal:egfr_lt_30->major/withhold_and_clarify(escalate) | confirm_and_monitor | H |
-| `ivabradine__strong_cyp3a4_inhibitor` | ivabradine <-> cyp3a4_inhibitor [strong] | contraindication | contraindicated | hepatic:child_pugh_c->contraindicated/-(base) | withhold_and_clarify | M |
-| `ivabradine__qt_or_bradycardic_drug` | ivabradine <-> qt_prolonging_or_bradycardic_drug | additive_pd | major | hepatic:child_pugh_c->contraindicated/-(base) | confirm_and_monitor | M |
+| `ivabradine__qt_or_bradycardic_drug` | ivabradine <-> qt_prolonging_or_bradycardic_drug | additive_pd | major | hepatic:child_pugh_c->contraindicated/withhold_and_clarify(base) | confirm_and_monitor | M |
 | `adenosine__dipyridamole` | adenosine <-> dipyridamole | pk_perpetrator | major | - | confirm_and_monitor | M |
 
 ## F. Hyperkalaemia/renal
 
 | id | <-> | basis | sev | context | dispense | conf |
 |--|--|--|--|--|--|--|
-| `acei_arb__mra_spironolactone_eplerenone` | acei_arb <-> mineralocorticoid_receptor_antagonist | additive_pd | major | renal:egfr_lt_30->contraindicated/-(base) | confirm_and_monitor | H |
-| `acei_arb__amiloride_triamterene` | acei_arb <-> epithelial_sodium_channel_blocker | additive_pd | major | renal:egfr_lt_30->contraindicated/-(base) | confirm_and_monitor | H |
-| `acei_arb__potassium_supplement_salt_substitute` | acei_arb <-> potassium_supplement_or_salt_substitute | additive_pd | major | renal:egfr_lt_30->contraindicated/-(base) | supply_with_counselling | H |
-| `acei_arb__nsaid_systemic` | acei_arb <-> nsaid | additive_pd | moderate | renal:egfr_lt_60->major/-(base); renal:egfr_lt_30->contraindicated/-(base) | confirm_and_monitor | H |
-| `acei_arb_diuretic__nsaid_triple_whammy` | acei_arb <-> nsaid | additive_pd | major | renal:egfr_lt_30->contraindicated/-(base) | withhold_and_clarify | H |
-| `acei__arb_dual_raas_blockade` | acei <-> arb | additive_pd | major | renal:egfr_lt_30->contraindicated/-(base) | confirm_and_monitor | H |
-| `trimethoprim_cotrimoxazole__potassium_raising_agents` | trimethoprim_or_cotrimoxazole <-> potassium_raising_agent | additive_pd | major | renal:egfr_lt_30->contraindicated/-(base) | confirm_and_monitor | H |
+| `acei_arb__mra_spironolactone_eplerenone` | acei_arb <-> mineralocorticoid_receptor_antagonist | additive_pd | major | renal:egfr_lt_30->contraindicated/withhold_and_clarify(base) | confirm_and_monitor | H |
+| `acei_arb__amiloride_triamterene` | acei_arb <-> epithelial_sodium_channel_blocker | additive_pd | major | renal:egfr_lt_30->contraindicated/withhold_and_clarify(base) | confirm_and_monitor | H |
+| `acei_arb__potassium_supplement_salt_substitute` | acei_arb <-> potassium_supplement_or_salt_substitute | additive_pd | major | renal:egfr_lt_30->contraindicated/withhold_and_clarify(base) | supply_with_counselling | H |
+| `acei_arb__nsaid_systemic` | acei_arb <-> nsaid | additive_pd | moderate | renal:egfr_lt_60->major/-(base); renal:egfr_lt_30->contraindicated/withhold_and_clarify(base) | confirm_and_monitor | H |
+| `acei_arb_diuretic__nsaid_triple_whammy` | acei_arb <-> nsaid | additive_pd | major | renal:egfr_lt_30->contraindicated/withhold_and_clarify(base) | withhold_and_clarify | H |
+| `acei__arb_dual_raas_blockade` | acei <-> arb | additive_pd | major | renal:egfr_lt_30->contraindicated/withhold_and_clarify(base) | confirm_and_monitor | H |
+| `trimethoprim_cotrimoxazole__potassium_raising_agents` | trimethoprim_or_cotrimoxazole <-> potassium_raising_agent | additive_pd | major | renal:egfr_lt_30->contraindicated/withhold_and_clarify(base) | confirm_and_monitor | H |
 | `lithium__nsaid_systemic` | lithium <-> nsaid | pk_perpetrator | major | renal:egfr_lt_60->major/-(base) | withhold_and_clarify | H |
 | `lithium__acei_arb` | lithium <-> acei_arb | pk_perpetrator | major | renal:egfr_lt_60->major/-(base) | confirm_and_monitor | H |
 | `lithium__thiazide_diuretic` | lithium <-> thiazide_diuretic | pk_perpetrator | major | renal:egfr_lt_60->major/-(base) | confirm_and_monitor | H |
 | `aminoglycoside__loop_diuretic` | aminoglycoside <-> loop_diuretic | additive_pd | major | renal:egfr_lt_60->major/-(base) | confirm_and_monitor | H |
-| `cumulative_nephrotoxin_burden__placeholder` | nephrotoxic_agent <-> nephrotoxic_agent | additive_pd | major | renal:egfr_lt_60->major/withhold_and_clarify(escalate) | confirm_and_monitor | M |
-| `methotrexate__nsaid_systemic` | methotrexate <-> nsaid | pk_perpetrator | moderate | renal:egfr_lt_60->major/withhold_and_clarify(escalate); renal:egfr_lt_30->contraindicated/-(base); hepatic:hepatic_impaired->major/-(base) | confirm_and_monitor | H |
+| `methotrexate__nsaid_systemic` | methotrexate <-> nsaid | pk_perpetrator | moderate | renal:egfr_lt_60->major/withhold_and_clarify(escalate); renal:egfr_lt_30->contraindicated/withhold_and_clarify(base); hepatic:hepatic_impaired->major/-(base) | confirm_and_monitor | H |
 | `methotrexate__trimethoprim_cotrimoxazole` | methotrexate <-> trimethoprim_or_cotrimoxazole | additive_pd | major | renal:egfr_lt_30->contraindicated/withhold_and_clarify(escalate) | withhold_and_clarify | H |
 | `methotrexate_high_dose__ppi` | methotrexate <-> proton_pump_inhibitor | pk_perpetrator | major | renal:egfr_lt_30->contraindicated/withhold_and_clarify(escalate) | confirm_and_monitor | M |
 
@@ -165,7 +162,6 @@
 | `rifampicin__hormonal_contraceptive` | hormonal_contraceptive_induction_sensitive <-> rifamycin_enzyme_inducer [potent_inducer] | pk_perpetrator | major | - | supply_with_counselling | H |
 | `enzyme_inducing_antiepileptic__hormonal_contraceptive` | hormonal_contraceptive_induction_sensitive <-> enzyme_inducing_antiepileptic [strong_inducer] | pk_perpetrator | major | - | supply_with_counselling | H |
 | `rifampicin__calcineurin_inhibitor` | calcineurin_inhibitor <-> rifampicin | pk_perpetrator | major | - | confirm_and_monitor | H |
-| `rifampicin__warfarin` | warfarin <-> rifampicin | pk_perpetrator | major | - | confirm_and_monitor | H |
 | `rifampicin__verapamil` | verapamil <-> rifampicin | pk_perpetrator | major | - | confirm_and_monitor | H |
 | `rifampicin__systemic_corticosteroid` | systemic_corticosteroid <-> rifampicin | pk_perpetrator | major | - | confirm_and_monitor | H |
 | `rifampicin__sulfonylurea` | sulfonylurea <-> rifampicin | pk_perpetrator | moderate | - | supply_with_counselling | M |
@@ -176,8 +172,6 @@
 | `carbamazepine__systemic_corticosteroid` | systemic_corticosteroid <-> carbamazepine | pk_perpetrator | major | - | confirm_and_monitor | H |
 | `carbamazepine__sulfonylurea` | sulfonylurea <-> carbamazepine | pk_perpetrator | moderate | - | supply_with_counselling | M |
 | `carbamazepine__antiretroviral` | antiretroviral <-> carbamazepine | pk_perpetrator | major | - | withhold_and_clarify | H |
-| `carbamazepine__direct_oral_anticoagulant` | direct_oral_anticoagulant <-> carbamazepine | pk_perpetrator | major | renal:crcl_lt_30->major/withhold_and_clarify(escalate) | confirm_and_monitor | H |
-| `carbamazepine__autoinduction` | carbamazepine <-> carbamazepine | pk_perpetrator | moderate | - | supply_with_counselling | H |
 | `carbamazepine__valproate` | valproate <-> carbamazepine | pk_perpetrator | major | - | confirm_and_monitor | H |
 | `carbamazepine__lamotrigine` | lamotrigine <-> carbamazepine | pk_perpetrator | moderate | - | confirm_and_monitor | M |
 | `st_johns_wort__cyp3a4_pgp_substrate` | narrow_ti_cyp3a4_pgp_substrate <-> st_johns_wort | pk_perpetrator | major | - | supply_with_counselling | H |
@@ -201,7 +195,6 @@
 | `dasatinib__acid_suppressant` | dasatinib <-> acid_suppressant | pk_perpetrator | major | hepatic:hepatic_impaired->major/-(base) | withhold_and_clarify | H |
 | `ketoconazole_oral__acid_suppressant` | ketoconazole <-> acid_suppressant | pk_perpetrator | moderate | hepatic:hepatic_impaired->moderate/-(base) | withhold_and_clarify | M |
 | `itraconazole_capsule__acid_suppressant` | itraconazole <-> acid_suppressant | pk_perpetrator | moderate | hepatic:hepatic_impaired->moderate/-(base) | withhold_and_clarify | M |
-| `itraconazole_oral_solution__acid_suppressant` | itraconazole <-> acid_suppressant | pk_perpetrator | moderate | hepatic:hepatic_impaired->moderate/-(base) | supply_with_counselling | M |
 
 ## J. Endocrine/misc
 
@@ -212,7 +205,7 @@
 | `sulfonylurea__gemfibrozil` | sulfonylurea <-> gemfibrozil | pk_perpetrator | moderate | renal:egfr_lt_30->major/-(base); hepatic:hepatic_impaired->major/-(base) | confirm_and_monitor | M |
 | `sulfonylurea__alcohol` | sulfonylurea <-> alcohol (ethanol) | additive_pd | major | - | supply_with_counselling | M |
 | `sulfonylurea__miconazole_oromucosal_gel` | sulfonylurea <-> miconazole | contraindication | contraindicated | - | withhold_and_clarify | M |
-| `metformin__iodinated_contrast_media` | metformin <-> iodinated_contrast_media | additive_pd | major | renal:egfr_lt_30->contraindicated/-(base); renal:egfr_lt_60->major/supply_with_counselling(base); renal:egfr_ge_60->moderate/supply_with_counselling(base) | supply_with_counselling | H |
+| `metformin__iodinated_contrast_media` | metformin <-> iodinated_contrast_media | additive_pd | major | renal:egfr_lt_30->contraindicated/withhold_and_clarify(base); renal:egfr_lt_60->major/supply_with_counselling(base); renal:egfr_ge_60->moderate/supply_with_counselling(base) | supply_with_counselling | H |
 | `thiopurine__allopurinol` | thiopurine <-> allopurinol | pk_perpetrator | major | renal:egfr_lt_30->major/-(base) | withhold_and_clarify | H |
 | `theophylline__cyp1a2_inhibitor` | xanthine_bronchodilator <-> cyp1a2_inhibitor [strong/moderate] | pk_perpetrator | major | hepatic:hepatic_impaired->major/-(base) | withhold_and_clarify | H |
 | `potassium_chloride_solid_oral__gi_transit_slowing` | potassium chloride <-> gi_transit_slowing_agent | contraindication | contraindicated | - | withhold_and_clarify | M |
