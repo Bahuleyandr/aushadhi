@@ -10,6 +10,7 @@ import { readPharmeasyNormalized } from '../adapters/pharmeasy.mjs';
 import { readNetmedsNormalized } from '../adapters/netmeds.mjs';
 import { readKaggleRows } from '../adapters/kaggle-2025.mjs';
 import { mergeRows, detectSubstituteMismatches } from '../lib/merge.mjs';
+import { buildStrengthModel } from '../lib/plausibility.mjs';
 import { buildKnownCombos, likelyTruncated } from '../lib/known-combos.mjs';
 import { loadAtcMap, atcForMolecules } from '../adapters/atc.mjs';
 import { loadNppaRows } from '../adapters/nppa.mjs';
@@ -141,8 +142,16 @@ for (const r of all) {
 }
 meta.renormalized_rows = renormalized;
 
-const { rows, conflicts } = mergeRows(all);
+// Learn per-molecule strength distributions from the (re-normalized) source rows,
+// then let merge annotate each output row with a plausibility-based strength trust
+// signal (resolution-free — strengths are not altered here).
+const strengthModel = buildStrengthModel(all);
+const { rows, conflicts } = mergeRows(all, { model: strengthModel });
 for (const m of detectSubstituteMismatches(rows)) conflicts.push(m); // loop, not spread (dataset-scale)
+meta.strength_verified_rows = rows.filter((r) => r.strength_verified).length;
+meta.strength_unverified_rows = rows.filter((r) => r.strength_status === 'unverified').length;
+meta.strength_conflict_rows = rows.filter((r) => r.strength_conflict).length;
+meta.strength_no_strength_rows = rows.filter((r) => r.strength_status === 'no_strength').length;
 
 // visibility: how many 2-slot rows sit inside a KNOWN 3+ molecule combo
 const kb = buildKnownCombos(rows);

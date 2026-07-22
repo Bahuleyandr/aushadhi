@@ -51,3 +51,22 @@ test('renderReport: tolerates missing optional fields', () => {
   assert.match(md, /# aushadhi dataset report/i);
   assert.ok(typeof md === 'string' && md.length > 0);
 });
+
+test('renderReport: strength verification section when the model ran', () => {
+  const md = renderReport({
+    ...summary,
+    strength_verified_rows: 240000, strength_unverified_rows: 20000,
+    strength_no_strength_rows: 7618, strength_conflict_rows: 300,
+  });
+  assert.match(md, /Strength verification/i);
+  assert.match(md, /verified/);
+  assert.match(md, /240,000/);
+  assert.match(md, /89\.7%/);        // 240000/267618
+  assert.match(md, /strength_conflict/);
+  assert.match(md, /\b300\b/);
+});
+
+test('renderReport: no strength section when the fields are absent (backward compatible)', () => {
+  const md = renderReport(summary);  // base summary has no strength_* fields
+  assert.doesNotMatch(md, /Strength verification/i);
+});

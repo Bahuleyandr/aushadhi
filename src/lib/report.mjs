@@ -37,6 +37,19 @@ export function renderReport(summary = {}, conflictsByKind = {}) {
     L.push('', '> `conflict` and `single_source` rows are the review-worthy ones for clinical use.', '');
   }
 
+  if (s.strength_verified_rows != null) {
+    const sv = s.strength_verified_rows ?? 0;
+    const su = s.strength_unverified_rows ?? 0;
+    const sn = s.strength_no_strength_rows ?? 0;
+    L.push('## Strength verification — plausibility-based trust signal', '', '| status | rows | share |', '|---|---:|---:|');
+    L.push(`| verified | ${fmt(sv)} | ${pct(sv, total)} |`);
+    L.push(`| unverified | ${fmt(su)} | ${pct(su, total)} |`);
+    L.push(`| no_strength | ${fmt(sn)} | ${pct(sn, total)} |`);
+    L.push('');
+    if (s.strength_conflict_rows != null) L.push(`- \`strength_conflict\` (sources disagree on strength — review): ${fmt(s.strength_conflict_rows)}`);
+    L.push('> `strength_verified` rows are safe to auto-fill; `unverified` / `strength_conflict` need pharmacist or authoritative-reference confirmation.', '');
+  }
+
   if (s.atc_coverage_rows != null) {
     L.push('## ATC classification', '', `- Coverage: **${fmt(s.atc_coverage_rows)} rows (${pct(s.atc_coverage_rows, total)})** via ${s.atc_molecules ?? '?'} molecules`, '');
   }
