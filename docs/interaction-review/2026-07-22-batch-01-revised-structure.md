@@ -68,3 +68,42 @@ Encodes the review's 6 cross-cutting promotion blockers. **Confirm this structur
 ## What I'll do on your OK
 
 Apply this shape to all rows: keep the 35 A (metadata/structure only), rewrite the 60 E per your notes, delete/merge/replace the 5 R, and enumerate 88/89/71 into explicit pairs — producing a revised Batch-1 artifact (~110 rules) plus a short diff of exactly what changed per row so your re-review is fast.
+
+---
+
+## Context-awareness (added per clinician request)
+
+The checker gains an **optional** patient context; rules evaluate against it when present and stay silent about it when absent.
+
+**Checker input (all optional, pass only what's known):**
+```jsonc
+"patient_context": {
+  "renal":   { "egfr": 42, "creatinine_umol_l": 150, "crcl": 40 },   // any subset
+  "hepatic": { "child_pugh": "B", "ast": 90, "alt": 120, "bilirubin_umol_l": 40, "flag": "impaired" }
+}
+```
+
+**Rule gains `context_modifiers`:**
+```jsonc
+"severity": "major",                       // BASE tier (used when the relevant factor is unknown AND on_unknown="base")
+"context_modifiers": [
+  { "factor": "renal", "when": "egfr_lt_30",  "severity": "contraindicated",
+    "management_override": { "dispense_action": "withhold_and_clarify", "prescriber_action": "..." },
+    "on_unknown": "escalate" },
+  { "factor": "renal", "when": "egfr_ge_60",  "severity": "major", "on_unknown": null }   // reassuring value relaxes
+]
+```
+
+**Evaluation:**
+1. Factor **present** in context → match the `when` predicate → apply that modifier's severity/management. (A reassuring value, e.g. normal eGFR, can *downgrade* from a cautious base.)
+2. Factor **present but no `when` matches** → base severity/management.
+3. Factor **absent** →
+   - if any modifier for that factor has `on_unknown:"escalate"` → present the **escalated** severity (worst such modifier), **with no renal/hepatic caveat text** (the pharmacist isn't told to go find a lab);
+   - else → base severity, factor **not mentioned at all**.
+
+`on_unknown` is a **clinician-set, per-rule** field — the safety-vs-noise call. Default I'll draft: `escalate` where the missing factor can make the pair genuinely dangerous (colchicine, methotrexate, DOACs, digoxin, metformin/contrast, NSAID+ACEi/diuretic), `base` otherwise.
+
+**Worked (context-aware):**
+- `colchicine__strong_cyp3a4_pgp_inhibitor`: base `major`; modifier {renal `egfr_lt_30` or hepatic impaired → `contraindicated`, `on_unknown:escalate`}. Renal unknown → shows *contraindicated*, no caveat text. eGFR 80 supplied → *major* + "interrupt/dose-reduce per inhibitor label."
+- `nsaid__acei_arb` (+diuretic = triple whammy): base `moderate`; modifier {renal impaired → `major`, `on_unknown:base` (escalate only if impairment reported)}. Renal unknown → *moderate*, clean. eGFR 35 supplied → *major* + AKI monitoring.
+- Predicates use a fixed vocabulary: `egfr_lt_15|lt_30|lt_60|ge_60`, `crcl_lt_30|...`, `hepatic_impaired|child_pugh_b|child_pugh_c`.
