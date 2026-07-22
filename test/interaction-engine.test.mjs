@@ -91,3 +91,29 @@ test('member-specific rule suppresses the generic class rule for the same pair (
   assert.equal(f[0].rule_id, 'colchicine__clarithromycin');
   assert.equal(f[0].severity, 'contraindicated');
 });
+
+import { checkInteractions } from '../src/lib/interaction-engine.mjs';
+
+test('checkInteractions evaluates every unordered pair and returns findings', () => {
+  const rule = { rule_id: 'a__b', object: { drug: 'a' }, perpetrator: { drug: 'b' },
+    severity: 'major', management: { dispense_action: 'confirm_and_monitor' }, context_modifiers: [] };
+  const res = checkInteractions({ subjects: ['a', 'x', 'b'], rules: [rule] });
+  assert.equal(res.pairs_checked, 3);
+  assert.equal(res.findings.length, 1);
+  assert.equal(res.findings[0].rule_id, 'a__b');
+});
+
+test('checkInteractions reports classes referenced by rules but missing member data (honest coverage)', () => {
+  const rule = { rule_id: 'a__c', object: { drug: 'a' }, perpetrator: { class: 'some_class', strength: ['strong'] },
+    severity: 'major', management: {}, context_modifiers: [] };
+  const res = checkInteractions({ subjects: ['a', 'y'], rules: [rule], memberSets: {} });
+  assert.ok(res.coverage.classes_missing_members.includes('some_class'));
+});
+
+test('each finding is tagged with the actual drug pair that matched it', () => {
+  const rule = { rule_id: 'a__b', object: { drug: 'a' }, perpetrator: { drug: 'b' },
+    severity: 'major', management: { dispense_action: 'confirm_and_monitor' }, context_modifiers: [] };
+  const res = checkInteractions({ subjects: ['x', 'a', 'b'], rules: [rule] });
+  assert.equal(res.findings.length, 1);
+  assert.deepEqual(res.findings[0].subjects, ['a', 'b']);
+});

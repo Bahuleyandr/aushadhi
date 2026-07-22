@@ -150,3 +150,30 @@ export function checkPair({ subjects, rules, memberSets = {}, patientContext = {
     .filter((r) => ruleSpecificity(r) === maxSpec)
     .map((r) => ({ rule_id: r.rule_id, ...resolveRule(r, patientContext) }));
 }
+
+/**
+ * Evaluate every unordered pair among the entered drugs against the rule pack.
+ * Reports honest coverage — including rule classes with no member data (which can
+ * therefore never match) so callers never present a gap as "no interaction".
+ */
+export function checkInteractions({ subjects, rules, memberSets = {}, patientContext = {} }) {
+  const findings = [];
+  let pairs_checked = 0;
+  for (let i = 0; i < subjects.length; i += 1) {
+    for (let j = i + 1; j < subjects.length; j += 1) {
+      pairs_checked += 1;
+      const pair = [subjects[i], subjects[j]];
+      for (const f of checkPair({ subjects: pair, rules, memberSets, patientContext })) {
+        findings.push({ subjects: pair, ...f });
+      }
+    }
+  }
+  const referenced = new Set();
+  for (const r of rules) for (const ref of ruleSides(r)) if (ref?.class) referenced.add(ref.class);
+  const classes_missing_members = [...referenced].filter((c) => !memberSets[c]).sort();
+  return {
+    findings,
+    pairs_checked,
+    coverage: { rules_total: rules.length, classes_referenced: referenced.size, classes_missing_members },
+  };
+}
