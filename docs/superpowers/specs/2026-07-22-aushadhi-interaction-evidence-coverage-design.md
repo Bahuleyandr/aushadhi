@@ -1,124 +1,124 @@
-# Aushadhi Interaction Evidence-Coverage Layer — Design Spec
+# Aushadhi Interaction Evidence-Coverage Layer — Design Spec (v2)
 
-- **Date:** 2026-07-22
-- **Status:** Design — awaiting review
+- **Date:** 2026-07-22 (v2 — revised after independent cross-review)
+- **Status:** Design — awaiting re-review
 - **Branch:** `feat/interaction-evidence-coverage` (off `feat/interaction-evidence`)
-- **Extends:** [`docs/plans/2026-07-10-aushadhi-interaction-evidence-layer.md`](../../plans/2026-07-10-aushadhi-interaction-evidence-layer.md) — realises Tasks 3–6 with concrete, grounded sources.
+- **Extends:** [`docs/plans/2026-07-10-aushadhi-interaction-evidence-layer.md`](../../plans/2026-07-10-aushadhi-interaction-evidence-layer.md)
+
+## 0. What the cross-review changed (v1 → v2)
+
+An adversarial review (reproduced against the code + live sources) refuted several v1 decisions. All accepted:
+
+1. **No auto-inferred pairwise packs.** v1 materialized inhibitor×substrate *pairs* as candidates — which violates the parent plan's explicit rule that FDA tables yield *mechanism/class* candidates only, "never inferred pairwise rules." **v2: roles are the canonical artifact; pair-level output exists only as `review_candidate` *hypotheses*, labelled class-inference, generated at query time / into a review queue — never a shipped production pair pack.**
+2. **FDA table is machine-fetchable.** v1 said "HTML-only, bot-blocked → hand-transcribe." It returns **302→200** and is an 11-column structured HTML table with an export hook; v1 also used the *wrong* (narrow "drug development") page. **v2: mechanically parse the broad "healthcare professionals" table, pin + hash it.**
+3. **Reviewed identity is required first.** The current ingredient index is 100% normalized-fallback identity (with junk canonicals like `b`, `water`, `hydrochloride`); a live ketoconazole/simvastatin query resolved both products but checked **zero** pairs (both needed review). Exact-name + salt-strip + a few synonyms is insufficient (prodrugs, active moieties, stereoisomers, regimens). **v2: a reviewed RxNorm/UNII identity map with typed relationships precedes matching.**
+4. **openFDA cannot originate candidates.** Free-text labels carry negations, combination-product text, animal findings, duplicate SPL bodies; naive token matching makes `e`→"e.g." **v2: openFDA only *corroborates* a reviewed pair or emits an `unclassified_label_mention` review item.**
+5. **Coverage must be computed, not pack-declared.** The kernel copies `rulePack.declared_coverage`, so a non-matching *partial* pack returns `partial`, not `unknown`. **v2: compute scoped `assessed`/`not_assessed` coverage and surface it in CLI output.**
+6. **Contracts must be closed.** `validateReviewCandidate` has no top-level key allowlist, so `display_severity`/`advice` pass through, and output echoes them. **v2: closed candidate schema + output projection allowlist + directive-language ban + evidence↔manifest licence reconciliation + route/dose/population applicability enforced.**
 
 ## 1. Goal
 
-The interaction checker on `feat/interaction-evidence` is structurally complete (ingredient resolver, pairwise kernel, source-policy, CLI, tests) but ships an **empty rule pack**, so every query returns "coverage unknown." This increment fills that pack with real, provenance-carrying interaction **candidates** from two verified public-domain sources, moving the checker from `declared_coverage: unknown` to `partial` — **without changing its safety contract** (missing evidence is never "safe"; nothing is presented as clinician-reviewed advice until a human signs it off).
+Move the checker from an empty pack to **role-grounded, honestly-scoped** coverage **without inferring pairwise rules**. Ship a pinned FDA role inventory, a reviewed identity map, computed scoped coverage, and closed contracts. Surface mechanistic pair hypotheses only as `review_candidate`s (never advice). Missing evidence is never "safe"; unassessed scopes are named, not hidden.
 
-## 2. What already exists (build on, do not rebuild)
+## 2. Contracts to implement against (verified in code — do not drift)
 
-From `feat/interaction-evidence` (verified against source):
+- `checkResolvedProducts({ resolvedInputs, rulePack, reviewCandidates = [] })`. **The CLI (`src/cli/interactions.mjs`) does not yet pass `reviewCandidates` — wire it.**
+- `validateReviewCandidate`: `review_status` = `'review_candidate'`; `severity` ∈ `{undefined,'unknown'}`; **`mechanism` must be `null`**; **`management` must be `null`**; **`evidence` must be a non-empty ARRAY**; requires `pair` or `pair_key`. **It has no top-level key allowlist today — add one (`additionalProperties:false`-equivalent).**
+- Evidence item required fields: `{source, document_id, document_version, retrieved_at, jurisdiction, excerpt, licence, review_status}` (+ optional `source_url` must be `https://`, `source_identifier`).
+- Coverage: `combineCoverage` = unknown ≻ partial ≻ complete. Replace the pack-declared value with a computed scope set.
+- Source manifest (`data-static/interaction-sources.json`): licence classes `{open, open-sharealike, public-domain, restricted, non-commercial, user-supplied}`; `production-open` allows `{open, open-sharealike, public-domain}`. **Reuse the existing source IDs `fda-cyp-transporter` and `openfda-labels` (licence class `public-domain`) — do not invent new ones.**
 
-- **Kernel** `src/lib/interaction-checker.mjs` — exports `checkResolvedProducts({ resolvedInputs, rulePack, reviewCandidates = [] })`, `validateRulePack`, `generateCrossDrugPairs`, `pairKey`, `DISCLAIMER`. **Crucially, it already accepts `reviewCandidates` separately from clinician-reviewed `rulePack`** — this is exactly where our derived output plugs in.
-- **Enums** (kernel-internal, authoritative): `REVIEW_STATUSES = {clinician_reviewed, review_candidate}`; `COVERAGE_VALUES = {complete, partial, unknown}`; `MAPPED_STATUSES = {exact, reviewed_override}`.
-- **Rule/candidate schema** `data-static/interaction-rules.schema.json` — pack: `{schema_version, pack_id, pack_version, profile, licence, source_ids, declared_coverage, rules[]}`; each rule carries `severity`, `mechanism` (nullable), the ingredient pair, `applicability`, and an **evidence** object requiring `{source, document_id, document_version, retrieved_at, jurisdiction, excerpt, licence, review_status}` (+ optional `source_url` which must be `https://`, `source_identifier`).
-- **Source policy** `src/lib/interaction-source-policy.mjs` + `data-static/interaction-sources.json` — `assertSourceAllowed(source, {profile})`; a manifest entry is `{id, name, homepage, license, commercial_use, redistribution, role, retrieved_at}`; profiles are `production-open` (rejects non-commercial/unknown-licence) and `internal-evaluation`.
-- **Ingredient index** — `{ingredient_id, canonical_name, observed_names[], precise_substances[], product_count, ...}`, 2,292 ingredients over 255,894 products.
+## 3. Sources (grounded + cross-verified)
 
-## 3. Sources — grounded 2026-07-22 (evidence, not assumption)
+- **DGIdb — rejected.** CYP/transporter genes: **60 inhibitor claims / 45 canonical drugs; 0 substrate, 0 inducer** (full-dump join; retyping the 3,726 untyped rows yields nothing usable). Drug-*target* DB, not metabolism. (v1's 42/26 was a raw-name-filter artifact.)
+- **FDA broad CYP/transporter table** — the "[Healthcare Professionals: FDA's Examples of Drugs that Interact with CYP Enzymes and Transporter Systems](https://www.fda.gov/drugs/drug-interactions-labeling/healthcare-professionals-fdas-examples-drugs-interact-cyp-enzymes-and-transporter-systems)" page (content-dated 2026-05-29): **machine-fetchable (302→200), 11-column structured HTML + export**, 245 rows / 244 labels / 419 role assertions. Roles: substrate (sensitive), inhibitor (strong/moderate/weak), inducer (strong/moderate/**weak** — retain), plus footnotes, combination/regimen labels, and food/herb entities. **US public domain.** Measured Aushadhi coverage (raw / with 3 reviewed spelling synonyms):
 
-- **DGIdb — REJECTED.** Both the flat TSV and the *full relational dump* (122,786 attributes, 37,143 typed claims) were mined. CYP/transporter genes carry **only `inhibitor` typing (42 claims / 26 drugs); zero `substrate`, zero `inducer`** anywhere; the 118 free-text "substrate" attributes that survive a gene join are all on IUPHAR *receptors*/transporters, none on CYPs. DGIdb is a drug-**target** database; it cannot seed a metabolic-interaction layer. Set aside.
-- **FDA "Table of Substrates, Inhibitors and Inducers" — mechanism backbone.** Per-enzyme role×strength grid: substrates (sensitive, moderate), inhibitors (strong/moderate/weak), inducers (strong/moderate), across CYP1A2/2B6/2C8/2C9/2C19/2D6/3A + P-gp/BCRP/OATP1B1/1B3/OAT/OCT/MATE. **US public domain** (17 U.S.C. §105). ~few hundred drugs. **Caveats:** HTML-only and bot-blocked (no API/CSV → ingest as a curated snapshot); needs a US↔INN name normalizer (`rifampin`→`rifampicin`, `phenobarbital`→`phenobarbitone`). Aushadhi coverage measured at **~72% of CYP3A drugs raw, ~76% after trivial spelling fixes**; residual misses are genuinely not on the Indian market.
-- **openFDA drug-label API — evidence/citation layer.** **CC0**; `https://api.fda.gov/drug/label.json`, keyed by `openfda.rxcui`/`unii`/`generic_name`/`substance_name`. `drug_interactions` is **free-text prose** (not structured), so it is used for citation evidence and *deterministic* "another known ingredient is explicitly named" extraction — never for NLP-inferred severity. Rate limits 240/min, 1,000/day (120,000/day with a free key).
+  | CYP3A 57.1%/58.7% · CYP2D6 76.3% · CYP2C9 82.6%/87.0% · CYP2C19 65.0%/70.0% · CYP1A2 67.9%/71.4% · CYP2B6 84.6%/92.3% · CYP2C8 66.7%/72.2% · P-gp 60.7% · BCRP 34.8% · OATP1B1 68.2%/77.3% · OATP1B3 65.0%/75.0% · OAT1 80% · OAT3 78.6% · OCT2/MATE1/MATE2-K 100% |
+  |---|
 
-## 4. Architecture
+  Only `rifampin/rifampicin`, `phenobarbital/phenobarbitone`, `glyburide/glibenclamide` improved coverage. **Do not silently expand generic "OATP1B" to 1B1/1B3.** Residual misses are *not* all genuinely absent from India (e.g., abiraterone is registered; the index holds `abiraterone acetate`) → an identity, not coverage, problem.
+- **openFDA labels** — `https://api.fda.gov/drug/label.json`; `drug_interactions` free-text; the `openfda` harmonization block is **optional** (a live morphine label had empty `openfda`) → cache/dedupe on top-level SPL `set_id` + `version` (+ keep `effective_time`). Rights: CC0/public-domain treatment with a private-party carve-out → provenance must read "company-submitted SPL accessed through openFDA," not "FDA-authored." Rate limits 240/min, 1,000/day (120k/day keyed).
 
-Two phases, both emitting `review_candidate`s into the existing kernel's `reviewCandidates` path. Both sources are public-domain, so both packs are **`production-open` eligible** (an upgrade over DGIdb's internal-only posture).
+## 4. Architecture (v2)
 
 ```
-FDA table (curated snapshot) ──► normalize (US↔INN + salt-strip) ──► match to ingredient index
-   └► per-ingredient enzyme-role profile ──► materialize inhibitor/inducer × substrate candidates ──┐
-openFDA labels (fetch+cache) ──► deterministic "named ingredient" extraction ──► label candidates ──┤
-                                                                                                     ▼
-                                                        existing checker  checkResolvedProducts({ reviewCandidates })
-                                                                     └► candidates: severity unknown, full provenance, DISCLAIMER
+FDA broad table ─(fetch 302→200, parse, PIN+HASH)→ role inventory (CANONICAL, production-open)
+                                                        │
+reviewed identity map (RxNorm/UNII, typed) ─────────────┼─► per-ingredient role profile (with relationship type)
+                                                        │
+query time: entered pair + roles ─► class-inference HYPOTHESIS ─► review_candidate (mechanism null, evidence=role facts, applicability-gated)
+openFDA labels ─► corroboration / unclassified_label_mention only  (never originates)
+output: computed scoped coverage {assessed, not_assessed} + closed candidate/output contracts
 ```
 
-## 5. Phase 1 — FDA CYP/transporter mechanism backbone (primary, shippable increment)
+## 5. Components
 
-### 5.1 Curated snapshot — `data-static/fda-dds-table.json`
-A transcribed, versioned snapshot of the FDA table (the page is not machine-fetchable, and the data is small and stable, so a human-auditable snapshot is the correct ingestion — not a fragile scraper). Shape:
-```json
-{ "source_url": "https://www.fda.gov/.../table-substrates-inhibitors-and-inducers",
-  "table_version": "2023-current", "retrieved_at": "2026-07-22", "licence": "public-domain-usgov",
-  "enzymes": { "CYP3A": { "inhibitor": { "strong": ["ketoconazole", ...], "moderate": [...], "weak": [...] },
-                          "inducer":   { "strong": ["rifampin", ...], "moderate": [...] },
-                          "substrate": { "sensitive": ["simvastatin", ...], "moderate": [...] } }, ... },
-  "transporters": { "P-gp": { ... } }, "non_drug_entities": ["grapefruit juice", "st. john's wort"] }
-```
+### 5.1 FDA parser + pinned role inventory — `src/lib/fda-cyp-parser.mjs`, `src/cli/build-fda-cyp-roles.mjs`
+Fetch the broad table (follow the 302), parse the 11-column grid, **retain raw cells, footnote superscripts, weak-inducer column, and entity type** (drug / food / herb / combination / regimen). Pin `{source_url, content_date, raw_html_sha256, normalized_sha256, parser_version, retrieved_at}`. **Fail closed on column drift.** Output `data/interaction/production-open/fda-cyp-roles.jsonl`: `{entity, entity_type, enzyme, role, strength, footnotes, source_ref}`. Monthly refresh = human-reviewed semantic diff of the pinned snapshot.
 
-### 5.2 Name normalization — `data-static/drug-name-synonyms.json`
-An explicit, auditable US↔INN/BAN map (`{"rifampin":"rifampicin", "phenobarbital":"phenobarbitone", ...}`), applied together with the index's existing salt-strip. **No silent fuzzy matching** — a name either matches exactly, via a declared synonym, or is logged unmatched.
+### 5.2 Reviewed identity map (new — precedes matching) — `data-static/interaction-identity-map.json`
+Reviewed, typed relationships between FDA entities and Aushadhi ingredients: `exact | salt | active_moiety | prodrug | metabolite | stereoisomer | regimen | synonym`, keyed via RxNorm/UNII where available. **No fuzzy matching; unmatched logged.** Keeps `abiraterone` ≠ `abiraterone acetate`, `oseltamivir` ≠ `oseltamivir carboxylate`, stereoisomers distinct, unless a reviewed moiety relationship says otherwise. This replaces v1's salt-strip+synonyms and compensates for the fallback-only ingredient index.
 
-### 5.3 Ingestion + matcher — `src/lib/fda-cyp-roles.mjs` + `src/cli/build-fda-cyp-roles.mjs`
-Load snapshot → normalize each `(enzyme, role, strength, drug)` → match to the ingredient index (`canonical_name` + `observed_names`) → emit **per-ingredient enzyme-role profile** `data/interaction/<profile>/fda-cyp-roles.jsonl`:
-```json
-{ "ingredient_id": "...", "canonical_name": "ketoconazole",
-  "roles": [ { "enzyme": "CYP3A", "role": "inhibitor", "strength": "strong", "evidence_ref": "fda-dds:CYP3A:inhibitor:strong" } ] }
-```
-Plus a coverage report of matched / synonym-matched / unmatched FDA drugs, and the `non_drug_entities` recorded as special DDI entities (not force-matched to ingredients).
+### 5.3 Per-ingredient role profile
+Join role inventory ↔ identity map ↔ ingredient index → `{ingredient_id, roles:[{enzyme, role, strength, identity_relationship, source_ref}]}`. The `identity_relationship` is carried so a prodrug/metabolite-derived role is visible downstream.
 
-### 5.4 Candidate materializer — `src/lib/fda-cyp-candidates.mjs`
-From the role profile, for each enzyme pair every `{inhibitor|inducer}` ingredient A with every `{substrate}` ingredient B (A≠B, deduped unordered) → a `review_candidate` conforming to the rule schema:
-```json
-{ "pair": ["<A_id>", "<B_id>"], "severity": "unknown", "review_status": "review_candidate",
-  "mechanism": "CYP3A: ketoconazole (strong inhibitor) + simvastatin (sensitive substrate)",
-  "evidence": { "source": "fda-dds-table", "document_id": "fda-dds", "document_version": "<table_version>",
-                "retrieved_at": "2026-07-22", "jurisdiction": "US",
-                "excerpt": "FDA classifies ketoconazole as a strong CYP3A inhibitor and simvastatin as a sensitive CYP3A substrate.",
-                "licence": "public-domain-usgov", "review_status": "review_candidate" },
-  "applicability": { ... } }
-```
-Emitted as `data-static/interaction-candidates.fda-cyp.json` (`profile: production-open`, `declared_coverage: partial`, `source_ids: ["fda-dds-table"]`). Strength (strong inhibitor × sensitive substrate) is carried as a **priority hint only**; severity stays `unknown` until clinician review promotes it (Task 10).
+### 5.4 Query-time class-inference hypotheses (NO committed pair pack)
+For an entered pair, if A is a `{strong|moderate} {inhibitor|inducer}` of enzyme E **and** B is a `sensitive substrate` of E → emit a `review_candidate`:
+- `review_status:'review_candidate'`, `severity:'unknown'`, **`mechanism:null`**, **`management:null`**, `pair:[A_id,B_id]`.
+- `evidence:[ {source:'fda-cyp-transporter', document_version:<content_date>, jurisdiction:'US', licence:'public-domain', excerpt:"FDA classifies A as a <strength> <E> inhibitor", review_status:'review_candidate', source_url:'https://...'}, {…"B as a sensitive <E> substrate"…} ]`.
+- A schema-allowed `notes`/`inference_class` field records: *"class inference — mechanistic hypothesis from FDA role classifications, not an established pairwise interaction; requires clinician review."*
+- **Suppress weak inhibitors. Do NOT cross-product transporter roles** (ICH M12 — transporter DDI prediction needs extra evidence). **Applicability-gated**: route/dose/population honored so a topical-only product is not treated as systemic.
+- Optionally write a bounded **internal review queue** (per-mechanism evidence merged; 75 pairs carry multiple mechanisms — merge, don't dedupe-away) for clinician triage. **This is not shipped as production interaction output.**
+- Scale is not the issue: full FDA data → ~2,155 unique matched pairs (CYP3A ~1,543); reviewer noise is.
 
-### 5.5 Checker integration
-The role profile also enables **runtime derivation** — the checker can compute a candidate for an entered pair directly from roles (so coverage isn't limited to the pre-materialized pack). The materialized pack is loaded via the kernel's existing `reviewCandidates` argument.
+### 5.5 openFDA corroboration only — `src/lib/openfda-fetch.mjs`, `src/lib/openfda-extract.mjs`
+Fetch/cache (SPL `set_id`+`version`; content-hash body dedupe). Extraction yields **only** (a) corroborating evidence attached to an already-reviewed pair, or (b) an `unclassified_label_mention` review item. **Never originates a candidate.** Handle negation ("no effect", "did not change"), filter product/route/species (animal-only), and ignore weak index tokens. Provenance = "company-submitted SPL via openFDA."
 
-### 5.6 Source policy
-Add `fda-dds-table` to `interaction-sources.json`: `{license: "public-domain-usgov", commercial_use: true, redistribution: true, role: "mechanism-classification", ...}` — passes `assertSourceAllowed` under `production-open`.
+### 5.6 Scoped coverage (replaces `declared_coverage` passthrough)
+Per query compute `assessed_scopes` (the enzymes/transporters actually checked, with the snapshot content-date) and `not_assessed_scopes` (`pharmacodynamic, qt, serotonin, additive-bleeding, chelation, ph-dependent-absorption, protein-binding, non-cyp-metabolism, transporter-inference`). CLI output states, prominently: **"No candidate found in these named sources; these scopes were not assessed; overall interaction status unknown."** — not merely a footer disclaimer.
 
-## 6. Phase 2 — openFDA label evidence layer
+### 5.7 Closed contracts
+Add a top-level key allowlist to `validateReviewCandidate` (reject `display_severity`, `advice`, any unknown key); project output through an explicit allowlist (no field echo); **forbid directive language** in any candidate-authored string; validate each evidence item's `source`/`licence` against the manifest under the active profile. Add the FDA + openFDA source-manifest entries only if missing (they exist as `fda-cyp-transporter`, `openfda-labels`).
 
-### 6.1 Fetch + cache — `src/lib/openfda-fetch.mjs` + `src/cli/fetch-openfda-labels.mjs`
-For matched ingredients, query by `openfda.generic_name`/`substance_name`; cache raw label JSON under `data/interaction/<profile>/openfda-cache/` with `set_id` + `retrieved_at`; dedup per `generic_name`/`rxcui` (one record per SPL). Rate-limit aware (240/min; optional `OPENFDA_API_KEY`).
+## 6. Safety (v2)
 
-### 6.2 Deterministic extraction — `src/lib/openfda-extract.mjs`
-From `drug_interactions` text, emit a `review_candidate` **only** when another **known Aushadhi ingredient** (canonical/observed name or declared synonym) is *explicitly named* in the text (exact token match; no NLP, no inferred severity). Evidence = the naming sentence excerpt + `set_id` + `retrieved_at` + `CC0-1.0`.
+- Candidates are structurally hypotheses: `mechanism:null`, `severity:'unknown'`, `review_candidate`, closed schema → cannot render as advice.
+- Coverage is computed and scoped; empty ⇒ named unassessed scopes + "status unknown."
+- Identity is reviewed and typed; no fuzzy matching; no OATP1B fan-out.
+- Applicability (route/dose/population) enforced.
+- Weak/transporter cross-products suppressed; class-inference explicitly labelled.
 
-### 6.3 Corroboration
-Where an openFDA excerpt corroborates an FDA-mechanism candidate pair, attach it as additional evidence on that candidate (stronger provenance, still `review_candidate`).
+## 7. Testing (v2)
 
-### 6.4 Source policy
-Add `openfda-label`: `{license: "CC0-1.0", commercial_use: true, redistribution: true, role: "label-evidence", ...}` — `production-open` eligible.
+- **Parser**: fixture broad-table → role inventory; column-drift ⇒ fail-closed; footnote + weak-inducer retention; hash pinning stable.
+- **Identity**: `abiraterone`≠`abiraterone acetate`, `oseltamivir`≠`oseltamivir carboxylate`, stereoisomers distinct; no OATP1B expansion; unmatched logged not coerced.
+- **Hypotheses**: strong inhibitor × sensitive substrate ⇒ candidate (`mechanism:null`, evidence array, inference-class note); weak inhibitor ⇒ suppressed; transporter×transporter ⇒ none; topical-only product ⇒ not systemic; multi-mechanism pair ⇒ merged evidence.
+- **Contracts**: probe `{display_severity, advice}` ⇒ rejected on input **and** absent from output.
+- **Coverage**: assessed/not-assessed computed correctly; PD/QT present in not-assessed; CLI surfaces the honest statement.
+- **openFDA**: negation text ⇒ no candidate; only corroboration / unclassified mention; species/product filtered; duplicate SPL bodies deduped.
+- **Golden (depends on §5.2)**: `ketoconazole` + `simvastatin` — only resolvable once reviewed identity maps both; then a class-inference candidate with two FDA evidence items and named not-assessed scopes.
 
-## 7. Safety & honesty (contract preserved)
+## 8. Build sequence (v2)
 
-- Every output is `review_status: review_candidate`, `severity: unknown`, with complete provenance and the existing `DISCLAIMER`. Never presented as clinician advice.
-- **Empty result = "coverage unknown," never "safe / no interaction."**
-- Normalization is explicit and auditable; unmatched drugs are logged, not silently dropped or fuzzily coerced.
-- Non-drug DDI entities (grapefruit juice, St John's wort) are flagged as special entities, not forced into the ingredient index.
-- Clinician review (plan Task 10) is the only path that promotes a `review_candidate` to a `clinician_reviewed` rule with a real severity.
+1. FDA parser + **pinned role inventory** (canonical).
+2. **Reviewed identity map** + role profile.
+3. **Scoped coverage + closed contracts + CLI wiring** (`reviewCandidates`, coverage output).
+4. Query-time **class-inference hypotheses** (gated), + internal review queue.
+5. openFDA **corroboration**.
 
-## 8. Testing
+**Phase 1 (first shippable) = steps 1–3** (a role-grounded, honestly-scoped, contract-closed checker) plus a minimal §5.4. It is explicitly **not** a shipped inferred-pair pack.
 
-- **`fda-cyp-roles`**: fixtures for exact / synonym / salt-strip / unmatched matching; a golden CYP3A enzyme block; coverage-report correctness.
-- **`fda-cyp-candidates`**: inhibitor×substrate ⇒ candidate; substrate×substrate ⇒ none; inducer×substrate ⇒ candidate; schema conformance; provenance completeness; A≠B and dedupe.
-- **`openfda-extract`**: label text naming a known ingredient ⇒ candidate with the naming excerpt; text naming no known ingredient ⇒ none; fetch/cache is mocked (no live network in tests).
-- **`source-policy`**: `fda-dds-table` + `openfda-label` allowed under `production-open`; manifest-schema conformance.
-- **Clinical golden case**: `ketoconazole` (strong CYP3A inhibitor) + `simvastatin` (sensitive CYP3A substrate) ⇒ a candidate with FDA evidence — a real, well-known contraindication surfaced end-to-end through the CLI.
+## 9. Corrected facts folded in
 
-## 9. Build sequence & scope
+| Claim | v1 | v2 (verified) |
+|---|---|---|
+| FDA table access | 404/bot-blocked, hand-transcribe | 302→200, machine-parse (broad HCP page) |
+| FDA CYP3A coverage | ~72–76% | 57.1% raw / 58.7% synonyms |
+| DGIdb CYP inhibitors | 42 claims / 26 drugs | 60 claims / 45 drugs (still rejected) |
+| Pair space | "maybe tens of thousands" (open risk) | ~2,155 matched unique pairs |
+| openFDA identity | keyed on generic/rxcui | `openfda` optional → SPL `set_id`+`version` |
+| Output of pairs | committed candidate pack | roles canonical; hypotheses at query time only |
 
-1. **Phase 1 (FDA backbone)** — deterministic and offline after the one-time snapshot transcription; the higher-value, shippable first cut.
-2. **Phase 2 (openFDA)** — network fetch + deterministic extraction; layered on top for citation depth and label-stated coverage.
+## 10. Explicitly not assessed (surfaced, not hidden)
 
-**Explicitly out of scope (this increment):** pharmacodynamic interactions (QT prolongation, serotonin syndrome, additive bleeding) — a documented gap this mechanism/label layer does *not* cover; clinician severity assignment (the human gate, Task 10); DGIdb; RxNorm identity mapping (not required — `generic_name` + salt-strip + the synonym map suffice for the first cut); any web/API/patient-facing surface (the plan mandates a local, read-only checker until clinical validation).
-
-## 10. Decisions to confirm at planning time
-
-- Severity encoding for unreviewed candidates: use the literal string `"unknown"` (schema requires a non-empty `severity`; kernel treats display of severity as gated on `clinician_reviewed`). Confirm against `validateRule`.
-- Snapshot transcription method: a curated first-pass JSON authored from the FDA lists (feasible at a few-hundred-drug scale) with the source URL + retrieval date embedded, versioned in `data-static/`.
+Pharmacodynamic interactions (QT, serotonin, additive bleeding), chelation / pH-dependent absorption, protein-binding, non-CYP metabolism, transporter-pair inference, clinician severity assignment, patient-facing UI. These are emitted as `not_assessed_scopes`.

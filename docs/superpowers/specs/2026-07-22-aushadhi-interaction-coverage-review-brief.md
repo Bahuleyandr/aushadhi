@@ -1,5 +1,19 @@
 # Cross-Verification Brief — Aushadhi Interaction Evidence-Coverage Design
 
+> ## v2 RE-REVIEW FOCUS (read first)
+> The **v2 spec** already incorporated the first review: roles are now the canonical artifact (no committed inferred-pair pack); FDA table is machine-parsed (302→200, broad HCP page); a reviewed RxNorm/UNII identity map precedes matching; openFDA only corroborates; coverage is computed/scoped and surfaced; candidate + output contracts are closed. Corrected numbers are folded in (FDA CYP3A ~57–59%, DGIdb 60/45, ~2,155 pairs). **Do not re-litigate those.** Probe v2's *new* risks:
+> 1. **Strategic value.** Given ~57% single-enzyme CYP3A coverage, CYP-only PK scope, and hypothesis-only output gated behind a reviewed identity map — is this worth building for the India dispensing use case, or is the juice worth the squeeze? Answer explicitly.
+> 2. **Reviewed identity map (§5.2) feasibility.** Is a hand-authored typed RxNorm/UNII map maintainable? How many entries are really needed to reach useful coverage? Is there a machine-assisted build that stays reviewed?
+> 3. **Hypothesis output (§5.4).** Even as `review_candidate` with `mechanism:null`, is surfacing strong-inhibitor×sensitive-substrate to a pharmacist clinically appropriate, or over-trusted noise? Where is the line?
+> 4. **Review workflow.** §5.4's internal review queue assumes a clinician triage loop (parent plan Task 10). Is that realistic here, or does it become an un-actioned backlog?
+> 5. **Scoped-coverage efficacy (§5.6).** Does naming `not_assessed_scopes` actually prevent over-trust, or get ignored? Is the not-assessed list complete?
+> 6. **Contract closure (§5.7).** Verify the proposed key allowlist includes every field §5.4 emits (`pair`, `evidence`, `review_status`, `severity`, `mechanism`, `management`, the inference-class note) and nothing more.
+> 7. **Parser durability (§5.1).** Fail-closed-on-column-drift + monthly human-reviewed diff — realistic, or a maintenance trap?
+>
+> The §3–§4 material below is the *original* v1 brief, retained for the reproduction commands (still valid) and context.
+
+---
+
 **For an independent reviewing agent.** You are being asked to critically verify a design before it becomes an implementation plan. Assume nothing is correct until you have checked it. Reproduce the key claims yourself with the commands provided. Your job is to find what is wrong, thin, unsafe, or over-scoped — not to rubber-stamp.
 
 Environment: Windows, Git Bash available. Aushadhi repo at `D:\Dev\Projects\aushadhi`. PostgreSQL 17 at `127.0.0.1:55432` (superuser `postgres`, passwordless local). Python + `psql` on PATH via `/c/Program Files/PostgreSQL/17/bin`.
