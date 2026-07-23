@@ -7,6 +7,16 @@
   "source_ids": [
     "aushadhi-open-clinician-rules"
   ],
+  "licence_notices": {
+    "aushadhi-open-clinician-rules": {
+      "attribution": "Aushadhi contributors",
+      "licence_notice": "Creative Commons Attribution 4.0 International",
+      "licence_id": "CC-BY-4.0",
+      "licence_url": "https://creativecommons.org/licenses/by/4.0/legalcode",
+      "source_url": "https://github.com/Bahuleyandr/aushadhi",
+      "changes": "Structured and versioned for the Aushadhi interaction checker."
+    }
+  },
   "declared_coverage": "unknown",
   "rules": []
 }

@@ -263,6 +263,7 @@ export function validateRulePack(rulePack) {
     'profile',
     'licence',
     'source_ids',
+    'licence_notices',
     'declared_coverage',
     'rules',
   ]), 'rule pack');

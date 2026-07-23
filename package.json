@@ -19,7 +19,9 @@
     "stats": "node src/cli/stats.mjs",
     "report": "node src/cli/report.mjs",
     "fleet": "node src/cli/fleet-status.mjs",
-    "interactions": "node src/cli/interactions.mjs"
+    "interactions": "node src/cli/interactions.mjs",
+    "interactions:draft:assemble": "node src/cli/assemble-interaction-draft-pack.mjs",
+    "verify:interaction-evidence": "node src/cli/verify-interaction-evidence-provenance.mjs"
   },
   "dependencies": {
     "cheerio": "^1.2.0",

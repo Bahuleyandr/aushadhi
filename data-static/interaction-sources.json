@@ -1,12 +1,13 @@
 {
   "schema_version": 1,
-  "policy_reviewed_at": "2026-07-10",
+  "policy_reviewed_at": "2026-07-24",
   "uses": [
     "catalogue",
     "ingredient-index",
     "product-resolution",
     "identity",
     "interaction-evidence",
+    "interaction-counterevidence",
     "rule-structure",
     "interaction-rules"
   ],
@@ -24,6 +25,7 @@
         "product-resolution",
         "identity",
         "interaction-evidence",
+        "interaction-counterevidence",
         "rule-structure",
         "interaction-rules"
       ],
@@ -45,6 +47,7 @@
         "product-resolution",
         "identity",
         "interaction-evidence",
+        "interaction-counterevidence",
         "rule-structure",
         "interaction-rules"
       ],
@@ -76,24 +79,30 @@
     },
     "openfda-labels": {
       "name": "openFDA drug labels",
-      "homepage": "https://open.fda.gov/apis/drug/label/",
+      "homepage": "https://open.fda.gov/data/spl/",
       "licence": {
         "id": "CC0-1.0",
         "class": "public-domain",
         "verification_status": "verified",
-        "verified_at": "2026-07-10",
-        "terms_url": "https://open.fda.gov/terms/"
+        "verified_at": "2026-07-23",
+        "terms_url": "https://open.fda.gov/data/spl/"
       },
       "enabled": true,
       "ingestion_forbidden": false,
       "redistributable": true,
       "artifact_pack": "open-core",
       "allowed_profiles": ["production-open", "internal-evaluation"],
-      "allowed_uses": ["interaction-evidence"],
+      "allowed_uses": ["interaction-evidence", "interaction-counterevidence"],
       "required_storage_zones": {
-        "production-open": ["data/interaction/production-open"],
-        "internal-evaluation": ["data/interaction/internal-evaluation"]
+        "production-open": ["data/interaction/production-open", "docs/interaction-review"],
+        "internal-evaluation": ["data/interaction/internal-evaluation", "docs/interaction-review"]
       },
+      "allowed_origin_hosts": ["api.fda.gov"],
+      "allowed_origin_paths": ["/drug/label.json"],
+      "reference_hosts": ["dailymed.nlm.nih.gov"],
+      "rights_scope": "company-submitted-structured-product-label-records-published-by-openfda-under-cc0",
+      "requires_document_reconciliation": true,
+      "requires_evidence_payload_validation": true,
       "disabled_reasons": []
     },
     "fda-cyp-transporter": {
@@ -113,10 +122,163 @@
       "allowed_profiles": ["production-open", "internal-evaluation"],
       "allowed_uses": ["interaction-evidence"],
       "required_storage_zones": {
-        "production-open": ["data/interaction/production-open"],
-        "internal-evaluation": ["data/interaction/internal-evaluation"]
+        "production-open": ["data/interaction/production-open", "docs/interaction-review"],
+        "internal-evaluation": ["data/interaction/internal-evaluation", "docs/interaction-review"]
       },
+      "allowed_origin_hosts": ["fda.gov"],
+      "allowed_origin_paths": [
+        "/drugs/drug-interactions-labeling/drug-development-and-drug-interactions-table-substrates-inhibitors-and-inducers"
+      ],
+      "rights_scope": "fda-authored-web-content-only",
+      "requires_evidence_payload_validation": true,
       "disabled_reasons": []
+    },
+    "fda-authored-web-content": {
+      "name": "Allowlisted FDA-authored drug-interaction material",
+      "homepage": "https://www.fda.gov/about-fda/about-website/website-policies",
+      "licence": {
+        "id": "US-PUBLIC-DOMAIN",
+        "class": "public-domain",
+        "verification_status": "verified",
+        "verified_at": "2026-07-23",
+        "terms_url": "https://www.fda.gov/about-fda/about-website/website-policies"
+      },
+      "enabled": false,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "open-core",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["interaction-evidence"],
+      "required_storage_zones": {
+        "production-open": ["data/interaction/production-open", "docs/interaction-review"],
+        "internal-evaluation": ["data/interaction/internal-evaluation", "docs/interaction-review"]
+      },
+      "rights_scope": "allowlisted-government-authored-documents-only",
+      "requires_evidence_payload_validation": true,
+      "disabled_reasons": [
+        "The previously approved FDA document returned Not found on 2026-07-23; no current revalidated FDA-authored document is allowlisted."
+      ]
+    },
+    "mhra-govuk-drug-safety-updates": {
+      "name": "MHRA Drug Safety Updates published on GOV.UK",
+      "homepage": "https://www.gov.uk/drug-safety-update",
+      "licence": {
+        "id": "OGL-3.0",
+        "class": "open",
+        "verification_status": "verified",
+        "verified_at": "2026-07-23",
+        "terms_url": "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
+      },
+      "enabled": true,
+      "ingestion_forbidden": false,
+      "redistributable": true,
+      "artifact_pack": "open-core",
+      "allowed_profiles": ["production-open", "internal-evaluation"],
+      "allowed_uses": ["interaction-evidence"],
+      "required_storage_zones": {
+        "production-open": ["data/interaction/production-open", "docs/interaction-review"],
+        "internal-evaluation": ["data/interaction/internal-evaluation", "docs/interaction-review"]
+      },
+      "allowed_origin_hosts": ["gov.uk"],
+      "allowed_origin_path_prefixes": ["/drug-safety-update/"],
+      "rights_scope": "exact-pages-with-open-government-licence-footer-and-no-page-specific-exception",
+      "requires_page_licence_assertion": true,
+      "requires_evidence_payload_validation": true,
+      "attribution": "Contains public sector information licensed under the Open Government Licence v3.0.",
+      "disabled_reasons": []
+    },
+    "dailymed-label-reference": {
+      "name": "DailyMed label reference locator",
+      "homepage": "https://dailymed.nlm.nih.gov/dailymed/",
+      "licence": {
+        "id": "UNKNOWN",
+        "class": "unknown",
+        "verification_status": "unknown",
+        "verified_at": null,
+        "terms_url": "https://www.nlm.nih.gov/web_policies.html"
+      },
+      "enabled": false,
+      "ingestion_forbidden": true,
+      "redistributable": false,
+      "artifact_pack": "manual-reference-only",
+      "allowed_profiles": [],
+      "allowed_uses": [],
+      "required_storage_zones": {},
+      "reference_hosts": ["dailymed.nlm.nih.gov"],
+      "rights_scope": "locator-only-until-each-label-is-reconciled-to-a-licensed-origin",
+      "disabled_reasons": [
+        "private-party submitted label content is not presumed public domain",
+        "use openfda-labels after exact set-id and version reconciliation"
+      ]
+    },
+    "fda-accessdata-label-reference": {
+      "name": "FDA accessdata sponsor-label reference locator",
+      "homepage": "https://www.accessdata.fda.gov/scripts/cder/daf/",
+      "licence": {
+        "id": "UNKNOWN",
+        "class": "unknown",
+        "verification_status": "unknown",
+        "verified_at": null,
+        "terms_url": "https://www.fda.gov/about-fda/about-website/website-policies"
+      },
+      "enabled": false,
+      "ingestion_forbidden": true,
+      "redistributable": false,
+      "artifact_pack": "manual-reference-only",
+      "allowed_profiles": [],
+      "allowed_uses": [],
+      "required_storage_zones": {},
+      "reference_hosts": ["accessdata.fda.gov"],
+      "rights_scope": "locator-only-for-sponsor-submitted-labels",
+      "disabled_reasons": [
+        "FDA hosting does not establish that sponsor-submitted label content is a US government work"
+      ]
+    },
+    "emc-manual-reference": {
+      "name": "electronic Medicines Compendium manual reference",
+      "homepage": "https://www.medicines.org.uk/emc/",
+      "licence": {
+        "id": "PROPRIETARY-WEB",
+        "class": "restricted",
+        "verification_status": "verified",
+        "verified_at": "2026-07-23",
+        "terms_url": "https://www.medicines.org.uk/emc/privacy-notice-and-legal"
+      },
+      "enabled": false,
+      "ingestion_forbidden": true,
+      "redistributable": false,
+      "artifact_pack": "manual-reference-only",
+      "allowed_profiles": [],
+      "allowed_uses": [],
+      "required_storage_zones": {},
+      "reference_hosts": ["medicines.org.uk"],
+      "rights_scope": "locator-only-no-copied-or-summarized-content",
+      "disabled_reasons": [
+        "terms prohibit database or knowledge-bank creation and systematic summarization without permission"
+      ]
+    },
+    "acr-manual-reference": {
+      "name": "American College of Radiology manual reference",
+      "homepage": "https://www.acr.org/Clinical-Resources/Clinical-Tools-and-Reference/Contrast-Manual",
+      "licence": {
+        "id": "PROPRIETARY-WEB",
+        "class": "restricted",
+        "verification_status": "verified",
+        "verified_at": "2026-07-23",
+        "terms_url": "https://www.acr.org/Legal"
+      },
+      "enabled": false,
+      "ingestion_forbidden": true,
+      "redistributable": false,
+      "artifact_pack": "manual-reference-only",
+      "allowed_profiles": [],
+      "allowed_uses": [],
+      "required_storage_zones": {},
+      "reference_hosts": ["acr.org"],
+      "rights_scope": "locator-only-no-copied-content",
+      "disabled_reasons": [
+        "reproduction and redistribution require permission"
+      ]
     },
     "who-inn": {
       "name": "WHO International Nonproprietary Names",
@@ -138,6 +300,10 @@
         "production-open": ["data/interaction/production-open"],
         "internal-evaluation": ["data/interaction/internal-evaluation"]
       },
+      "allowed_origin_hosts": ["who.int"],
+      "allowed_origin_paths": ["/teams/health-product-and-policy-standards/inn"],
+      "allowed_origin_path_prefixes": ["/teams/health-product-and-policy-standards/inn/"],
+      "requires_evidence_payload_validation": true,
       "disabled_reasons": []
     },
     "rxnorm": {
@@ -160,17 +326,20 @@
         "production-open": ["data/interaction/production-open"],
         "internal-evaluation": ["data/interaction/internal-evaluation"]
       },
+      "allowed_origin_hosts": ["nlm.nih.gov"],
+      "allowed_origin_path_prefixes": ["/research/umls/rxnorm/"],
+      "requires_evidence_payload_validation": true,
       "disabled_reasons": []
     },
     "fda-gsrs-unii": {
       "name": "FDA GSRS/UNII",
-      "homepage": "https://precision.fda.gov/uniisearch",
+      "homepage": "https://open.fda.gov/data/unii/",
       "licence": {
-        "id": "US-PUBLIC-DOMAIN",
+        "id": "CC0-1.0",
         "class": "public-domain",
         "verification_status": "verified",
-        "verified_at": "2026-07-10",
-        "terms_url": "https://www.fda.gov/about-fda/about-website/website-policies"
+        "verified_at": "2026-07-23",
+        "terms_url": "https://open.fda.gov/data/unii/"
       },
       "enabled": true,
       "ingestion_forbidden": false,
@@ -179,9 +348,14 @@
       "allowed_profiles": ["production-open", "internal-evaluation"],
       "allowed_uses": ["identity"],
       "required_storage_zones": {
-        "production-open": ["data/interaction/production-open"],
-        "internal-evaluation": ["data/interaction/internal-evaluation"]
+        "production-open": ["data/interaction/production-open", "docs/interaction-review"],
+        "internal-evaluation": ["data/interaction/internal-evaluation", "docs/interaction-review"]
       },
+      "allowed_origin_hosts": ["open.fda.gov", "download.open.fda.gov"],
+      "allowed_origin_path_prefixes": ["/data/unii/", "/other/unii/"],
+      "reference_hosts": ["precision.fda.gov"],
+      "rights_scope": "substance-identity-only",
+      "requires_evidence_payload_validation": true,
       "disabled_reasons": []
     },
     "aushadhi-open-clinician-rules": {
@@ -203,6 +377,12 @@
       "required_storage_zones": {
         "production-open": ["data-static", "data/interaction/production-open"],
         "internal-evaluation": ["data/interaction/internal-evaluation"]
+      },
+      "redistribution_obligations": {
+        "attribution": "Aushadhi contributors",
+        "licence_notice": "Creative Commons Attribution 4.0 International",
+        "source_url": "https://github.com/Bahuleyandr/aushadhi",
+        "changes_notice_required": true
       },
       "disabled_reasons": []
     },
@@ -250,6 +430,16 @@
       "required_storage_zones": {
         "production-open": ["data/interaction/production-open/drugcentral-sharealike"],
         "internal-evaluation": ["data/interaction/internal-evaluation/drugcentral-sharealike"]
+      },
+      "allowed_origin_hosts": ["drugcentral.org"],
+      "allowed_origin_path_prefixes": ["/"],
+      "requires_evidence_payload_validation": true,
+      "redistribution_obligations": {
+        "attribution": "DrugCentral",
+        "licence_notice": "Creative Commons Attribution-ShareAlike 4.0 International",
+        "source_url": "https://drugcentral.org/",
+        "changes_notice_required": true,
+        "compatible_adapter_licences": ["CC-BY-SA-4.0"]
       },
       "disabled_reasons": []
     },

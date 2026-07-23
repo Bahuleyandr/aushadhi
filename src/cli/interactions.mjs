@@ -186,6 +186,7 @@ export async function runInteractionCheck(options) {
     profile: rulePack.profile,
     use: 'interaction-rules',
     storagePath: storagePath(options.rulesPath),
+    licenceNotices: rulePack.licence_notices ?? {},
   });
 
   const scan = await scanProductQueries({
