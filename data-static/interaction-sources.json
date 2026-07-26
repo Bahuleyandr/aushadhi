@@ -407,6 +407,7 @@
         "internal-evaluation": ["data/interaction/internal-evaluation"]
       },
       "read_only_input_zones": {
+        "production-open": ["dist"],
         "internal-evaluation": ["dist"]
       },
       "disabled_reasons": []

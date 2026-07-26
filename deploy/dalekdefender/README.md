@@ -7,6 +7,7 @@ Always-on 1mg crawler running on **dd** (dalekdefender). Single instance, polite
 
 - `aushadhi-crawl.service` → `/etc/systemd/system/aushadhi-crawl.service`
 - `aushadhi-crawl.service.d/splittunnel.conf` → drop-in of the same name
+- `aushadhi-build.service.d/memory.conf` → build heap and cgroup memory envelope
 - The loop lives in the repo at `scripts/crawl-loop.sh` (WorkingDirectory `/root/aushadhi`).
 - `aushadhi-cache-retention.service` and `.timer` compress raw page-cache HTML
   older than six hours. They do not touch normalized records, state, indexes, or
@@ -37,6 +38,16 @@ mkdir -p /etc/systemd/system/aushadhi-crawl.service.d
 cp aushadhi-crawl.service.d/splittunnel.conf /etc/systemd/system/aushadhi-crawl.service.d/
 systemctl daemon-reload
 systemctl enable --now aushadhi-crawl
+```
+
+The nightly build processes the complete accumulated catalogue. Install its
+memory envelope alongside the build unit; the package-level 6 GiB V8 heap stays
+below the 8 GiB cgroup ceiling:
+
+```bash
+mkdir -p /etc/systemd/system/aushadhi-build.service.d
+cp aushadhi-build.service.d/memory.conf /etc/systemd/system/aushadhi-build.service.d/
+systemctl daemon-reload
 ```
 
 ## ⚠ Split-tunnel (load-bearing) — why the drop-in exists
