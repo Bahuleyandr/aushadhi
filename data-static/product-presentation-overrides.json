@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "product_id_namespace": "aushadhi:product:v1",
+  "product_assertion_namespace": "aushadhi:product-assertion:v1",
+  "mappings": []
+}

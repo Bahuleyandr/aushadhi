@@ -3,9 +3,15 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { checkResolvedProducts, validateRulePack } from '../lib/interaction-checker.mjs';
-import { createIngredientIdentity } from '../lib/ingredient-identity.mjs';
+import {
+  mapResolvedProducts,
+  summarizeInteractionMappings,
+  validateIngredientMappingManifest,
+  validateProductPresentationManifest,
+} from '../lib/interaction-mapping.mjs';
 import {
   assertArtifactProvenance,
+  assertSourceAllowed,
   loadSourceManifest,
 } from '../lib/interaction-source-policy.mjs';
 import { scanProductQueries } from '../lib/product-resolver.mjs';
@@ -13,6 +19,16 @@ import { scanProductQueries } from '../lib/product-resolver.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const DEFAULT_ARTIFACT = path.join(ROOT, 'dist', 'latest', 'drugs.jsonl');
 const DEFAULT_RULES = path.join(ROOT, 'data-static', 'interaction-rules.json');
+const DEFAULT_INGREDIENT_MAPPINGS = path.join(
+  ROOT,
+  'data-static',
+  'ingredient-mapping-overrides.json',
+);
+const DEFAULT_PRESENTATION_MAPPINGS = path.join(
+  ROOT,
+  'data-static',
+  'product-presentation-overrides.json',
+);
 
 function requireValue(args, index, flag) {
   const value = args[index + 1];
@@ -27,6 +43,8 @@ export function parseArgs(args) {
     profile: null,
     artifactPath: DEFAULT_ARTIFACT,
     rulesPath: DEFAULT_RULES,
+    ingredientMappingsPath: DEFAULT_INGREDIENT_MAPPINGS,
+    presentationMappingsPath: DEFAULT_PRESENTATION_MAPPINGS,
     queries: [],
   };
 
@@ -40,6 +58,12 @@ export function parseArgs(args) {
       index += 1;
     } else if (flag === '--rules') {
       options.rulesPath = path.resolve(ROOT, requireValue(args, index, flag));
+      index += 1;
+    } else if (flag === '--ingredient-mappings') {
+      options.ingredientMappingsPath = path.resolve(ROOT, requireValue(args, index, flag));
+      index += 1;
+    } else if (flag === '--presentation-mappings') {
+      options.presentationMappingsPath = path.resolve(ROOT, requireValue(args, index, flag));
       index += 1;
     } else if (flag === '--drug') {
       options.queries.push(parseDrugQuery(requireValue(args, index, flag)));
@@ -131,33 +155,31 @@ function assertSummaryMatchesRows(summaryProvenance, observedProvenance) {
   return observedIds;
 }
 
-function mappedIngredient(ingredient) {
-  const identity = createIngredientIdentity(ingredient);
-  if (identity.precision === 'observed') {
-    return { ...ingredient, ...identity, mapping_status: 'exact' };
-  }
-  return {
-    ...ingredient,
-    ...identity,
-    mapping_status: 'unmapped',
-    error: 'catalogue_normalized_fallback_requires_review',
-  };
-}
-
-function attachIngredientMappings(records) {
-  return records.map((record) => {
-    if (record.status !== 'resolved') return record;
-    if (!Array.isArray(record.product.ingredients)) {
-      throw new Error(`resolved product ${record.product.product_id} has no ingredient array`);
+function assertMappingEvidenceSourcesAllowed(sourceManifest, profile, mappingManifests) {
+  for (const { manifest, allowedUses } of mappingManifests) {
+    for (const mapping of manifest?.mappings ?? []) {
+      for (const evidence of mapping.review?.evidence ?? []) {
+        const source = sourceManifest.sources?.[evidence.source_id];
+        if (!source) {
+          throw new Error(`mapping evidence uses unknown source ${evidence.source_id}`);
+        }
+        const use = allowedUses.find((candidate) => source.allowed_uses?.includes(candidate));
+        if (!use) {
+          throw new Error(
+            `mapping evidence source ${evidence.source_id} is not allowed for this mapping type`,
+          );
+        }
+        const storagePathForPolicy = source.required_storage_zones?.[profile]?.[0]
+          ?? 'data-static';
+        assertSourceAllowed(sourceManifest, {
+          sourceId: evidence.source_id,
+          profile,
+          use,
+          storagePath: storagePathForPolicy,
+        });
+      }
     }
-    return {
-      ...record,
-      product: {
-        ...record.product,
-        ingredients: record.product.ingredients.map(mappedIngredient),
-      },
-    };
-  });
+  }
 }
 
 function assertRulePackProfile(runtimeProfile, rulePack) {
@@ -188,6 +210,23 @@ export async function runInteractionCheck(options) {
     storagePath: storagePath(options.rulesPath),
     licenceNotices: rulePack.licence_notices ?? {},
   });
+  const ingredientManifest = await readJson(
+    options.ingredientMappingsPath,
+    'ingredient mapping overrides',
+  );
+  const presentationManifest = await readJson(
+    options.presentationMappingsPath,
+    'product presentation overrides',
+  );
+  validateIngredientMappingManifest(ingredientManifest);
+  validateProductPresentationManifest(presentationManifest);
+  assertMappingEvidenceSourcesAllowed(manifest, options.profile, [
+    { manifest: ingredientManifest, allowedUses: ['identity'] },
+    {
+      manifest: presentationManifest,
+      allowedUses: ['product-resolution', 'identity', 'interaction-evidence'],
+    },
+  ]);
 
   const scan = await scanProductQueries({
     artifactPath: options.artifactPath,
@@ -200,10 +239,18 @@ export async function runInteractionCheck(options) {
     use: 'product-resolution',
     storagePath: storagePath(options.artifactPath),
   });
-  return checkResolvedProducts({
-    resolvedInputs: attachIngredientMappings(scan.results),
-    rulePack,
+  const mappedRecords = mapResolvedProducts({
+    records: scan.results,
+    ingredientManifest,
+    presentationManifest,
   });
+  return {
+    ...checkResolvedProducts({
+      resolvedInputs: mappedRecords,
+      rulePack,
+    }),
+    mapping_summary: summarizeInteractionMappings(mappedRecords),
+  };
 }
 
 export async function main(args = process.argv.slice(2)) {

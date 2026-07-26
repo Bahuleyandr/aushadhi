@@ -314,7 +314,19 @@ function mappingIssue(record, ingredient, ingredientIndex, status) {
     ingredient_index: ingredientIndex,
   };
   if (isObject(ingredient)) {
-    for (const key of ['ingredient_id', 'observed_name', 'canonical_name', 'candidates', 'error']) {
+    for (const key of [
+      'ingredient_id',
+      'assertion_ingredient_id',
+      'ingredient_occurrence_id',
+      'observed_name',
+      'canonical_name',
+      'assertion_canonical_name',
+      'identity_relationship',
+      'runtime_drug',
+      'candidates',
+      'error',
+      'presentation_error',
+    ]) {
       if (ingredient[key] !== undefined) issue[key] = structuredClone(ingredient[key]);
     }
   }

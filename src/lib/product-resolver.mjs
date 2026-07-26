@@ -9,8 +9,10 @@ import {
 } from './normalize.mjs';
 
 const compareCodePoint = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-const PRODUCT_ID_NAMESPACE = 'aushadhi:product:v1';
+export const PRODUCT_ID_NAMESPACE = 'aushadhi:product:v1';
+export const PRODUCT_ASSERTION_NAMESPACE = 'aushadhi:product-assertion:v1';
 const QUERY_KEYS = new Set(['brand_name', 'manufacturer', 'pack_label', 'form_raw', 'strengths']);
+const WHITESPACE = /\s+/gu;
 
 function optionalString(value, field) {
   if (value === null || value === undefined || value === '') return null;
@@ -48,6 +50,68 @@ function ingredientSignature(row) {
     normText(ingredient?.observed_name ?? ingredient?.molecule_raw ?? ingredient?.molecule),
     normalizeStrength(ingredient?.strength_raw),
   ].join('\u0001')).sort(compareCodePoint).join('\u0002');
+}
+
+function assertionText(value) {
+  if (value === null || value === undefined) return null;
+  const normalized = String(value).normalize('NFKC').replace(WHITESPACE, ' ').trim();
+  return normalized || null;
+}
+
+function ingredientAssertion(ingredient, index) {
+  if (!ingredient || typeof ingredient !== 'object' || Array.isArray(ingredient)) {
+    throw new TypeError(`product ingredient ${index} must be an object`);
+  }
+  const names = [
+    ['observed_name', ingredient.observed_name],
+    ['molecule_raw', ingredient.molecule_raw],
+    ['molecule', ingredient.molecule],
+  ];
+  const selected = names.find(([, value]) => assertionText(value) !== null);
+  if (!selected) throw new TypeError(`product ingredient ${index} requires an observed name`);
+  const [sourceField, value] = selected;
+  const strengthValue = ingredient.strength_value;
+  if (strengthValue !== null
+      && strengthValue !== undefined
+      && !Number.isFinite(strengthValue)) {
+    throw new TypeError(`product ingredient ${index}.strength_value must be finite`);
+  }
+  return {
+    observed_name: assertionText(value),
+    source_field: sourceField,
+    strength_raw: assertionText(ingredient.strength_raw),
+    strength_value: strengthValue ?? null,
+    strength_unit: assertionText(ingredient.strength_unit),
+  };
+}
+
+export function productAssertionForRow(row) {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) {
+    throw new TypeError('product row must be an object');
+  }
+  const brandName = assertionText(row.brand_name);
+  if (!brandName) throw new TypeError('product row requires brand_name');
+  if (!Array.isArray(row.ingredients) || row.ingredients.length === 0) {
+    throw new TypeError('product row requires at least one ingredient');
+  }
+  const ingredients = row.ingredients
+    .map(ingredientAssertion)
+    .sort((left, right) => compareCodePoint(JSON.stringify(left), JSON.stringify(right)));
+  return {
+    brand_name: brandName,
+    manufacturer: assertionText(row.manufacturer),
+    pack_label: assertionText(row.pack_label),
+    form_raw: assertionText(row.form_raw),
+    ingredients,
+  };
+}
+
+export function productAssertionHashForRow(row) {
+  return createHash('sha256')
+    .update(PRODUCT_ASSERTION_NAMESPACE, 'utf8')
+    .update('\u0000', 'utf8')
+    .update(JSON.stringify(productAssertionForRow(row)), 'utf8')
+    .digest('hex');
 }
 
 export function normalizeProductQuery(query) {

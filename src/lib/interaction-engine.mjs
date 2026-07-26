@@ -500,6 +500,30 @@ function normalizeSubject(subject) {
   };
 }
 
+export function normalizeRuntimeInteractionSubject(subject) {
+  if (!isObject(subject)) {
+    throw new TypeError('runtime interaction subjects require structured subjects');
+  }
+  if (typeof subject.route !== 'string' || subject.route.trim() === '') {
+    throw new TypeError('runtime interaction subjects require a non-empty route');
+  }
+  if (typeof subject.formulation !== 'string' || subject.formulation.trim() === '') {
+    throw new TypeError('runtime interaction subjects require a non-empty formulation');
+  }
+  const normalized = normalizeSubject(subject);
+  if (ABSTRACT_RUNTIME_ROUTES.has(normalized.route)) {
+    throw new TypeError(
+      `runtime interaction subject route "${subject.route}" is not a concrete administration route`,
+    );
+  }
+  if (ABSTRACT_RUNTIME_FORMULATIONS.has(normalized.formulation)) {
+    throw new TypeError(
+      `runtime interaction subject formulation "${subject.formulation}" is not a concrete dose form`,
+    );
+  }
+  return subjectOutput(normalized);
+}
+
 function subjectKey(subject) {
   return JSON.stringify([subject.drug, subject.route, subject.formulation]);
 }
@@ -1521,26 +1545,7 @@ export function checkRuntimeInteractions(options) {
     throw new TypeError('runtime interaction checks require at least two structured subjects');
   }
   for (const subject of options.subjects) {
-    if (!isObject(subject)) {
-      throw new TypeError('runtime interaction checks require structured subjects');
-    }
-    if (typeof subject.route !== 'string' || subject.route.trim() === '') {
-      throw new TypeError('runtime interaction subjects require a non-empty route');
-    }
-    if (typeof subject.formulation !== 'string' || subject.formulation.trim() === '') {
-      throw new TypeError('runtime interaction subjects require a non-empty formulation');
-    }
-    const normalized = normalizeSubject(subject);
-    if (ABSTRACT_RUNTIME_ROUTES.has(normalized.route)) {
-      throw new TypeError(
-        `runtime interaction subject route "${subject.route}" is not a concrete administration route`,
-      );
-    }
-    if (ABSTRACT_RUNTIME_FORMULATIONS.has(normalized.formulation)) {
-      throw new TypeError(
-        `runtime interaction subject formulation "${subject.formulation}" is not a concrete dose form`,
-      );
-    }
+    normalizeRuntimeInteractionSubject(subject);
   }
   for (const rule of runtimeRules) {
     if (rule.runtime_status.pair_matcher_executable !== true) {

@@ -20,6 +20,9 @@ npm test          # node:test suite
 # call Node directly on PowerShell because npm 11 consumes repeated --drug flags
 node src/cli/interactions.mjs --profile internal-evaluation --drug "Augmentin 625 Duo Tablet" --drug "Azithral 500 Tablet"
 
+# generate RxNorm/UNII mapping proposals; output remains review_candidate
+node src/cli/propose-interaction-mappings.mjs --profile internal-evaluation --ingredient "warfarin"
+
 # gap-filler: call node directly (PowerShell eats `--` before npm flags)
 node src/cli/gapfill.mjs --discover 50            # build/extend the slug index (A-Z browse)
 node src/cli/gapfill.mjs --limit 200              # targeted fetches, priority: catalog > likely-truncated > conflicts > missing
@@ -44,6 +47,9 @@ sources whose licences and storage zones are approved for redistribution.
 contains restricted Jan Aushadhi and Tata 1mg provenance and must not be
 redistributed. Ambiguous products and lossy legacy ingredient names are
 reported as unresolved instead of being auto-selected or silently mapped.
+Observed ingredient strings require a human-reviewed typed RxNorm/UNII
+mapping, and a runtime subject requires a separately reviewed concrete product
+route and formulation. Brand and pack text never infer either.
 
 Structured disambiguation is accepted as JSON, for example:
 
@@ -51,8 +57,9 @@ Structured disambiguation is accepted as JSON, for example:
 --drug '{"brand_name":"Example","manufacturer":"Maker","strengths":["10 mg"],"form_raw":"tablet","pack_label":"strip of 10 tablets"}'
 ```
 
-See [the interaction evidence plan](docs/plans/2026-07-10-aushadhi-interaction-evidence-layer.md)
-and [the source/licence manifest](data-static/interaction-sources.json).
+See [the interaction evidence plan](docs/plans/2026-07-10-aushadhi-interaction-evidence-layer.md),
+the [reviewed mapping workflow](docs/interaction-mapping.md), and the
+[source/licence manifest](data-static/interaction-sources.json).
 
 ## Truncation
 
