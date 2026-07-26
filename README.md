@@ -40,9 +40,10 @@ combinations, and checks every unique cross-product ingredient pair against a
 versioned clinician-reviewed rule pack. It never treats a missing rule as proof
 of safety: the committed open rule pack currently declares coverage as
 `unknown` and contains no invented clinical rules. The internal-evaluation pack
-contains one clinician-approved warfarin-amiodarone rule, restricted to six
-combinations of five exact reviewed PMBJP oral-tablet assertions; it is not
-loaded by `production-open`.
+contains two clinician-approved rules: warfarin-amiodarone is restricted to six
+combinations of five exact reviewed PMBJP oral-tablet assertions, and
+warfarin-fluconazole is restricted to 12 combinations of seven exact reviewed
+PMBJP oral-tablet assertions. Neither is loaded by `production-open`.
 
 Every run requires an explicit release profile. `production-open` accepts only
 sources whose licences and storage zones are approved for redistribution.

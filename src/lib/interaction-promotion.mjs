@@ -18,6 +18,10 @@ import { validateDraftRules } from './interaction-draft-validation.mjs';
 const SHA256 = /^[0-9a-f]{64}$/u;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const ROLES = ['object', 'perpetrator'];
+const PROMOTABLE_OPENFDA_CITATION_STATUSES = new Set([
+  'machine_confirmed_openfda_reconciled_pending_clinician',
+  'machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope',
+]);
 
 function isObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -436,11 +440,10 @@ export function compileInteractionRuntimePack({
     );
     if (draft.rule.evidence.some((evidence) => (
       evidence.review_status !== 'review_candidate'
-      || evidence.citation_status
-        !== 'machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope'
+      || !PROMOTABLE_OPENFDA_CITATION_STATUSES.has(evidence.citation_status)
     ))) {
       throw new TypeError(
-        `${promotion.rule_id} evidence is not bound to the approved internal product scope`,
+        `${promotion.rule_id} evidence is not eligible for clinician-gated internal promotion`,
       );
     }
     const scope = bindScope({

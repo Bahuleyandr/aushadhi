@@ -2,19 +2,18 @@
 
 Date: 2026-07-26
 
-Status: review candidate only
+Status: clinician reviewed
 
-Release profile: proposed for `internal-evaluation` only
+Release profile: approved for `internal-evaluation` only
 
 Production-open status: disabled
 
-This packet prepares, but does not approve, one exact fluconazole ingredient
-identity, four PMBJP oral-tablet presentations, and a warfarin-fluconazole
-clinical rule limited to 12 cross-product combinations. The machine-readable
-bindings are in
+This packet records approval of one exact fluconazole ingredient identity, four
+PMBJP oral-tablet presentations, and a warfarin-fluconazole clinical rule
+limited to 12 cross-product combinations. The machine-readable bindings are in
 `docs/interaction-review/2026-07-26-warfarin-fluconazole-review.json`.
 
-## Ingredient identity candidate
+## Ingredient identity
 
 The observed ingredient `fluconazole` has one exact active RxNorm ingredient
 candidate:
@@ -25,10 +24,10 @@ candidate:
 - local ingredient ID
   `sha256:37cc87b734ee49f5f3ad5773f44aa5089c4bc93ab4fb50bc53048e2b69416bd0`
 
-The mapping remains absent from the committed override manifest until a
-clinician approves the exact relationship.
+The exact relationship is approved and committed to the reviewed override
+manifest for `internal-evaluation`.
 
-## Product-presentation candidates
+## Product presentations
 
 | PMBJP code | Exact product assertion | Pack | Product assertion SHA-256 | Proposed presentation |
 |---|---|---:|---|---|
@@ -48,27 +47,29 @@ no active concept. That is recorded as a transparent corroboration gap, not
 silently normalized; the direct PMBI tender is the presentation evidence for
 code `2773`.
 
-## Clinical candidate
+## Clinical approval
 
 The reconciled draft row is
 `warfarin__fluconazole`, exact row SHA-256
 `088bd06e472723bce36527b67d1c2b0d7c24694842c5929c25c1c4e693952f84`.
-It remains runtime-disabled, promotion-ineligible, and clinician-pending.
+The draft remains runtime-disabled and promotion-ineligible so it cannot
+self-authorize. A separate deterministic promotion binds this exact row to the
+reviewed mappings and clinician approval.
 
-The proposed scope combines the three already reviewed PMBJP warfarin tablets
-(1 mg, 2 mg, and 5 mg) with the four fluconazole candidates above, producing
+The approved scope combines the three reviewed PMBJP warfarin tablets (1 mg,
+2 mg, and 5 mg) with the four reviewed fluconazole tablets above, producing
 12 exact product pairs. It is not an ingredient-wide approval.
 
-The proposed severity is `major` and the proposed dispensing action is
-`confirm_and_monitor`. The alert would require confirmation that the
+The approved severity is `major` and the approved dispensing action is
+`confirm_and_monitor`. The alert requires confirmation that the
 prescriber or anticoagulation service reviewed the warfarin dose and arranged
-PT/INR monitoring when fluconazole is started or stopped. It would not direct
+PT/INR monitoring when fluconazole is started or stopped. It does not direct
 the pharmacy to change a dose or stop either medicine independently.
 
 Counselling covers unusual bleeding or bruising, prolonged bleeding, blood in
 urine, and red or tarry-black stools. The current fluconazole label says its
 enzyme-inhibiting effect persists 4 to 5 days after discontinuation. The
-candidate does not invent a universal INR schedule for that interval or a
+approved rule does not invent a universal INR schedule for that interval or a
 single-dose exception.
 
 ## Evidence and adversarial findings
@@ -91,7 +92,9 @@ single-dose exception.
 
 ## Approval statements
 
-These are deliberately separate decisions.
+These deliberately separate decisions were approved by `clinician:subas` on
+2026-07-26. The response and scope interpretation are recorded in
+`2026-07-26-warfarin-fluconazole-clinician-approval.md`.
 
 ### Ingredient identity
 

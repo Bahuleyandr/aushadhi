@@ -11,8 +11,8 @@ Section A is reconciled to the v2 runtime-status and strict citation model. Rule
 - Citation status: `{"machine_confirmed_openfda_reconciled_pending_clinician":32,"machine_confirmed_govuk_ogl_bound_pending_clinician":2,"machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope":2}`
 - Schema freeze: `validateDraftRules` passes. Every row is runtime-disabled
   and promotion-ineligible within the draft pack. The
-  `warfarin__amiodarone` row now carries its approved oral/tablet scope and
-  `warfarin__fluconazole` carries a proposed oral/tablet review scope, but
+  `warfarin__amiodarone` and `warfarin__fluconazole` rows carry their approved
+  oral/tablet scopes, but
   exact product-pair binding and clinician authorization belong to the
   independent internal-evaluation promotion manifest; the draft cannot
   self-authorize. Every other row lacks a complete, non-empty concrete route
@@ -34,7 +34,7 @@ Section A is reconciled to the v2 runtime-status and strict citation model. Rule
 - Source-policy gap: live fetches of the official FDA URL `https://www.fda.gov/media/76636/download` on 2026-07-24 were inconsistent, returning both `Not found` and a valid 157,619-byte PDF (SHA-256 `9dc0a23061fcf9a1e27f58d664331d674d37a5a02300d01bc344149c4935fa89`). The exact timing sentence was machine-extracted from the PDF, but `fda-authored-web-content` remains disabled and has no enabled licence/payload-extraction contract. No mirror was substituted, and `aspirin_ld_ir__ibuprofen_timing` remains fail-closed with no evidence, jurisdiction, timing action, or executable matcher.
 - Structural validation passes. Ticagrelor remains pinned inline for the named dabigatran rule rather than present in the broad curated P-gp-inhibitor set. The two evidence-gap aspirin rules, the analgesic-dose CALDOLOR child, the standalone hepatic restriction, the cotrimoxazole same-product selector, and the triple-therapy review reference do not fire because the hardened engine enforces their declared `pair_matcher_executable:false` quarantine.
 - Applicability jurisdiction is bounded to retained evidence: 29 rules are US-only, 2 are UK-only, 2 fail-closed rules have no jurisdiction, and no rule asserts unsupported Indian applicability. Runtime checks require an explicit matching jurisdiction before action details are exposed.
-- Restricted/manual-reference eMC and ACR sources in machine evidence: 0. Miconazole uses GOV.UK OGL evidence. The 34 openFDA records comprise 33 positive `interaction-evidence` records and one typed `interaction-counterevidence` record for rivaroxaban plus clarithromycin; all use `CC0-1.0`, the openFDA API as machine origin, and DailyMed as reference-only. The two current warfarin-amiodarone records support the separate clinician-approved internal product scope as U.S.-label evidence only. The two warfarin-fluconazole records remain clinician-pending, have no Child-Pugh modifier, and support the proposed oral-tablet review scope plus the label-stated 4-to-5-day persistence boundary. None asserts an Indian regulatory-label claim.
+- Restricted/manual-reference eMC and ACR sources in machine evidence: 0. Miconazole uses GOV.UK OGL evidence. The 34 openFDA records comprise 33 positive `interaction-evidence` records and one typed `interaction-counterevidence` record for rivaroxaban plus clarithromycin; all use `CC0-1.0`, the openFDA API as machine origin, and DailyMed as reference-only. The two current warfarin-amiodarone records support the separate clinician-approved internal product scope as U.S.-label evidence only. The two warfarin-fluconazole records remain review candidates inside the immutable draft, but they now support a separate clinician-approved internal product scope; they have no Child-Pugh modifier and retain the label-stated 4-to-5-day persistence boundary. Neither promotion asserts an Indian regulatory-label claim.
 - The corrected macrolide selector fires for clarithromycin and erythromycin as diagnostic output.
 - The retained aspirin/ibuprofen CALDOLOR evidence is review material only. Because analgesic-dose aspirin is not a pair-matcher input, the child is matcher-inert and no bare aspirin/ibuprofen finding is emitted. The policy-disabled timing rule and the unreconciled generic GI rule also do not surface.
 
@@ -44,7 +44,7 @@ Section A is reconciled to the v2 runtime-status and strict citation model. Rule
 |---|---:|---:|---:|---|
 | `warfarin__nsaid_systemic` | diagnostic | yes | 1 | Diagnostic only: route and therapy-status constraints are not matcher-gateable. |
 | `warfarin__aspirin_analgesic_antiplatelet` | diagnostic | yes | 1 | Diagnostic only: exact named pair, but runtime scope lacks a concrete formulation on both subjects. |
-| `warfarin__fluconazole` | diagnostic | yes | 2 | Diagnostic only: exact oral-tablet review scope and current bilateral U.S.-label evidence are present, but ingredient/product mapping and clinician promotion remain separately required. |
+| `warfarin__fluconazole` | diagnostic | yes | 2 | Draft remains disabled. The approved internal runtime scope is bound separately to seven exact reviewed oral-tablet presentations and 12 cross-product combinations; it cannot widen to other products. |
 | `warfarin__miconazole_oromucosal_gel` | diagnostic | yes | 1 | Diagnostic only: oral-gel formulation and UK supply-status branch are not matcher-gateable. |
 | `warfarin__ketoconazole_systemic` | diagnostic | yes | 1 | Diagnostic only: systemic/oral formulation is not matcher-gateable. |
 | `warfarin__voriconazole` | diagnostic | yes | 1 | Diagnostic only: exact named pair, but runtime scope lacks a concrete formulation on both subjects. |
