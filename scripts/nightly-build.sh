@@ -5,6 +5,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 echo "$(date -u '+%FT%TZ') nightly-build start"
-npm run build   # heap ceiling (--max-old-space-size) lives in the package.json script
+npm run build          # heap ceiling (--max-old-space-size) lives in the package.json script
+npm run prescribable   # doctor-facing prescribable layer + strength-review shortlist (reads build's drugs.jsonl)
 npm run report
 echo "$(date -u '+%FT%TZ') nightly-build done"
