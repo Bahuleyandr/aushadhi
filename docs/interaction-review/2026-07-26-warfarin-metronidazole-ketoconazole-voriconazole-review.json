@@ -1,0 +1,517 @@
+{
+  "schema_version": 1,
+  "packet_id": "warfarin-metronidazole-ketoconazole-voriconazole-pmbjp-oral-tablets-2026-07-26",
+  "generated_at": "2026-07-26",
+  "review_status": "review_candidate",
+  "release_profile": "internal-evaluation",
+  "production_open_enabled": false,
+  "ingredient_identity_candidates": [
+    {
+      "mapping_id": "ingredient:ketoconazole:rxnorm-6135",
+      "assertion": {
+        "ingredient_id": "sha256:0a5ac69ba4a0e934d85bbe7089ec9bf3ecad050f2744e65cb78bed9225b5c755",
+        "canonical_name": "ketoconazole",
+        "observed_name": "ketoconazole"
+      },
+      "proposed_identity": {
+        "clinical_ingredient_id": "sha256:0a5ac69ba4a0e934d85bbe7089ec9bf3ecad050f2744e65cb78bed9225b5c755",
+        "canonical_name": "ketoconazole",
+        "runtime_drug": "ketoconazole",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "6135",
+          "name": "ketoconazole",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "search_response_sha256": "78d6e9f2f4daf311e436203096154ccb1f5d73dd881d1c5029d8dda64248a2c0",
+          "properties_response_sha256": "d2baa2da582add7052a1155c3396ee3de5787279bc41fc3ed9a8e60df3fe360e"
+        },
+        "unii": {
+          "code": "R9400W927I",
+          "response_sha256": "092cb643e7118fef7ef2284f14a9c06c18f961a218464a5ed4ae3699c2d6abdc"
+        }
+      },
+      "evidence": [
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=ketoconazole&allsrc=0&search=0",
+          "retrieved_at": "2026-07-26"
+        },
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/6135/properties.json",
+          "retrieved_at": "2026-07-26"
+        },
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/6135/property.json?propName=UNII_CODE",
+          "retrieved_at": "2026-07-26"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "ingredient:metronidazole:rxnorm-6922",
+      "assertion": {
+        "ingredient_id": "sha256:2cfce43b6ba7f9dc5199dddfb775a891d05ef3b1843760d3b1a1a7661c507d00",
+        "canonical_name": "metronidazole",
+        "observed_name": "metronidazole"
+      },
+      "proposed_identity": {
+        "clinical_ingredient_id": "sha256:2cfce43b6ba7f9dc5199dddfb775a891d05ef3b1843760d3b1a1a7661c507d00",
+        "canonical_name": "metronidazole",
+        "runtime_drug": "metronidazole",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "6922",
+          "name": "metronidazole",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "search_response_sha256": "1396e54cb42c48b3086a63c67089cecc3ab1dbdedefbc0ec7765bb26dca143a1",
+          "properties_response_sha256": "eb299294e4467e13dafb4caa2813b10e4ca2263f987ccf6f92101e0738092fc3"
+        },
+        "unii": {
+          "code": "140QMO216E",
+          "response_sha256": "1da2980cc5b77bb44e6c1b930a44fe83f2faf4444052f992f24a4042605f8433"
+        }
+      },
+      "evidence": [
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=metronidazole&allsrc=0&search=0",
+          "retrieved_at": "2026-07-26"
+        },
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/6922/properties.json",
+          "retrieved_at": "2026-07-26"
+        },
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/6922/property.json?propName=UNII_CODE",
+          "retrieved_at": "2026-07-26"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "ingredient:voriconazole:rxnorm-121243",
+      "assertion": {
+        "ingredient_id": "sha256:1b256adbbd2342e39f3e1b78d36313735db6cdc065eb0f3c82ff0f99f183a20a",
+        "canonical_name": "voriconazole",
+        "observed_name": "voriconazole"
+      },
+      "proposed_identity": {
+        "clinical_ingredient_id": "sha256:1b256adbbd2342e39f3e1b78d36313735db6cdc065eb0f3c82ff0f99f183a20a",
+        "canonical_name": "voriconazole",
+        "runtime_drug": "voriconazole",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "121243",
+          "name": "voriconazole",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "search_response_sha256": "fc6b6faaff7bc7b1786cf8991ae682ebb5b1bd675e66abb7a8cacb7aeaa89fc8",
+          "properties_response_sha256": "04d3ae88f55db85f1a483bc9bfe39346fd53a7c3734bc8c8de5569ce57133f47"
+        },
+        "unii": {
+          "code": "JFU09I87TR",
+          "response_sha256": "8629d7d2e6fd59e501e19308ed87d738190431647d40268f0eba5a465b1b9c9b"
+        }
+      },
+      "evidence": [
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=voriconazole&allsrc=0&search=0",
+          "retrieved_at": "2026-07-26"
+        },
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/121243/properties.json",
+          "retrieved_at": "2026-07-26"
+        },
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/121243/property.json?propName=UNII_CODE",
+          "retrieved_at": "2026-07-26"
+        }
+      ],
+      "approval": null
+    }
+  ],
+  "product_presentation_candidates": [
+    {
+      "mapping_id": "presentation:pmbjp:201:oral-tablet",
+      "source_product_id": "janaushadhi:201",
+      "product_id": "sha256:80ca56ce18156f053a97dbd7dbe969bc537e7eba9e8722ddb34147387c42910d",
+      "product_assertion_sha256": "a8eac64a6ca3075081d44dc926af5bc576aee0d9296f205c5a929fb675c687a4",
+      "product_assertion": {
+        "brand_name": "Metronidazole Tablets IP 200mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "10's",
+        "ingredient": "metronidazole 200 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-222/2025:201:page-59",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-222_30042025.pdf",
+          "document_sha256": "47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff",
+          "text": "Metronidazole Tablets IP 200mg; Each film-coated tablet contains: Metronidazole Tablets IP 200mg; 10's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:199326",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/199326/properties.json",
+          "search_response_sha256": "d659793eb327309fd72ddcfc67ac5e22ebf6107d118529be24f952483a82a73f",
+          "properties_response_sha256": "57bc25a388cdeebd29dc518d02e26e36e342a639b92eda4e4e4def0957442f46",
+          "name": "metronidazole 200 MG Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "presentation:pmbjp:202:oral-tablet",
+      "source_product_id": "janaushadhi:202",
+      "product_id": "sha256:8bff49d5c03a2d12ea18972a6fc617dac8d096d67ab011bdc5261950c1d2555e",
+      "product_assertion_sha256": "95687430cb6c58fc92dbfe8110609e9a04a1cec682cfd192ee8d09d5bc36349e",
+      "product_assertion": {
+        "brand_name": "Metronidazole Tablets IP 400mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "10's",
+        "ingredient": "metronidazole 400 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-222/2025:202:page-59",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-222_30042025.pdf",
+          "document_sha256": "47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff",
+          "text": "Metronidazole Tablets IP 400mg; Each film-coated tablet contains: Metronidazole Tablets IP 400mg; 10's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:199327",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/199327/properties.json",
+          "search_response_sha256": "20f656f5b9e9cb8f7a013ade3d1bfeebb9d64cc5947d910d50d59fb74d27e1a3",
+          "properties_response_sha256": "6ff357f4326179e4e4e4d1680614c474071e0f101948468727adbd5951b52639",
+          "name": "metronidazole 400 MG Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "presentation:pmbjp:400:oral-tablet",
+      "source_product_id": "janaushadhi:400",
+      "product_id": "sha256:1ce7e99945760bf965229ddd3017bc76bb830d8ee7ae1d098cec3991d2b36b67",
+      "product_assertion_sha256": "5c73e9a7a1d2276384ee1227a95aad0ec2ff42c1fbd7a337282b7e0e05b11536",
+      "product_assertion": {
+        "brand_name": "Ketoconazole Tablets IP 200 mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "10's",
+        "ingredient": "ketoconazole 200 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-166/2021:400:page-69",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20eTender-166_30092021.pdf",
+          "document_sha256": "c7ba618eaad7772639830d9c272df2800f829412148598bec0b344792dbc699a",
+          "text": "Ketoconazole Tablets IP 200 mg; Each uncoated tablet contains: Ketoconazole IP 200mg; 10's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:197853",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/197853/properties.json",
+          "search_response_sha256": "dec768409da98281c893fbc7e44f6af6908f92fd349270fa8dea3786ba857016",
+          "properties_response_sha256": "7369b02a410f63d1466d7b10000910956345cb155ecba7e4fff79fd403f38db0",
+          "name": "ketoconazole 200 MG Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2034:oral-tablet",
+      "source_product_id": "janaushadhi:2034",
+      "product_id": "sha256:4383af48fd1aba0c81ec7d4cff6d5eb1620998607fd578f5b7bf6a4696b9952f",
+      "product_assertion_sha256": "4b9aee41bdec150b53809270617f07be94403edead77f2a21885b1f0fcc4c7ea",
+      "product_assertion": {
+        "brand_name": "Voriconazole Tablets IP 200mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "4's",
+        "ingredient": "voriconazole 200 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-211/2023:2034:page-105",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20eTender_211_13092023.pdf",
+          "document_sha256": "907a329c1dc1de3bc8d9b32b6ec3f1841f6492f2d7a2c7b4f56abc53a51e8abf",
+          "text": "Voriconazole Tablets IP 200mg; Each film-coated tablet contains: Voriconazole IP 200mg; 4's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:349434",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/349434/properties.json",
+          "search_response_sha256": "43fc0b1dd56a2e548c463d78fa9dcb13452800d284a510cd8c1479ea931de65d",
+          "properties_response_sha256": "24d14758adbe9e951655b41fbc4823ce856bdd539c07c9c909a32c499f872349",
+          "name": "voriconazole 200 MG Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    }
+  ],
+  "proposed_rules": [
+    {
+      "rule_id": "warfarin__metronidazole",
+      "draft_rule_sha256": "2f6e13a141107149c32c82df764a0710a423265e5600b35155ece4d53222df3f",
+      "review_status": "review_candidate",
+      "proposed_severity": "major",
+      "proposed_dispense_action": "confirm_and_monitor",
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "warfarin_product_ids": [
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        "interacting_product_ids": [
+          "sha256:80ca56ce18156f053a97dbd7dbe969bc537e7eba9e8722ddb34147387c42910d",
+          "sha256:8bff49d5c03a2d12ea18972a6fc617dac8d096d67ab011bdc5261950c1d2555e"
+        ],
+        "expected_product_pair_count": 6,
+        "product_pairs": [
+          [
+            "sha256:80ca56ce18156f053a97dbd7dbe969bc537e7eba9e8722ddb34147387c42910d",
+            "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+          ],
+          [
+            "sha256:80ca56ce18156f053a97dbd7dbe969bc537e7eba9e8722ddb34147387c42910d",
+            "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+          ],
+          [
+            "sha256:80ca56ce18156f053a97dbd7dbe969bc537e7eba9e8722ddb34147387c42910d",
+            "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+          ],
+          [
+            "sha256:8bff49d5c03a2d12ea18972a6fc617dac8d096d67ab011bdc5261950c1d2555e",
+            "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+          ],
+          [
+            "sha256:8bff49d5c03a2d12ea18972a6fc617dac8d096d67ab011bdc5261950c1d2555e",
+            "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+          ],
+          [
+            "sha256:8bff49d5c03a2d12ea18972a6fc617dac8d096d67ab011bdc5261950c1d2555e",
+            "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+          ]
+        ]
+      },
+      "source_versions": [
+        "openfda-labels:a2883ca1-5a9a-4259-9d80-46ab67274384:25",
+        "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+      ],
+      "management_boundary": {
+        "requires_prescriber_or_anticoagulation_service_review": true,
+        "requires_pt_inr_monitoring_when_started_or_stopped": true,
+        "autonomous_pharmacy_dose_change": false,
+        "autonomous_stop_either_medicine": false,
+        "bleeding_symptom_counselling": true,
+        "universal_pt_inr_schedule_asserted": false,
+        "fixed_post_discontinuation_interval_asserted": false,
+        "tinidazole_included": false
+      },
+      "explicit_exclusions": [
+        "tinidazole and all nitroimidazole class extrapolation",
+        "topical metronidazole",
+        "metronidazole combination suspension",
+        "non-tablet metronidazole presentations"
+      ],
+      "approval": null
+    },
+    {
+      "rule_id": "warfarin__ketoconazole_oral",
+      "draft_rule_sha256": "1657195ba626a2337c8b390679e64f32006c26fd758948560a4faf97875d8a3e",
+      "review_status": "review_candidate",
+      "proposed_severity": "major",
+      "proposed_dispense_action": "confirm_and_monitor",
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "warfarin_product_ids": [
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        "interacting_product_ids": [
+          "sha256:1ce7e99945760bf965229ddd3017bc76bb830d8ee7ae1d098cec3991d2b36b67"
+        ],
+        "expected_product_pair_count": 3,
+        "product_pairs": [
+          [
+            "sha256:1ce7e99945760bf965229ddd3017bc76bb830d8ee7ae1d098cec3991d2b36b67",
+            "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+          ],
+          [
+            "sha256:1ce7e99945760bf965229ddd3017bc76bb830d8ee7ae1d098cec3991d2b36b67",
+            "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+          ],
+          [
+            "sha256:1ce7e99945760bf965229ddd3017bc76bb830d8ee7ae1d098cec3991d2b36b67",
+            "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+          ]
+        ]
+      },
+      "source_versions": [
+        "openfda-labels:bc189ce2-3f10-260d-e053-2a95a90ae808:2",
+        "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+      ],
+      "management_boundary": {
+        "requires_prescriber_or_anticoagulation_service_review": true,
+        "requires_pt_inr_monitoring_when_started_or_stopped": true,
+        "autonomous_pharmacy_dose_change": false,
+        "autonomous_stop_either_medicine": false,
+        "bleeding_symptom_counselling": true,
+        "universal_pt_inr_schedule_asserted": false,
+        "fixed_post_discontinuation_interval_asserted": false,
+        "topical_ketoconazole_included": false
+      },
+      "explicit_exclusions": [
+        "ketoconazole soap",
+        "ketoconazole lotion, shampoo, cream, and other topical presentations"
+      ],
+      "approval": null
+    },
+    {
+      "rule_id": "warfarin__voriconazole",
+      "draft_rule_sha256": "b8e0d94d6a94d2a765ff8690d9a9b4bff66c333747eeb2cc0bb57e2c95997cf8",
+      "review_status": "review_candidate",
+      "proposed_severity": "major",
+      "proposed_dispense_action": "confirm_and_monitor",
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "warfarin_product_ids": [
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        "interacting_product_ids": [
+          "sha256:4383af48fd1aba0c81ec7d4cff6d5eb1620998607fd578f5b7bf6a4696b9952f"
+        ],
+        "expected_product_pair_count": 3,
+        "product_pairs": [
+          [
+            "sha256:4383af48fd1aba0c81ec7d4cff6d5eb1620998607fd578f5b7bf6a4696b9952f",
+            "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+          ],
+          [
+            "sha256:4383af48fd1aba0c81ec7d4cff6d5eb1620998607fd578f5b7bf6a4696b9952f",
+            "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+          ],
+          [
+            "sha256:4383af48fd1aba0c81ec7d4cff6d5eb1620998607fd578f5b7bf6a4696b9952f",
+            "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+          ]
+        ]
+      },
+      "source_versions": [
+        "openfda-labels:67c174da-41b8-4738-8a22-dd814b8e96b8:27",
+        "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+      ],
+      "management_boundary": {
+        "requires_prescriber_or_anticoagulation_service_review": true,
+        "requires_pt_inr_monitoring_when_started_or_stopped": true,
+        "autonomous_pharmacy_dose_change": false,
+        "autonomous_stop_either_medicine": false,
+        "bleeding_symptom_counselling": true,
+        "universal_pt_inr_schedule_asserted": false,
+        "fixed_post_discontinuation_interval_asserted": false,
+        "mandatory_antifungal_substitution": false
+      },
+      "explicit_exclusions": [
+        "intravenous and all non-tablet voriconazole presentations"
+      ],
+      "approval": null
+    }
+  ],
+  "excluded_catalogue_assertions": [
+    {
+      "source_product_id": "janaushadhi:1672",
+      "product_id": "sha256:65908bf7ba7cfb31b28c6283f3cfebca39d534145e72b97e4a8b0d05ca1c17b5",
+      "product_assertion_sha256": "8d346fee5e757fbaa1d12c596b68d80280043b0d5b3e7b26f66e3213ad66c696",
+      "assertion": "Ketoconazole Soap 2%",
+      "reason": "topical soap; not the reviewed oral-tablet presentation"
+    },
+    {
+      "source_product_id": "janaushadhi:2441",
+      "product_id": "sha256:ab39eeb3e8b3c3ec2bdd5ed128e49cc2bdc5da2030b5e914a92676b2381157ac",
+      "product_assertion_sha256": "bb5fe8193509ac0ee7322a2cef4941729e659aa293edd42e8011a3f850625ff9",
+      "assertion": "Metronidazole (1% w/w) + Povidone Iodine (5% w/w) Ointment",
+      "reason": "topical combination ointment; not oral metronidazole tablet"
+    },
+    {
+      "source_product_id": "janaushadhi:2616",
+      "product_id": "sha256:2ffcb5aa365c039ebcfdbcd51bcd507137fd3c9c44ba862dd4709955b791e511",
+      "product_assertion_sha256": "3fdd61e5034bbc9cbc5ea400fbab2e8e32b89cd711ebe2d50bf19dc7db2f22c9",
+      "assertion": "Ofloxacin 100mg and Metronidazole 200mg per 5ml Oral Suspension",
+      "reason": "combination oral suspension; not an exact single-ingredient tablet assertion"
+    }
+  ],
+  "adversarial_verification": [
+    {
+      "check": "tinidazole extrapolation",
+      "status": "removed",
+      "detail": "The metronidazole rule is now an exact named pair. Tinidazole has no selector, mapping, product scope, or source claim in this packet."
+    },
+    {
+      "check": "topical and non-tablet overmatch",
+      "status": "pass",
+      "detail": "Exact product bindings exclude PMBJP ketoconazole soap, metronidazole ointment, and metronidazole combination suspension."
+    },
+    {
+      "check": "current U.S. SPL versions and retained fragments",
+      "status": "pass",
+      "detail": "DailyMed current SPL XML was fetched live on 2026-07-26 and still reports versions 25, 2, 27, and 7 with every retained interaction fragment present. After a temporary HTTP 404 response, api.fda.gov recovered and the repository assembler live-verified all 244 evidence records, synchronized the 199-rule aggregate, review index, and attestation, and produced pack SHA-256 367fe4cba0e6680835fc11ac2c9079a0ff14aaac78598a79c3bc66b7374f7008."
+    },
+    {
+      "check": "unsupported Child-Pugh pair modifiers",
+      "status": "removed",
+      "detail": "All three proposed rules have empty context_modifiers arrays."
+    },
+    {
+      "check": "autonomous pharmacy action",
+      "status": "blocked_by_contract",
+      "detail": "The candidate rules require prescriber or anticoagulation-service review and do not authorize pharmacy dose changes or interruption of either medicine."
+    },
+    {
+      "check": "runtime isolation",
+      "status": "pass",
+      "detail": "No ingredient or presentation candidate is committed, no promotion entry exists, and both runtime packs remain unchanged; production-open stays empty."
+    }
+  ]
+}

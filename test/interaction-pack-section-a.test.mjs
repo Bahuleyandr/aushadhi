@@ -341,8 +341,12 @@ test('unsupported CYP claims stay absent while the approved amiodarone persisten
       )),
   );
   assert.doesNotMatch(
-    ruleById('warfarin__ketoconazole_systemic').mechanism,
-    /R-warfarin|CYP3A4/iu,
+    ruleById('warfarin__ketoconazole_oral').mechanism,
+    /R-warfarin/iu,
+  );
+  assert.match(
+    ruleById('warfarin__ketoconazole_oral').mechanism,
+    /CYP3A4/iu,
   );
   assert.doesNotMatch(
     ruleById('warfarin__amiodarone').mechanism,
@@ -587,7 +591,7 @@ test('the standalone rivaroxaban hepatic restriction is not exposed as a pair ma
 
 test('Section A openFDA evidence carries the complete reconciled provenance contract', () => {
   const records = openFdaEvidenceRecords();
-  assert.equal(records.length, 34);
+  assert.equal(records.length, 37);
 
   for (const { evidence, ruleId } of records) {
     const label = `${ruleId}/${evidence.source_id}`;
@@ -604,7 +608,8 @@ test('Section A openFDA evidence carries the complete reconciled provenance cont
     assert.equal(String(evidence.spl_version), evidence.provenance.version, label);
     assert.equal(
       evidence.retrieved_at,
-      ['warfarin__amiodarone', 'warfarin__fluconazole'].includes(ruleId)
+      evidence.source_id.startsWith('fda-label-warfarin-current')
+        || ['warfarin__amiodarone', 'warfarin__fluconazole'].includes(ruleId)
         ? '2026-07-26'
         : '2026-07-24',
       label,
@@ -721,8 +726,8 @@ test(
   },
 );
 
-test('Section A citations use exact unique hashes and the strict v2 effect/action split', () => {
-  const hashes = new Set();
+test('Section A citations use exact hashes and the strict v2 effect/action split', () => {
+  const hashes = new Map();
   let evidenceCount = 0;
   let fragmentCount = 0;
   for (const rule of rules) {
@@ -741,13 +746,31 @@ test('Section A citations use exact unique hashes and the strict v2 effect/actio
         fragmentCount += 1;
         const digest = createHash('sha256').update(fragment.text, 'utf8').digest('hex');
         assert.equal(fragment.text_sha256, digest, `${rule.rule_id}/${evidence.source_id}`);
-        assert.equal(hashes.has(digest), false, `${rule.rule_id}/${evidence.source_id}`);
-        hashes.add(digest);
+        const prior = hashes.get(digest);
+        if (prior) {
+          assert.equal(prior.text, fragment.text, `${rule.rule_id}/${evidence.source_id}`);
+          assert.equal(
+            prior.setId,
+            '51e98fb6-ba76-497e-95d8-fe895ef0b7ed',
+            `${rule.rule_id}/${evidence.source_id}`,
+          );
+          assert.equal(
+            evidence.provenance.set_id,
+            prior.setId,
+            `${rule.rule_id}/${evidence.source_id}`,
+          );
+        } else {
+          hashes.set(digest, {
+            text: fragment.text,
+            setId: evidence.provenance?.set_id,
+          });
+        }
       }
     }
   }
-  assert.equal(evidenceCount, 36);
-  assert.equal(fragmentCount, 64);
+  assert.equal(evidenceCount, 39);
+  assert.equal(fragmentCount, 75);
+  assert.equal(hashes.size, 67);
 });
 
 test('Section A machine evidence excludes restricted eMC/ACR text and identifies GOV.UK OGL records', () => {

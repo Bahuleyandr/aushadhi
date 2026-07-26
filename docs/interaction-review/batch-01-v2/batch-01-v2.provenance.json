@@ -1,14 +1,14 @@
 {
   "schema_version": 2,
-  "pack_sha256": "d62a18e94e07bbb6ef3d7ec49f823c99999defb0dbf9d3f1ae78ee8cbbd5ce0b",
+  "pack_sha256": "367fe4cba0e6680835fc11ac2c9079a0ff14aaac78598a79c3bc66b7374f7008",
   "member_sets_sha256": "9131ce12b555afa7df03b7180639041880e97d3ec384f766aab889480e8cd304",
   "member_sets_byte_count": 13406,
-  "verified_at": "2026-07-26T13:01:44.421Z",
+  "verified_at": "2026-07-26T15:15:27.592Z",
   "verification_profile": "production-open",
   "payload_binding": "verified",
   "rule_count": 199,
-  "evidence_record_count": 241,
+  "evidence_record_count": 244,
   "evidence_document_count": 156,
-  "evidence_digest_sha256": "110d8ad96b8d71362485f327ab8968c6e31acd5eb18d6ef363fc0c23276719f0",
+  "evidence_digest_sha256": "238ec1ee0b5908b3ae9e596c6a4034d68ec65b6fd18d00ac97ab41bbdba8abda",
   "trust_boundary": "unsigned_local_drift_detection_not_authentication"
 }
