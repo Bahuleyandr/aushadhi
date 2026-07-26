@@ -425,6 +425,166 @@
           }
         ]
       }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:201:oral-tablet",
+      "product_id": "sha256:80ca56ce18156f053a97dbd7dbe969bc537e7eba9e8722ddb34147387c42910d",
+      "product_assertion_sha256": "a8eac64a6ca3075081d44dc926af5bc576aee0d9296f205c5a929fb675c687a4",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-222/2025:201:page-59",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-222_30042025.pdf",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:metronidazole-200-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=metronidazole%20200%20MG%20Oral%20Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "d659793eb327309fd72ddcfc67ac5e22ebf6107d118529be24f952483a82a73f"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:199326",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/199326/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "57bc25a388cdeebd29dc518d02e26e36e342a639b92eda4e4e4def0957442f46"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:202:oral-tablet",
+      "product_id": "sha256:8bff49d5c03a2d12ea18972a6fc617dac8d096d67ab011bdc5261950c1d2555e",
+      "product_assertion_sha256": "95687430cb6c58fc92dbfe8110609e9a04a1cec682cfd192ee8d09d5bc36349e",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-222/2025:202:page-59",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-222_30042025.pdf",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:metronidazole-400-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=metronidazole%20400%20MG%20Oral%20Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "20f656f5b9e9cb8f7a013ade3d1bfeebb9d64cc5947d910d50d59fb74d27e1a3"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:199327",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/199327/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "6ff357f4326179e4e4e4d1680614c474071e0f101948468727adbd5951b52639"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:400:oral-tablet",
+      "product_id": "sha256:1ce7e99945760bf965229ddd3017bc76bb830d8ee7ae1d098cec3991d2b36b67",
+      "product_assertion_sha256": "5c73e9a7a1d2276384ee1227a95aad0ec2ff42c1fbd7a337282b7e0e05b11536",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-166/2021:400:page-69",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20eTender-166_30092021.pdf",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "c7ba618eaad7772639830d9c272df2800f829412148598bec0b344792dbc699a"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:ketoconazole-200-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=ketoconazole%20200%20MG%20Oral%20Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "dec768409da98281c893fbc7e44f6af6908f92fd349270fa8dea3786ba857016"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:197853",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/197853/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "7369b02a410f63d1466d7b10000910956345cb155ecba7e4fff79fd403f38db0"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2034:oral-tablet",
+      "product_id": "sha256:4383af48fd1aba0c81ec7d4cff6d5eb1620998607fd578f5b7bf6a4696b9952f",
+      "product_assertion_sha256": "4b9aee41bdec150b53809270617f07be94403edead77f2a21885b1f0fcc4c7ea",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-211/2023:2034:page-105",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20eTender_211_13092023.pdf",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "907a329c1dc1de3bc8d9b32b6ec3f1841f6492f2d7a2c7b4f56abc53a51e8abf"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:voriconazole-200-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=voriconazole%20200%20MG%20Oral%20Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "43fc0b1dd56a2e548c463d78fa9dcb13452800d284a510cd8c1479ea931de65d"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:349434",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/349434/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "24d14758adbe9e951655b41fbc4823ce856bdd539c07c9c909a32c499f872349"
+          }
+        ]
+      }
     }
   ]
 }
