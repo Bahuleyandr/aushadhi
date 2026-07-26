@@ -8,6 +8,26 @@ Always-on 1mg crawler running on **dd** (dalekdefender). Single instance, polite
 - `aushadhi-crawl.service` → `/etc/systemd/system/aushadhi-crawl.service`
 - `aushadhi-crawl.service.d/splittunnel.conf` → drop-in of the same name
 - The loop lives in the repo at `scripts/crawl-loop.sh` (WorkingDirectory `/root/aushadhi`).
+- `aushadhi-cache-retention.service` and `.timer` compress raw page-cache HTML
+  older than six hours. They do not touch normalized records, state, indexes, or
+  build artifacts. The hardened host runs this unit from `/opt/aushadhi`.
+
+## Raw page-cache retention
+
+The crawlers retain source HTML for reproducibility, but raw responses are highly
+compressible and must not remain indefinitely uncompressed. Install the retention
+unit and timer on the hardened host:
+
+```bash
+cp aushadhi-cache-retention.service aushadhi-cache-retention.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now aushadhi-cache-retention.timer
+```
+
+Run `scripts/compress-page-cache.sh` with
+`AUSHADHI_CACHE_DRY_RUN=1` to inspect candidates. The script accepts only the four
+known `pages` directories beneath `AUSHADHI_RAW_ROOT`, uses bounded parallel
+compression, verifies every generated gzip stream, and refuses broad roots.
 
 ## Install / update
 

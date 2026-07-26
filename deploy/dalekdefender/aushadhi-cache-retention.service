@@ -1,0 +1,19 @@
+[Unit]
+Description=Aushadhi raw page-cache compression
+After=local-fs.target
+ConditionPathIsDirectory=/var/lib/aushadhi/data/raw
+
+[Service]
+Type=oneshot
+User=aushadhi
+Group=aushadhi
+WorkingDirectory=/opt/aushadhi
+Environment=AUSHADHI_RAW_ROOT=/var/lib/aushadhi/data/raw
+Environment=AUSHADHI_CACHE_MIN_AGE_MINUTES=360
+Environment=AUSHADHI_CACHE_COMPRESS_JOBS=4
+Environment=AUSHADHI_CACHE_COMPRESS_BATCH_SIZE=64
+ExecStart=/usr/bin/bash /opt/aushadhi/scripts/compress-page-cache.sh
+Nice=15
+IOSchedulingClass=idle
+CPUWeight=20
+MemoryMax=1G
