@@ -11,6 +11,44 @@ Three assertions must be independently preserved:
 Missing mappings remain unresolved. They never fall back to salt stripping,
 fuzzy matching, brand parsing, or a default systemic/oral route.
 
+## Deterministic mapping review backlog
+
+Before querying an external terminology service, build the complete local
+review queue from the approved draft rule pack and the current catalogue:
+
+```powershell
+npm run interactions:mappings:backlog -- `
+  --profile internal-evaluation
+```
+
+The command validates all draft rules, expands direct selectors, pinned inline
+class members, recursively nested combination selectors, and explicitly
+labelled global-member-set fallbacks. Every ingredient assertion retains its
+rule ID, section, selector role and path, risk basis, context modifiers,
+applicability, route/formulation scope, and all four `runtime_status` flags.
+
+It writes three generated, gitignored files below
+`data/interaction/internal-evaluation/mapping-backlog/`:
+
+- `ingredient-assertions.jsonl` contains exact normalized rule assertions and
+  their catalogue match statistics;
+- `product-presentations.jsonl` binds matching catalogue products to both the
+  deterministic product ID and exact product-assertion hash;
+- `summary.json` binds both outputs to SHA-256 hashes of the rule pack, member
+  sets, product artefact, and catalogue summary.
+
+The builder verifies row-level source provenance against the catalogue summary
+and the selected source-policy profile. Product IDs that refer to more than one
+exact product assertion are collision-flagged and cannot be approved as a
+single presentation mapping. Missing class rosters and unmatched ingredient
+assertions remain explicit gaps.
+
+All output remains `review_candidate`; accepted mapping counts are always zero.
+The command has no flag that accepts identities, infers presentations, or
+promotes runtime rules. In particular, catalogue `form_raw`, brand suffixes,
+and pack labels are preserved only as exact product assertions and never
+treated as clinical route or formulation evidence.
+
 ## Machine-assisted identity proposals
 
 The explicit proposal command queries the official RxNorm API and writes only
