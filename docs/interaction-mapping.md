@@ -127,7 +127,8 @@ Human-approved mappings live in
 - exact RxNorm or UNII identifiers plus response hashes;
 - reviewer, review date, source URL, retrieval date, and evidence hash.
 
-The empty committed file is intentional. Candidate generation never edits it.
+Committed manifests contain only explicitly accepted mappings. Candidate
+generation never edits them.
 
 ## Reviewed product presentations
 
@@ -143,6 +144,11 @@ This second hash prevents case, label, strength, salt, or composition drift
 from inheriting an old presentation decision merely because catalogue
 normalization kept the same product ID. Abstract values such as `systemic`,
 `parenteral`, and `solid_oral` are rejected.
+
+Mappings backed by profile-restricted evidence declare `allowed_profiles`.
+The reviewed PMBJP pilot mappings are limited to `internal-evaluation`; the
+ordinary `production-open` path ignores them and cannot create a runtime
+subject from them.
 
 ## Runtime handoff
 

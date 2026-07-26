@@ -109,6 +109,7 @@ function presentationMapping(row, overrides = {}) {
     mapping_id: 'presentation:mapped-duo',
     product_id: productIdForRow(row),
     product_assertion_sha256: productAssertionHashForRow(row),
+    allowed_profiles: ['production-open', 'internal-evaluation'],
     presentation: {
       route: 'oral',
       formulation: 'tablet',
@@ -411,6 +412,60 @@ test('presentation mappings require concrete canonical route and formulation val
     }])),
     /canonical route and formulation/i,
   );
+  assert.throws(
+    () => validateProductPresentationManifest(presentationManifest([{
+      ...valid,
+      allowed_profiles: ['internal-evaluation', 'internal-evaluation'],
+    }])),
+    /duplicate profile/i,
+  );
+  assert.throws(
+    () => validateProductPresentationManifest(presentationManifest([{
+      ...valid,
+      allowed_profiles: ['unknown-profile'],
+    }])),
+    /unsupported profile/i,
+  );
+});
+
+test('profile-scoped presentation mappings stay unavailable outside their review profile', () => {
+  const row = product();
+  const internalOnly = presentationMapping(row, {
+    allowed_profiles: ['internal-evaluation'],
+  });
+  const ingredients = ingredientManifest([
+    ingredientMapping({
+      mappingId: 'ingredient:one',
+      assertionName: 'ingredient one',
+    }),
+  ]);
+  const presentations = presentationManifest([internalOnly]);
+
+  const [internal] = mapResolvedProducts({
+    records: [resolvedRecord(row)],
+    ingredientManifest: ingredients,
+    presentationManifest: presentations,
+    profile: 'internal-evaluation',
+  });
+  assert.equal(internal.product.presentation.status, 'reviewed_override');
+  assert.deepEqual(internal.product.ingredients[0].runtime_subject, {
+    drug: 'ingredient one',
+    route: 'oral',
+    formulation: 'tablet',
+  });
+
+  const [production] = mapResolvedProducts({
+    records: [resolvedRecord(row)],
+    ingredientManifest: ingredients,
+    presentationManifest: presentations,
+    profile: 'production-open',
+  });
+  assert.equal(production.product.presentation.status, 'unmapped');
+  assert.equal(
+    production.product.presentation.error,
+    'reviewed_product_presentation_mapping_required',
+  );
+  assert.equal(production.product.ingredients[0].runtime_subject, null);
 });
 
 test('candidate helpers preserve assertions but do not propose clinical mappings', () => {

@@ -347,7 +347,7 @@ test('production-open rejects reviewed mappings derived from restricted evidence
   }
 });
 
-test('the committed empty mapping manifests do not auto-accept observed ingredient names', () => {
+test('committed mappings do not auto-accept unrelated observed products or ingredients', () => {
   const dir = makeFixture();
   try {
     const result = runCli([

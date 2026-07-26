@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  mapResolvedProducts,
   validateIngredientMappingManifest,
   validateProductPresentationManifest,
 } from '../src/lib/interaction-mapping.mjs';
@@ -153,8 +154,215 @@ test('committed ingredient mappings contain only the two approved exact identiti
   )));
 });
 
-test('committed product presentation mappings remain empty pending evidence review', () => {
-  const manifest = readManifest('product-presentation-overrides.json');
-  assert.equal(validateProductPresentationManifest(manifest), true);
-  assert.deepEqual(manifest.mappings, []);
+const approvedProducts = [
+  {
+    mapping_id: 'presentation:pmbjp:1502:oral-tablet',
+    product_id: 'sha256:5eaf19c6b773adf00509d55047b68d226ba2d80f1141402677f5e211b2caf186',
+    product_assertion_sha256: 'e3a48df03852887ec4d09d5a7f12cd559aabbd2e2c23dc91388e0acaa0f1a9f5',
+    drug: 'amiodarone',
+    product: {
+      brand_name: 'Amiodarone Tablets IP 100 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "10's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'amiodarone',
+        strength_raw: '100 mg',
+        strength_value: 100,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '1502' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-live-product:1502', 'a3dcb04da9304087eda6d5d7e78c04ca91efe1e8890daad09d1a53b254054bde'],
+      ['janaushadhi', 'pmbjp-tender:RC-222/2025:1502:page-69', '47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff'],
+      ['rxnorm', 'rxnorm-version:06-Jul-2026', 'ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd'],
+      ['rxnorm', 'rxnorm-search:amiodarone-100-mg-oral-tablet', 'e6224b96a3a844b256fc186d0d0d1775a8e0ef8e6a796f4e765b8ae9440e9317'],
+      ['rxnorm', 'rxcui:835956', 'f1b639d1d78172ff40f80a65957537cf4d4c5a4ca901c0776a41026d2703e605'],
+    ],
+  },
+  {
+    mapping_id: 'presentation:pmbjp:430:oral-tablet',
+    product_id: 'sha256:6c6694d33f35f51e843d4aaf3a4914fb738f2baaf7d1f5494f6db6c638536626',
+    product_assertion_sha256: 'afb937ecb1feaeaaca3e286233f74ca6d3ccb70e69bdb926152615617252ed0d',
+    drug: 'amiodarone',
+    product: {
+      brand_name: 'Amiodarone Tablets IP 200 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "10's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'amiodarone',
+        strength_raw: '200 mg',
+        strength_value: 200,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '430' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-live-product:430', '40b97388913f33ec04bda7aa454dd020105e84e713b39632062e4950be457d0d'],
+      ['janaushadhi', 'pmbjp-tender:RC-221/2025:430:page-62', 'c885a7b5f438678cd25956f16eb070a44880dd7219ad8f0c46319f2b22113f15'],
+      ['rxnorm', 'rxnorm-version:06-Jul-2026', 'ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd'],
+      ['rxnorm', 'rxnorm-search:amiodarone-200-mg-oral-tablet', '3981ff78bf6c153528d1106f55cbd21841c2d2968c9cdee3ca8be7affb72a4b3'],
+      ['rxnorm', 'rxcui:833528', '3d2d73c805085af9398ddb07f1d66d43de77fbc9cd7a822160b4404de12afea5'],
+    ],
+  },
+  {
+    mapping_id: 'presentation:pmbjp:2141:oral-tablet',
+    product_id: 'sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca',
+    product_assertion_sha256: 'ed9ac49f1fe53f1f4c720641ad5e1bee54ed362e69e4357f36ffeab9022e76cb',
+    drug: 'warfarin',
+    product: {
+      brand_name: 'Warfarin Tablets IP 1mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "10's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'warfarin',
+        strength_raw: '1mg',
+        strength_value: 1,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '2141' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-live-product:2141', 'a64f78f9e2a459e161195ca1bd411dcb343abe224545cad09bb8428896d9798d'],
+      ['janaushadhi', 'pmbjp-tender:RC-222/2025:2141:page-75', '47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff'],
+      ['rxnorm', 'rxnorm-version:06-Jul-2026', 'ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd'],
+      ['rxnorm', 'rxnorm-search:warfarin-sodium-1-mg-oral-tablet', '62e6d118ea7a045b36e29e22dc35d0f6f411714a0d12fd363a0f0101c1af1243'],
+      ['rxnorm', 'rxcui:855288', '7dd6469d6c779c1fcdcfe07efd521763b833de34087222831634849545a5caac'],
+    ],
+  },
+  {
+    mapping_id: 'presentation:pmbjp:2142:oral-tablet',
+    product_id: 'sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548',
+    product_assertion_sha256: '13e88c7899c9974b4fd1378a47b2b09fa3045199460a02f7b7df6a7cb787e6a5',
+    drug: 'warfarin',
+    product: {
+      brand_name: 'Warfarin Tablets IP 2mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "10's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'warfarin',
+        strength_raw: '2mg',
+        strength_value: 2,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '2142' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-live-product:2142', '3592b1209ef58fb7ff94b1f8fb3f2f8ddd1d1f401815b5ac571cca37b93936e9'],
+      ['janaushadhi', 'pmbjp-tender:RC-208/2023:2142:page-68', '96421b547f246cb43c13608bd9253954a2a4085f81b5927c53dc5ec2c8a49ec9'],
+      ['rxnorm', 'rxnorm-version:06-Jul-2026', 'ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd'],
+      ['rxnorm', 'rxnorm-search:warfarin-sodium-2-mg-oral-tablet', 'b6c0b19b9eeab72f64a6e244ad492347c5acc086b4a09961f3d96d9cf810cf08'],
+      ['rxnorm', 'rxcui:855302', '33f3548cce7ca8d437702f7015d1c5e1a6971d89db9ba538eb4bc4e0f209d214'],
+    ],
+  },
+  {
+    mapping_id: 'presentation:pmbjp:452:oral-tablet',
+    product_id: 'sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141',
+    product_assertion_sha256: '7aaa9f346fd2bb665c97551bcfd57bc6c088b5dcb91019769360364014f48b01',
+    drug: 'warfarin',
+    product: {
+      brand_name: 'Warfarin Tablets IP 5 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "10's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'warfarin',
+        strength_raw: '5 mg',
+        strength_value: 5,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '452' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-live-product:452', '02242bcefd369f6079f9b270cf69ed89983c8c2c5c17111700054a4052d96f4d'],
+      ['janaushadhi', 'pmbjp-tender:RC-156/2020:452:page-63', 'ba7e538a03d7fc74901b0871a1091a686fdd2a71f950874221549ba7440a750b'],
+      ['rxnorm', 'rxnorm-version:06-Jul-2026', 'ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd'],
+      ['rxnorm', 'rxnorm-search:warfarin-sodium-5-mg-oral-tablet', '7d7268f9618bde780dbedc9564a9651c46beb8e2549731bca8956e67fd429879'],
+      ['rxnorm', 'rxcui:855332', 'cd3b9c133ea6e273c771ac30790755b07e0d771d642d2b6e214959e0685b3db7'],
+    ],
+  },
+];
+
+test('committed product presentation mappings contain only the five approved PMBJP rows', () => {
+  const presentationManifest = readManifest('product-presentation-overrides.json');
+  const ingredientManifest = readManifest('ingredient-mapping-overrides.json');
+  assert.equal(validateProductPresentationManifest(presentationManifest), true);
+  assert.deepEqual(
+    presentationManifest.mappings.map((mapping) => ({
+      mapping_id: mapping.mapping_id,
+      product_id: mapping.product_id,
+      product_assertion_sha256: mapping.product_assertion_sha256,
+      allowed_profiles: mapping.allowed_profiles,
+      presentation: mapping.presentation,
+      review_status: mapping.review.status,
+      reviewer_id: mapping.review.reviewer_id,
+      reviewed_at: mapping.review.reviewed_at,
+      evidence: mapping.review.evidence.map((evidence) => [
+        evidence.source_id,
+        evidence.identifier,
+        evidence.evidence_sha256,
+      ]),
+    })),
+    approvedProducts.map((entry) => ({
+      mapping_id: entry.mapping_id,
+      product_id: entry.product_id,
+      product_assertion_sha256: entry.product_assertion_sha256,
+      allowed_profiles: ['internal-evaluation'],
+      presentation: { route: 'oral', formulation: 'tablet' },
+      review_status: 'reviewed',
+      reviewer_id: 'clinician:subas',
+      reviewed_at: '2026-07-26',
+      evidence: entry.evidence,
+    })),
+  );
+
+  const records = approvedProducts.map((entry) => ({
+    input: { brand_name: entry.product.brand_name },
+    status: 'resolved',
+    product: {
+      ...structuredClone(entry.product),
+      product_id: entry.product_id,
+    },
+  }));
+  const mappedInternal = mapResolvedProducts({
+    records,
+    ingredientManifest,
+    presentationManifest,
+    profile: 'internal-evaluation',
+  });
+  assert.deepEqual(
+    mappedInternal.map((record) => ({
+      presentation: record.product.presentation,
+      runtime_subject: record.product.ingredients[0].runtime_subject,
+    })),
+    approvedProducts.map((entry) => ({
+      presentation: {
+        status: 'reviewed_override',
+        mapping_id: entry.mapping_id,
+        product_assertion_sha256: entry.product_assertion_sha256,
+        route: 'oral',
+        formulation: 'tablet',
+      },
+      runtime_subject: {
+        drug: entry.drug,
+        route: 'oral',
+        formulation: 'tablet',
+      },
+    })),
+  );
+
+  const mappedProduction = mapResolvedProducts({
+    records,
+    ingredientManifest,
+    presentationManifest,
+    profile: 'production-open',
+  });
+  assert.ok(mappedProduction.every((record) => (
+    record.product.presentation.status === 'unmapped'
+    && record.product.ingredients[0].runtime_subject === null
+  )));
 });
