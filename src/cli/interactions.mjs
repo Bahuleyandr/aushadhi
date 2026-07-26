@@ -4,6 +4,7 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { checkResolvedProducts, validateRulePack } from '../lib/interaction-checker.mjs';
 import {
+  mappingAllowedForProfile,
   mapResolvedProducts,
   summarizeInteractionMappings,
   validateIngredientMappingManifest,
@@ -158,6 +159,7 @@ function assertSummaryMatchesRows(summaryProvenance, observedProvenance) {
 function assertMappingEvidenceSourcesAllowed(sourceManifest, profile, mappingManifests) {
   for (const { manifest, allowedUses } of mappingManifests) {
     for (const mapping of manifest?.mappings ?? []) {
+      if (!mappingAllowedForProfile(mapping, profile)) continue;
       for (const evidence of mapping.review?.evidence ?? []) {
         const source = sourceManifest.sources?.[evidence.source_id];
         if (!source) {
@@ -243,6 +245,7 @@ export async function runInteractionCheck(options) {
     records: scan.results,
     ingredientManifest,
     presentationManifest,
+    profile: options.profile,
   });
   return {
     ...checkResolvedProducts({

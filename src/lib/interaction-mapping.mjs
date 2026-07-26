@@ -24,6 +24,7 @@ const SHA256 = /^[a-f0-9]{64}$/u;
 const LOCAL_ID = /^sha256:[a-f0-9]{64}$/u;
 const RXCUI = /^[0-9]+$/u;
 const UNII = /^[A-Z0-9]{10}$/u;
+const RELEASE_PROFILES = new Set(['production-open', 'internal-evaluation']);
 const RELATIONSHIPS = new Set([
   'exact',
   'salt',
@@ -283,6 +284,7 @@ function validatePresentationMapping(value, index) {
     'mapping_id',
     'product_id',
     'product_assertion_sha256',
+    'allowed_profiles',
     'presentation',
     'review',
   ]), label);
@@ -307,6 +309,25 @@ function validatePresentationMapping(value, index) {
   });
   if (normalized.route !== route || normalized.formulation !== formulation) {
     throw new TypeError(`${label}.presentation must use canonical route and formulation values`);
+  }
+  if (value.allowed_profiles !== undefined) {
+    if (!Array.isArray(value.allowed_profiles) || value.allowed_profiles.length === 0) {
+      throw new TypeError(`${label}.allowed_profiles must be a non-empty array`);
+    }
+    const seenProfiles = new Set();
+    for (let profileIndex = 0; profileIndex < value.allowed_profiles.length; profileIndex += 1) {
+      const profile = requireString(
+        value.allowed_profiles[profileIndex],
+        `${label}.allowed_profiles[${profileIndex}]`,
+      );
+      if (!RELEASE_PROFILES.has(profile)) {
+        throw new TypeError(`${label}.allowed_profiles contains unsupported profile ${profile}`);
+      }
+      if (seenProfiles.has(profile)) {
+        throw new TypeError(`${label}.allowed_profiles contains duplicate profile ${profile}`);
+      }
+      seenProfiles.add(profile);
+    }
   }
   validateReview(value.review, `${label}.review`);
 }
@@ -412,16 +433,23 @@ export function createProductPresentationCandidate(product) {
   };
 }
 
-function buildMappingIndexes(ingredientManifest, presentationManifest) {
+export function mappingAllowedForProfile(mapping, profile) {
+  if (profile === null || profile === undefined) return true;
+  return mapping.allowed_profiles === undefined || mapping.allowed_profiles.includes(profile);
+}
+
+function buildMappingIndexes(ingredientManifest, presentationManifest, profile) {
   validateIngredientMappingManifest(ingredientManifest);
   validateProductPresentationManifest(presentationManifest);
   return {
     ingredients: new Map(ingredientManifest.mappings.map((entry) => (
       [entry.assertion.ingredient_id, entry]
     ))),
-    presentations: new Map(presentationManifest.mappings.map((entry) => (
-      [entry.product_id, entry]
-    ))),
+    presentations: new Map(
+      presentationManifest.mappings
+        .filter((entry) => mappingAllowedForProfile(entry, profile))
+        .map((entry) => [entry.product_id, entry]),
+    ),
   };
 }
 
@@ -518,9 +546,10 @@ export function mapResolvedProducts({
   records,
   ingredientManifest,
   presentationManifest,
+  profile = null,
 }) {
   if (!Array.isArray(records)) throw new TypeError('records must be an array');
-  const indexes = buildMappingIndexes(ingredientManifest, presentationManifest);
+  const indexes = buildMappingIndexes(ingredientManifest, presentationManifest, profile);
   return records.map((record, recordIndex) => {
     requireObject(record, `record ${recordIndex}`);
     if (record.status !== 'resolved') return structuredClone(record);
