@@ -1,14 +1,14 @@
 # Section A — citation sign-off worksheet
 
-**36 retained evidence records** across **33 rules**, containing **64 hashed fragments**.
+**39 retained evidence records** across **33 rules**, containing **75 hashed fragments**.
 
 This worksheet is deterministically generated from the slice. It records evidence provenance and exact source fragments; it does not add or revise clinical claims.
 
 - Section: `A`
-- JSONL SHA-256: `614b34c8c47b0476338aa8f8d5851ec7530bf756bb3bb4fdda7b2ed32d2aa739`
-- openFDA-reconciled evidence: `34`
-- source_policy_use: `{"interaction-counterevidence":1,"interaction-evidence":35}`
-- citation_status: `{"machine_confirmed_govuk_ogl_bound_pending_clinician":2,"machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope":2,"machine_confirmed_openfda_reconciled_pending_clinician":32}`
+- JSONL SHA-256: `3b9114faddbf2a758c3b5bc881a824ea4fbb82b84fd2ea6b3cfdd8b5b73ab42c`
+- openFDA-reconciled evidence: `37`
+- source_policy_use: `{"interaction-counterevidence":1,"interaction-evidence":38}`
+- citation_status: `{"machine_confirmed_govuk_ogl_bound_pending_clinician":2,"machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope":2,"machine_confirmed_openfda_reconciled_pending_clinician":35}`
 
 For `openfda-labels`, the machine origin is the exact openFDA `set_id` query and the DailyMed URL is reference-only. Payload hashes use recursively sorted object keys with array order preserved (`sorted-json-keys-v1`); fragment containment uses the repository `openfda-spl-text-v1` normalization at each declared `source_path`.
 
@@ -167,12 +167,12 @@ For `openfda-labels`, the machine origin is the exact openFDA `set_id` query and
   - [Advice for healthcare professionals / Review of interaction] (sha256 1619a003626551e6ea2e59e414ecab7b28f6cb1af49475cb3d969633c8be0d34; path details.body) "if the concomitant use of miconazole oral gel with an oral anticoagulant such as warfarin is planned, exercise caution and ensure that you monitor and titrate the anticoagulant effect carefully"
   - [Advice for healthcare professionals / Review of interaction] (sha256 881a066463c2c8cfed2b21bc939ed1651230435cf5c8a22a296923b2455a20ab; path details.body) "The antifungal drug miconazole inhibits several P450 isozymes, including CYP2C9, which can heighten the anticoagulant effect of warfarin and lead to an increase in international normalised ratio (INR) values (and subsequent bleeding complications)."
 
-## warfarin__ketoconazole_systemic
+## warfarin__ketoconazole_oral
 
 - runtime_enabled: `false`
 - pair_matcher_executable: `true`
 - applicability.jurisdiction: `["US"]`
-- machine_evidence: `1`
+- machine_evidence: `2`
 
 ### evidence[0] — `fda-label-ketoconazole` — `machine_confirmed_openfda_reconciled_pending_clinician`
 
@@ -184,25 +184,55 @@ For `openfda-labels`, the machine origin is the exact openFDA `set_id` query and
 - SPL: version=`2`; effective_time=`20250117`; source_date=`2025-01-17`
 - payload: sha256=`a0872968d6e697c71b32e13b40b74dceb7730b7158aae2100888551e44f7f985`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
 - source_paths: `["precautions[0]"]`
-- currentness: `checked_current_openfda` @`2026-07-24`
-- proposition: Systemic ketoconazole may enhance the anticoagulant effect of warfarin (US ketoconazole label). Mechanism (CYP inhibition) not asserted from this excerpt.
-- source_effect: `["documented_pharmacologic_interaction"]`
-- label_action: `["monitor"]`
+- currentness: `checked_current_openfda` @`2026-07-26`
+- proposition: The current U.S. oral ketoconazole label states that ketoconazole may enhance the anticoagulant effect of coumarin-like drugs and that the effect should be carefully titrated and monitored.
+- source_effect: `["enhanced_anticoagulant_effect"]`
+- label_action: `["carefully_titrate_and_monitor"]`
 - scope: `{"scope_type":"exact_members","members":["warfarin","ketoconazole"]}`
 - jurisdictions: `["US"]`
 - does NOT by itself support:
-  - Local runtime severity, workflow action, and promotion without clinician approval.
-  - Runtime use while the declared selector or evidence scope is not executable.
-  - This source does not establish the rule in UK, IN.
+  - Local runtime severity, workflow action, or promotion without clinician approval.
+  - Topical ketoconazole soap, lotion, shampoo, cream, or other non-oral products.
+  - An Indian regulatory-label claim.
+  - An exact Child-Pugh B interaction modifier.
+  - Autonomous pharmacy dose adjustment or interruption of either medicine.
+  - A universal PT/INR schedule or fixed post-discontinuation monitoring interval.
 - fragments:
   - [Drug Interactions] (sha256 64dfb2a92e85dfdf2e7414db0e0f5d5376120ed5caef04d5b53a844e28269d84; path precautions[0]) "Coumarins: Ketoconazole may enhance the anticoagulant effect of coumarin-like drugs, thus the anticoagulant effect should be carefully titrated and monitored."
+
+### evidence[1] — `fda-label-warfarin-current-ketoconazole` — `machine_confirmed_openfda_reconciled_pending_clinician`
+
+- source: openFDA drug-label record (company-submitted SPL); U.S. National Library of Medicine / FDA | regulator="FDA" | product="warfarin sodium tablets" | section="Drug Interactions; Patient Counseling Information"
+- policy contract: source_policy_id=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; jurisdiction=`US`; review_status=`review_candidate`
+- origin: https://api.fda.gov/drug/label.json?search=set_id%3A%2251e98fb6-ba76-497e-95d8-fe895ef0b7ed%22&limit=100
+- DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=51e98fb6-ba76-497e-95d8-fe895ef0b7ed
+- document: `51e98fb6-ba76-497e-95d8-fe895ef0b7ed@7`; retrieved_at=`2026-07-26`
+- SPL: version=`7`; effective_time=`20260629`; source_date=`2026-06-29`
+- payload: sha256=`bcb1e6db5ac6619c0c93ede9f0c689dfd8ffdff4f187067335c243046b5d3e04`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
+- source_paths: `["drug_interactions[0]","drug_interactions[0]","information_for_patients[0]"]`
+- currentness: `checked_current_openfda` @`2026-07-26`
+- proposition: The current U.S. warfarin label lists Ketoconazole as a CYP inhibitor, requires closer INR monitoring when interacting medicines, antibiotics, or antifungals are started or stopped, and identifies reportable bleeding symptoms.
+- source_effect: `["metabolic_enzyme_inhibition","increased_inr","increased_bleeding_risk"]`
+- label_action: `["closely_monitor_inr_when_started_or_stopped","bleeding_symptom_counselling"]`
+- scope: `{"scope_type":"exact_members","members":["warfarin","ketoconazole"]}`
+- jurisdictions: `["US"]`
+- does NOT by itself support:
+  - Local runtime severity, workflow action, or promotion without clinician approval.
+  - An Indian regulatory-label claim.
+  - An exact Child-Pugh B interaction modifier.
+  - Autonomous pharmacy dose adjustment or interruption of either medicine.
+  - A universal PT/INR schedule or fixed post-discontinuation monitoring interval.
+- fragments:
+  - [Drug Interactions] (sha256 98e944313c173deff9443ef485c6838467b0e2cd0f1c4d2cfb09a9e89f727369; path drug_interactions[0]) "CYP3A4 alprazolam, amiodarone, amlodipine, amprenavir, aprepitant, atorvastatin, atazanavir, bicalutamide, cilostazol, cimetidine, ciprofloxacin, clarithromycin, conivaptan, cyclosporine, darunavir/ritonavir, diltiazem, erythromycin, fluconazole, fluoxetine, fluvoxamine, fosamprenavir, imatinib, indinavir, isoniazid, itraconazole, ketoconazole, lopinavir/ritonavir, nefazodone, nelfinavir, nilotinib, oral contraceptives, posaconazole, ranitidine, ranolazine, ritonavir, saquinavir, telithromycin, tipranavir, voriconazole, zileuton"
+  - [Drug Interactions] (sha256 ebd497231a12303e4d4ec4633a822878a063947bc7fdba8474431482441a0d7b; path drug_interactions[0]) "More frequent INR monitoring should be performed when starting or stopping other drugs, including botanicals, or when changing dosages of other drugs, including drugs intended for short-term use (e.g., antibiotics, antifungals, corticosteroids) [see Boxed Warning ] ."
+  - [Patient Counseling Information] (sha256 65d3b8e1e2cfcd8d5109fa4902a9b37c2fd8a6f539e81218a01670d369502702; path information_for_patients[0]) "Signs and symptoms of bleeding include: pain, swelling or discomfort, prolonged bleeding from cuts, increased menstrual flow or vaginal bleeding, nosebleeds, bleeding of gums from brushing, unusual bleeding or bruising, red or dark brown urine, red or tar black stools, headache, dizziness, or weakness [see Box Warning and Warnings and Precautions (5.1) ] ."
 
 ## warfarin__voriconazole
 
 - runtime_enabled: `false`
 - pair_matcher_executable: `true`
 - applicability.jurisdiction: `["US"]`
-- machine_evidence: `1`
+- machine_evidence: `2`
 
 ### evidence[0] — `fda-label-voriconazole` — `machine_confirmed_openfda_reconciled_pending_clinician`
 
@@ -214,18 +244,50 @@ For `openfda-labels`, the machine origin is the exact openFDA `set_id` query and
 - SPL: version=`27`; effective_time=`20260215`; source_date=`2026-02-15`
 - payload: sha256=`482ea96d744a36285c329e6ed88a69bbe8fcc9460b2f23921f3476f4969f02ae`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
 - source_paths: `["drug_interactions[0]","drug_interactions[0]"]`
-- currentness: `checked_current_openfda` @`2026-07-24`
-- proposition: Voriconazole increases warfarin effect via CYP2C9 inhibition.
-- source_effect: `["increased_drug_exposure","altered_anticoagulant_effect","metabolic_enzyme_inhibition"]`
-- label_action: `["monitor"]`
+- currentness: `checked_current_openfda` @`2026-07-26`
+- proposition: The current U.S. voriconazole label reports significantly increased prothrombin time with warfarin through CYP2C9 inhibition and directs close-interval anticoagulation monitoring with clinician-directed dose adjustment.
+- source_effect: `["increased_prothrombin_time","altered_anticoagulant_effect","metabolic_enzyme_inhibition"]`
+- label_action: `["close_interval_anticoagulation_monitoring","clinician_directed_anticoagulant_dose_adjustment"]`
 - scope: `{"scope_type":"exact_members","members":["warfarin","voriconazole"]}`
 - jurisdictions: `["US"]`
 - does NOT by itself support:
-  - Local runtime severity, workflow action, and promotion without clinician approval.
-  - This source does not establish the rule in UK, IN.
+  - Local runtime severity, workflow action, or promotion without clinician approval.
+  - An Indian regulatory-label claim.
+  - An exact Child-Pugh B interaction modifier.
+  - Autonomous pharmacy dose adjustment or interruption of either medicine.
+  - A mandatory antifungal substitution.
+  - A universal PT/INR schedule or fixed post-discontinuation monitoring interval.
 - fragments:
   - [Drug Interactions] (sha256 04bbd65b0552714cdb2385963e691b69412a96076507d3f9e3aab19591a76792; path drug_interactions[0]) "Warfarin (CYP2C9 Inhibition) Other Oral Coumarin Anticoagulants (CYP2C9/3A4 Inhibition) Prothrombin Time Significantly Increased Not Studied In Vivo or In Vitro for other Oral Coumarin Anticoagulants, but Drug Plasma Exposure Likely to be Increased"
   - [Drug Interactions] (sha256 4820a3e1f08ec57b2912285bab8fe4a0080f89acd37eef2bbf40fda3984e4b4d; path drug_interactions[0]) "If patients receiving coumarin preparations are treated simultaneously with voriconazole, the prothrombin time or other suitable anticoagulation tests should be monitored at close intervals and the dosage of anticoagulants adjusted accordingly."
+
+### evidence[1] — `fda-label-warfarin-current-voriconazole` — `machine_confirmed_openfda_reconciled_pending_clinician`
+
+- source: openFDA drug-label record (company-submitted SPL); U.S. National Library of Medicine / FDA | regulator="FDA" | product="warfarin sodium tablets" | section="Drug Interactions; Patient Counseling Information"
+- policy contract: source_policy_id=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; jurisdiction=`US`; review_status=`review_candidate`
+- origin: https://api.fda.gov/drug/label.json?search=set_id%3A%2251e98fb6-ba76-497e-95d8-fe895ef0b7ed%22&limit=100
+- DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=51e98fb6-ba76-497e-95d8-fe895ef0b7ed
+- document: `51e98fb6-ba76-497e-95d8-fe895ef0b7ed@7`; retrieved_at=`2026-07-26`
+- SPL: version=`7`; effective_time=`20260629`; source_date=`2026-06-29`
+- payload: sha256=`bcb1e6db5ac6619c0c93ede9f0c689dfd8ffdff4f187067335c243046b5d3e04`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
+- source_paths: `["drug_interactions[0]","drug_interactions[0]","drug_interactions[0]","information_for_patients[0]"]`
+- currentness: `checked_current_openfda` @`2026-07-26`
+- proposition: The current U.S. warfarin label lists Voriconazole as a CYP inhibitor, requires closer INR monitoring when interacting medicines, antibiotics, or antifungals are started or stopped, and identifies reportable bleeding symptoms.
+- source_effect: `["metabolic_enzyme_inhibition","increased_inr","increased_bleeding_risk"]`
+- label_action: `["closely_monitor_inr_when_started_or_stopped","bleeding_symptom_counselling"]`
+- scope: `{"scope_type":"exact_members","members":["warfarin","voriconazole"]}`
+- jurisdictions: `["US"]`
+- does NOT by itself support:
+  - Local runtime severity, workflow action, or promotion without clinician approval.
+  - An Indian regulatory-label claim.
+  - An exact Child-Pugh B interaction modifier.
+  - Autonomous pharmacy dose adjustment or interruption of either medicine.
+  - A universal PT/INR schedule or fixed post-discontinuation monitoring interval.
+- fragments:
+  - [Drug Interactions] (sha256 14a1ce05e42103a7f45533ca89dc0759c12616d5a28e3ef3db3a61b9356a758f; path drug_interactions[0]) "CYP2C9 amiodarone, capecitabine, cotrimoxazole, etravirine, fluconazole, fluvastatin, fluvoxamine, metronidazole, miconazole, oxandrolone, sulfinpyrazone, tigecycline, voriconazole, zafirlukast"
+  - [Drug Interactions] (sha256 98e944313c173deff9443ef485c6838467b0e2cd0f1c4d2cfb09a9e89f727369; path drug_interactions[0]) "CYP3A4 alprazolam, amiodarone, amlodipine, amprenavir, aprepitant, atorvastatin, atazanavir, bicalutamide, cilostazol, cimetidine, ciprofloxacin, clarithromycin, conivaptan, cyclosporine, darunavir/ritonavir, diltiazem, erythromycin, fluconazole, fluoxetine, fluvoxamine, fosamprenavir, imatinib, indinavir, isoniazid, itraconazole, ketoconazole, lopinavir/ritonavir, nefazodone, nelfinavir, nilotinib, oral contraceptives, posaconazole, ranitidine, ranolazine, ritonavir, saquinavir, telithromycin, tipranavir, voriconazole, zileuton"
+  - [Drug Interactions] (sha256 ebd497231a12303e4d4ec4633a822878a063947bc7fdba8474431482441a0d7b; path drug_interactions[0]) "More frequent INR monitoring should be performed when starting or stopping other drugs, including botanicals, or when changing dosages of other drugs, including drugs intended for short-term use (e.g., antibiotics, antifungals, corticosteroids) [see Boxed Warning ] ."
+  - [Patient Counseling Information] (sha256 65d3b8e1e2cfcd8d5109fa4902a9b37c2fd8a6f539e81218a01670d369502702; path information_for_patients[0]) "Signs and symptoms of bleeding include: pain, swelling or discomfort, prolonged bleeding from cuts, increased menstrual flow or vaginal bleeding, nosebleeds, bleeding of gums from brushing, unusual bleeding or bruising, red or dark brown urine, red or tar black stools, headache, dizziness, or weakness [see Box Warning and Warnings and Precautions (5.1) ] ."
 
 ## warfarin__macrolide_cyp_inhibitor
 
@@ -258,12 +320,12 @@ For `openfda-labels`, the machine origin is the exact openFDA `set_id` query and
 - fragments:
   - [Drug Interactions] (sha256 81311cfe10ec4333bcc636eedccba36e6a060d84a9b726864bfe463da1338ed2; path drug_interactions[0]) "Spontaneous reports in the postmarketing period suggest that concomitant administration of clarithromycin and oral anticoagulants may potentiate the effects of the oral anticoagulants."
 
-## warfarin__metronidazole_tinidazole
+## warfarin__metronidazole
 
 - runtime_enabled: `false`
 - pair_matcher_executable: `true`
 - applicability.jurisdiction: `["US"]`
-- machine_evidence: `1`
+- machine_evidence: `2`
 
 ### evidence[0] — `fda-label-metronidazole` — `machine_confirmed_openfda_reconciled_pending_clinician`
 
@@ -274,20 +336,50 @@ For `openfda-labels`, the machine origin is the exact openFDA `set_id` query and
 - document: `a2883ca1-5a9a-4259-9d80-46ab67274384@25`; retrieved_at=`2026-07-24`
 - SPL: version=`25`; effective_time=`20260522`; source_date=`2026-05-22`
 - payload: sha256=`4baf60bc4b057156c7bd085554287e2c69e557fce0d266d35980ec69b9926417`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
-- source_paths: `["drug_interactions[0]"]`
-- currentness: `checked_current_openfda` @`2026-07-24`
-- proposition: Metronidazole may potentiate warfarin and prolong prothrombin time (US metronidazole label). Supports METRONIDAZOLE only; tinidazole not confirmed from this source.
-- source_effect: `["altered_anticoagulant_effect"]`
-- label_action: `["monitor"]`
-- scope: `{"scope_type":"extrapolated_class","directly_supported_members":["metronidazole"],"runtime_members":["metronidazole","tinidazole"],"requires_clinician_class_mapping":true,"runtime_class":"nitroimidazole","source_members":["metronidazole"]}`
+- source_paths: `["drug_interactions[0]","drug_interactions[0]"]`
+- currentness: `checked_current_openfda` @`2026-07-26`
+- proposition: The current U.S. metronidazole label reports potentiation of warfarin with prolonged prothrombin time and requires careful PT/INR monitoring. It supports metronidazole only, not tinidazole.
+- source_effect: `["altered_anticoagulant_effect","prolonged_prothrombin_time"]`
+- label_action: `["carefully_monitor_pt_inr"]`
+- scope: `{"scope_type":"exact_members","members":["warfarin","metronidazole"]}`
 - jurisdictions: `["US"]`
 - does NOT by itself support:
-  - Local runtime severity, workflow action, and promotion without clinician approval.
-  - Runtime use while the declared selector or evidence scope is not executable.
-  - The source class or named members require clinician approval before mapping to the runtime class roster.
-  - This source does not establish the rule in UK, IN.
+  - Local runtime severity, workflow action, or promotion without clinician approval.
+  - Tinidazole or a nitroimidazole class extrapolation.
+  - An Indian regulatory-label claim.
+  - An exact Child-Pugh B interaction modifier.
+  - Autonomous pharmacy dose adjustment or interruption of either medicine.
+  - A universal PT/INR schedule or fixed post-discontinuation monitoring interval.
 - fragments:
   - [Drug Interactions] (sha256 f9149da76ffb56c60582de935878be386ed69358a931a46de449d5ad79eef6ca; path drug_interactions[0]) "Metronidazole has been reported to potentiate the anticoagulant effect of warfarin and other oral coumarin anticoagulants, resulting in a prolongation of prothrombin time."
+  - [Drug Interactions] (sha256 3f37c4d5c8d61346946f3ddceeeaefa2e0bcfa4bc48dc2ebf07f33d9ecbb0e8e; path drug_interactions[0]) "When FLAGYL 375 capsules is prescribed for patients on this type of anticoagulant therapy prothrombin time and INR should be carefully monitored."
+
+### evidence[1] — `fda-label-warfarin-current-metronidazole` — `machine_confirmed_openfda_reconciled_pending_clinician`
+
+- source: openFDA drug-label record (company-submitted SPL); U.S. National Library of Medicine / FDA | regulator="FDA" | product="warfarin sodium tablets" | section="Drug Interactions; Patient Counseling Information"
+- policy contract: source_policy_id=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; jurisdiction=`US`; review_status=`review_candidate`
+- origin: https://api.fda.gov/drug/label.json?search=set_id%3A%2251e98fb6-ba76-497e-95d8-fe895ef0b7ed%22&limit=100
+- DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=51e98fb6-ba76-497e-95d8-fe895ef0b7ed
+- document: `51e98fb6-ba76-497e-95d8-fe895ef0b7ed@7`; retrieved_at=`2026-07-26`
+- SPL: version=`7`; effective_time=`20260629`; source_date=`2026-06-29`
+- payload: sha256=`bcb1e6db5ac6619c0c93ede9f0c689dfd8ffdff4f187067335c243046b5d3e04`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
+- source_paths: `["drug_interactions[0]","drug_interactions[0]","information_for_patients[0]"]`
+- currentness: `checked_current_openfda` @`2026-07-26`
+- proposition: The current U.S. warfarin label lists Metronidazole as a CYP inhibitor, requires closer INR monitoring when interacting medicines, antibiotics, or antifungals are started or stopped, and identifies reportable bleeding symptoms.
+- source_effect: `["metabolic_enzyme_inhibition","increased_inr","increased_bleeding_risk"]`
+- label_action: `["closely_monitor_inr_when_started_or_stopped","bleeding_symptom_counselling"]`
+- scope: `{"scope_type":"exact_members","members":["warfarin","metronidazole"]}`
+- jurisdictions: `["US"]`
+- does NOT by itself support:
+  - Local runtime severity, workflow action, or promotion without clinician approval.
+  - An Indian regulatory-label claim.
+  - An exact Child-Pugh B interaction modifier.
+  - Autonomous pharmacy dose adjustment or interruption of either medicine.
+  - A universal PT/INR schedule or fixed post-discontinuation monitoring interval.
+- fragments:
+  - [Drug Interactions] (sha256 14a1ce05e42103a7f45533ca89dc0759c12616d5a28e3ef3db3a61b9356a758f; path drug_interactions[0]) "CYP2C9 amiodarone, capecitabine, cotrimoxazole, etravirine, fluconazole, fluvastatin, fluvoxamine, metronidazole, miconazole, oxandrolone, sulfinpyrazone, tigecycline, voriconazole, zafirlukast"
+  - [Drug Interactions] (sha256 ebd497231a12303e4d4ec4633a822878a063947bc7fdba8474431482441a0d7b; path drug_interactions[0]) "More frequent INR monitoring should be performed when starting or stopping other drugs, including botanicals, or when changing dosages of other drugs, including drugs intended for short-term use (e.g., antibiotics, antifungals, corticosteroids) [see Boxed Warning ] ."
+  - [Patient Counseling Information] (sha256 65d3b8e1e2cfcd8d5109fa4902a9b37c2fd8a6f539e81218a01670d369502702; path information_for_patients[0]) "Signs and symptoms of bleeding include: pain, swelling or discomfort, prolonged bleeding from cuts, increased menstrual flow or vaginal bleeding, nosebleeds, bleeding of gums from brushing, unusual bleeding or bruising, red or dark brown urine, red or tar black stools, headache, dizziness, or weakness [see Box Warning and Warnings and Precautions (5.1) ] ."
 
 ## warfarin__cotrimoxazole
 

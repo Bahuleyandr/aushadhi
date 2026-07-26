@@ -12,10 +12,10 @@ Runtime `off` rows are diagnostic-only. A `pair matcher` value of `no` means the
 | `warfarin__aspirin_analgesic_antiplatelet` | warfarin <-> aspirin | additive_pd | major | hepatic:child_pugh_b->major/-(base) | confirm_and_monitor | off | yes | US | H |
 | `warfarin__fluconazole` | warfarin <-> fluconazole | pk_perpetrator | major | - | confirm_and_monitor | off | yes | US | H |
 | `warfarin__miconazole_oromucosal_gel` | warfarin <-> miconazole | pk_perpetrator | major | - | withhold_and_clarify | off | yes | UK | H |
-| `warfarin__ketoconazole_systemic` | warfarin <-> ketoconazole | pk_perpetrator | major | hepatic:child_pugh_b->major/-(base) | confirm_and_monitor | off | yes | US | H |
-| `warfarin__voriconazole` | warfarin <-> voriconazole | pk_perpetrator | major | hepatic:child_pugh_b->major/-(base) | confirm_and_monitor | off | yes | US | H |
+| `warfarin__ketoconazole_oral` | warfarin <-> ketoconazole | pk_perpetrator | major | - | confirm_and_monitor | off | yes | US | H |
+| `warfarin__voriconazole` | warfarin <-> voriconazole | pk_perpetrator | major | - | confirm_and_monitor | off | yes | US | H |
 | `warfarin__macrolide_cyp_inhibitor` | warfarin <-> macrolide_cyp3a_inhibitor [moderate/strong] | pk_perpetrator | major | hepatic:child_pugh_b->major/-(base) | confirm_and_monitor | off | yes | US | H |
-| `warfarin__metronidazole_tinidazole` | warfarin <-> nitroimidazole | pk_perpetrator | major | hepatic:child_pugh_b->major/-(base) | confirm_and_monitor | off | yes | US | H |
+| `warfarin__metronidazole` | warfarin <-> metronidazole | pk_perpetrator | major | - | confirm_and_monitor | off | yes | US | H |
 | `warfarin__cotrimoxazole` | warfarin <-> co-trimoxazole | pk_perpetrator | major | hepatic:child_pugh_b->major/-(base) | confirm_and_monitor | off | no | US | H |
 | `warfarin__amiodarone` | warfarin <-> amiodarone | pk_perpetrator | major | - | confirm_and_monitor | off | yes | US | H |
 | `warfarin__fluoroquinolone` | warfarin <-> fluoroquinolone | observed_clinical_multifactorial | moderate | - | supply_with_counselling | off | yes | US | H |

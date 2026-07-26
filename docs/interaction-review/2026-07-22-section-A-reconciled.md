@@ -3,20 +3,24 @@
 Section A is reconciled to the v2 runtime-status and strict citation model. Rules remain draft-only and require clinician approval before promotion.
 
 - Source: `docs/interaction-review/batch-01-v2/sections/A.verified.jsonl`
-- JSONL SHA-256: `614b34c8c47b0476338aa8f8d5851ec7530bf756bb3bb4fdda7b2ed32d2aa739`
+- JSONL SHA-256: `3b9114faddbf2a758c3b5bc881a824ea4fbb82b84fd2ea6b3cfdd8b5b73ab42c`
 - Generated: `2026-07-26`
-- Inventory: 33 rules; 36 retained evidence records; 64 machine-text-verified exact hashed fragments; 2 fail-closed rules with no retained evidence.
+- Inventory: 33 rules; 39 retained evidence records; 75 machine-text-verified exact hashed fragments; 2 fail-closed rules with no retained evidence.
 - Runtime: 0 enabled; 27 pair-executable diagnostics; 6 matcher-inert review
   rows; 0 clinical-context-complete; 0 promotion-eligible.
-- Citation status: `{"machine_confirmed_openfda_reconciled_pending_clinician":32,"machine_confirmed_govuk_ogl_bound_pending_clinician":2,"machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope":2}`
+- Citation status: `{"machine_confirmed_openfda_reconciled_pending_clinician":35,"machine_confirmed_govuk_ogl_bound_pending_clinician":2,"machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope":2}`
 - Schema freeze: `validateDraftRules` passes. Every row is runtime-disabled
   and promotion-ineligible within the draft pack. The
   `warfarin__amiodarone` and `warfarin__fluconazole` rows carry their approved
   oral/tablet scopes, but
   exact product-pair binding and clinician authorization belong to the
   independent internal-evaluation promotion manifest; the draft cannot
-  self-authorize. Every other row lacks a complete, non-empty concrete route
-  and formulation scope for both runtime subjects. The `warfarin__tramadol`,
+  self-authorize. The `warfarin__metronidazole`,
+  `warfarin__ketoconazole_oral`, and `warfarin__voriconazole` rows now carry
+  exact oral-tablet review-candidate scopes, but have no approved mapping or
+  promotion entry and remain runtime-disabled. Every other row lacks a
+  complete, non-empty concrete route and formulation scope for both runtime
+  subjects. The `warfarin__tramadol`,
   `edoxaban__pgp_inducer`, and `clopidogrel__cyp2c19_inhibiting_ppi` rows also
   have `clinical_context_complete:false` because their `newly_added` action
   target requires medication-initiation direction that the matcher does not
@@ -29,12 +33,12 @@ Section A is reconciled to the v2 runtime-status and strict citation model. Rule
 
 ## Verification outcome
 
-- Phase 2 provenance validation: 25 exact source documents are retained. Thirty-four openFDA evidence records, covering 23 selected SPL payloads and 59 fragments, reconcile exactly to one current result, pinned version/effective time, canonical payload hash, and source path. Both GOV.UK records additionally pin the exact Content API payload, `details.body` fragment paths, canonical payload hash, matching `base_path`/`drug_safety_update` type, and a separately fetched page carrying the OGL v3.0 footer with no page-specific reuse exception.
+- Phase 2 provenance validation: 25 exact source documents are retained. Thirty-seven openFDA evidence records, covering 23 selected SPL payloads and 70 fragments, reconcile to pinned versions, effective times, canonical payload hashes, and source paths. DailyMed current SPL XML was rechecked live on 2026-07-26 for the metronidazole, oral ketoconazole, voriconazole, and warfarin records and retained every cited fragment. After a temporary HTTP 404 response, api.fda.gov recovered and the repository assembler live-verified all 244 evidence records, synchronized the 199-rule aggregate, review index, and attestation, and produced pack SHA-256 `367fe4cba0e6680835fc11ac2c9079a0ff14aaac78598a79c3bc66b7374f7008`. Both GOV.UK records additionally pin the exact Content API payload, `details.body` fragment paths, canonical payload hash, matching `base_path`/`drug_safety_update` type, and a separately fetched page carrying the OGL v3.0 footer with no page-specific reuse exception.
 - Exact unmatched gap: `aspirin__nsaid_additive_gi_bleeding` evidence `fda-label-nsaid-class`, set_id `8bff5df5-d856-4237-b6a8-ae445b454844`. The exact current openFDA result is SPL version 13, effective `20250922`, payload SHA-256 `d6cdff491ee0ac6c0a9e7fa707dea2c2856bcbf0ac835c7402279f2592d5f0e2`; it does not contain the stored aspirin-specific GI-risk fragment under `openfda-spl-text-v1`. The evidence was removed without substitution or fuzzy matching, applicability jurisdiction was cleared, and the rule was made non-executable.
 - Source-policy gap: live fetches of the official FDA URL `https://www.fda.gov/media/76636/download` on 2026-07-24 were inconsistent, returning both `Not found` and a valid 157,619-byte PDF (SHA-256 `9dc0a23061fcf9a1e27f58d664331d674d37a5a02300d01bc344149c4935fa89`). The exact timing sentence was machine-extracted from the PDF, but `fda-authored-web-content` remains disabled and has no enabled licence/payload-extraction contract. No mirror was substituted, and `aspirin_ld_ir__ibuprofen_timing` remains fail-closed with no evidence, jurisdiction, timing action, or executable matcher.
 - Structural validation passes. Ticagrelor remains pinned inline for the named dabigatran rule rather than present in the broad curated P-gp-inhibitor set. The two evidence-gap aspirin rules, the analgesic-dose CALDOLOR child, the standalone hepatic restriction, the cotrimoxazole same-product selector, and the triple-therapy review reference do not fire because the hardened engine enforces their declared `pair_matcher_executable:false` quarantine.
 - Applicability jurisdiction is bounded to retained evidence: 29 rules are US-only, 2 are UK-only, 2 fail-closed rules have no jurisdiction, and no rule asserts unsupported Indian applicability. Runtime checks require an explicit matching jurisdiction before action details are exposed.
-- Restricted/manual-reference eMC and ACR sources in machine evidence: 0. Miconazole uses GOV.UK OGL evidence. The 34 openFDA records comprise 33 positive `interaction-evidence` records and one typed `interaction-counterevidence` record for rivaroxaban plus clarithromycin; all use `CC0-1.0`, the openFDA API as machine origin, and DailyMed as reference-only. The two current warfarin-amiodarone records support the separate clinician-approved internal product scope as U.S.-label evidence only. The two warfarin-fluconazole records remain review candidates inside the immutable draft, but they now support a separate clinician-approved internal product scope; they have no Child-Pugh modifier and retain the label-stated 4-to-5-day persistence boundary. Neither promotion asserts an Indian regulatory-label claim.
+- Restricted/manual-reference eMC and ACR sources in machine evidence: 0. Miconazole uses GOV.UK OGL evidence. The 37 openFDA records comprise 36 positive `interaction-evidence` records and one typed `interaction-counterevidence` record for rivaroxaban plus clarithromycin; all use `CC0-1.0`, the openFDA API as machine origin, and DailyMed as reference-only. The two current warfarin-amiodarone records support the separate clinician-approved internal product scope as U.S.-label evidence only. The two warfarin-fluconazole records remain review candidates inside the immutable draft, but they now support a separate clinician-approved internal product scope; they have no Child-Pugh modifier and retain the label-stated 4-to-5-day persistence boundary. The three metronidazole, oral-ketoconazole, and voriconazole pairs each have bilateral U.S.-label evidence, exact oral-tablet draft scope, no Child-Pugh modifier, and no promotion until separate clinician approval. No promotion asserts an Indian regulatory-label claim.
 - The corrected macrolide selector fires for clarithromycin and erythromycin as diagnostic output.
 - The retained aspirin/ibuprofen CALDOLOR evidence is review material only. Because analgesic-dose aspirin is not a pair-matcher input, the child is matcher-inert and no bare aspirin/ibuprofen finding is emitted. The policy-disabled timing rule and the unreconciled generic GI rule also do not surface.
 
@@ -46,10 +50,10 @@ Section A is reconciled to the v2 runtime-status and strict citation model. Rule
 | `warfarin__aspirin_analgesic_antiplatelet` | diagnostic | yes | 1 | Diagnostic only: exact named pair, but runtime scope lacks a concrete formulation on both subjects. |
 | `warfarin__fluconazole` | diagnostic | yes | 2 | Draft remains disabled. The approved internal runtime scope is bound separately to seven exact reviewed oral-tablet presentations and 12 cross-product combinations; it cannot widen to other products. |
 | `warfarin__miconazole_oromucosal_gel` | diagnostic | yes | 1 | Diagnostic only: oral-gel formulation and UK supply-status branch are not matcher-gateable. |
-| `warfarin__ketoconazole_systemic` | diagnostic | yes | 1 | Diagnostic only: systemic/oral formulation is not matcher-gateable. |
-| `warfarin__voriconazole` | diagnostic | yes | 1 | Diagnostic only: exact named pair, but runtime scope lacks a concrete formulation on both subjects. |
+| `warfarin__ketoconazole_oral` | diagnostic | yes | 2 | Review candidate only: exact oral-tablet scope and bilateral U.S.-label evidence are present, but no ingredient/presentation mapping or clinician-authorized promotion exists. Topical ketoconazole remains excluded. |
+| `warfarin__voriconazole` | diagnostic | yes | 2 | Review candidate only: exact oral-tablet scope and bilateral U.S.-label evidence are present, but no ingredient/presentation mapping or clinician-authorized promotion exists. Intravenous and other non-tablet presentations remain excluded. |
 | `warfarin__macrolide_cyp_inhibitor` | diagnostic | yes | 1 | Diagnostic only: the selector now fires, but the source supports clarithromycin rather than the full two-member class. |
-| `warfarin__metronidazole_tinidazole` | diagnostic | yes | 1 | Diagnostic only: the source supports metronidazole, not the full nitroimidazole selector. |
+| `warfarin__metronidazole` | diagnostic | yes | 2 | Review candidate only: the unsupported nitroimidazole class selector was narrowed to exact metronidazole with bilateral U.S.-label evidence and oral-tablet scope. Tinidazole and non-tablet products remain excluded, and no clinician-authorized promotion exists. |
 | `warfarin__cotrimoxazole` | diagnostic | no | 1 | Fail closed: the current matcher cannot prove the same-product trimethoprim/sulfamethoxazole combination occurrence, and runtime scope lacks concrete formulation. |
 | `warfarin__amiodarone` | diagnostic | yes | 2 | Draft remains disabled. The approved internal runtime scope is bound separately to five exact reviewed oral-tablet presentations and six cross-product combinations; it cannot widen to other products. |
 | `warfarin__fluoroquinolone` | diagnostic | yes | 2 | Diagnostic only: class, route, and jurisdiction scope exceed the member-level evidence. |
@@ -78,13 +82,17 @@ Section A is reconciled to the v2 runtime-status and strict citation model. Rule
 
 ## Promotion boundary
 
-All draft rules have `promotion_eligible:false`. Thirty-four positive
+All draft rules have `promotion_eligible:false`. Thirty-eight positive
 machine-confirmed evidence records and one typed counterevidence record
 establish exact source text and declared scope only. The warfarin-amiodarone
 clinician approval is represented outside the draft in a deterministic
 promotion manifest that binds the exact draft bytes, source versions,
 reviewed ingredient identities, and five reviewed product presentations. All
-other rules remain unapproved for runtime promotion. The removed
+other rules remain unapproved for runtime promotion. The three
+metronidazole, oral-ketoconazole, and voriconazole review candidates are
+isolated in their 2026-07-26 packet; they bind exact draft bytes and proposed
+product cross-products but cannot enter either runtime pack without separate
+ingredient, presentation, and clinical approvals. The removed
 naproxen-label and policy-disabled FDA timing fragments are recorded only as
 explicit evidence gaps; neither is copied into the retained slice or used to
 authorize a finding.
