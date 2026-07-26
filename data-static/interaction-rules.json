@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "pack_id": "aushadhi-open-interactions",
+  "pack_version": "0.1.0",
+  "profile": "production-open",
+  "licence": "CC-BY-4.0",
+  "source_ids": [
+    "aushadhi-open-clinician-rules"
+  ],
+  "licence_notices": {
+    "aushadhi-open-clinician-rules": {
+      "attribution": "Aushadhi contributors",
+      "licence_notice": "Creative Commons Attribution 4.0 International",
+      "licence_id": "CC-BY-4.0",
+      "licence_url": "https://creativecommons.org/licenses/by/4.0/legalcode",
+      "source_url": "https://github.com/Bahuleyandr/aushadhi",
+      "changes": "Structured and versioned for the Aushadhi interaction checker."
+    }
+  },
+  "declared_coverage": "unknown",
+  "rules": []
+}

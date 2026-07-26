@@ -1,0 +1,6 @@
+/.gitattributes text eol=lf
+*.sh text eol=lf
+/data-static/interaction-*.json text eol=lf
+/data-static/ingredient-mapping-overrides.json text eol=lf
+/data-static/product-presentation-overrides.json text eol=lf
+/docs/interaction-review/** text eol=lf

@@ -1,0 +1,102 @@
+# Reviewed interaction identity and presentation mapping
+
+The interaction checker does not treat a catalogue molecule string, brand
+suffix, pack label, or dosage-form-looking word as a clinical runtime identity.
+Three assertions must be independently preserved:
+
+1. the exact resolved product and its byte-stable assertion hash;
+2. each ingredient occurrence, including the observed term and strength;
+3. a reviewed concrete route and formulation for that exact product assertion.
+
+Missing mappings remain unresolved. They never fall back to salt stripping,
+fuzzy matching, brand parsing, or a default systemic/oral route.
+
+## Machine-assisted identity proposals
+
+The explicit proposal command queries the official RxNorm API and writes only
+generated `review_candidate` records:
+
+```powershell
+node src/cli/propose-interaction-mappings.mjs `
+  --profile internal-evaluation `
+  --ingredient "warfarin" `
+  --ingredient "ketoconazole"
+```
+
+The default output is
+`data/interaction/internal-evaluation/rxnorm-mappings.jsonl`; the persistent
+response cache is under the same profile directory. Both are gitignored.
+Index-driven runs require an explicit maximum of 100 assertions:
+
+```powershell
+node src/cli/propose-interaction-mappings.mjs `
+  --profile internal-evaluation `
+  --ingredient-index data/interaction/internal-evaluation/ingredient-index.jsonl `
+  --limit 25
+```
+
+Exact RxNorm searches are kept distinct from normalized searches. A single
+exact active ingredient (`IN`) or precise ingredient (`PIN`) result is still
+only a candidate. Normalized, ambiguous, and unexpected-term-type results
+cannot be accepted automatically. Operational failures are retried but never
+cached or converted into `unmapped`.
+
+## Reviewed ingredient mappings
+
+Human-approved mappings live in
+`data-static/ingredient-mapping-overrides.json`. Each row pins:
+
+- the immutable local assertion ingredient ID and canonical observed term;
+- the canonical clinical ingredient ID and runtime drug token;
+- a typed relationship such as `exact`, `salt`, `active_moiety`, `prodrug`,
+  `metabolite`, `stereoisomer`, `regimen`, or `synonym`;
+- exact RxNorm or UNII identifiers plus response hashes;
+- reviewer, review date, source URL, retrieval date, and evidence hash.
+
+The empty committed file is intentional. Candidate generation never edits it.
+
+## Reviewed product presentations
+
+Human-approved route/form mappings live in
+`data-static/product-presentation-overrides.json`. A mapping binds a concrete
+route and formulation to both:
+
+- the deterministic local `product_id`; and
+- an exact product-assertion SHA-256 covering brand, manufacturer, pack, raw
+  form, observed ingredient terms, and strengths.
+
+This second hash prevents case, label, strength, salt, or composition drift
+from inheriting an old presentation decision merely because catalogue
+normalization kept the same product ID. Abstract values such as `systemic`,
+`parenteral`, and `solid_oral` are rejected.
+
+## Runtime handoff
+
+`src/lib/interaction-mapping.mjs` creates a stable ingredient-occurrence ID for
+each ingredient within the exact product. A structured runtime subject is
+created only when both the ingredient identity and the product presentation
+have reviewed mappings:
+
+```json
+{
+  "drug": "ketoconazole",
+  "route": "oral",
+  "formulation": "tablet"
+}
+```
+
+The ordinary read-only interaction CLI loads the two committed override files
+by default and reports a `mapping_summary`. Test or review fixtures can use
+explicit files:
+
+```powershell
+node src/cli/interactions.mjs `
+  --profile internal-evaluation `
+  --ingredient-mappings path/to/ingredient-mappings.json `
+  --presentation-mappings path/to/presentation-mappings.json `
+  --drug "Exact Brand A" `
+  --drug "Exact Brand B"
+```
+
+The committed production rule pack remains empty and declares unknown
+coverage. Reviewed mapping completeness does not promote a clinical rule.

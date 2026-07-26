@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aushadhi.dev/schemas/interaction-rules.schema.json",
+  "title": "Aushadhi interaction rule pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "pack_id",
+    "pack_version",
+    "profile",
+    "licence",
+    "source_ids",
+    "declared_coverage",
+    "rules"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "pack_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pack_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profile": {
+      "enum": [
+        "production-open",
+        "internal-evaluation"
+      ]
+    },
+    "licence": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "declared_coverage": {
+      "enum": [
+        "complete",
+        "partial",
+        "unknown"
+      ]
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "rules": {
+            "maxItems": 0
+          }
+        },
+        "required": [
+          "rules"
+        ]
+      },
+      "then": {
+        "properties": {
+          "declared_coverage": {
+            "not": {
+              "const": "complete"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "conditionList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "document_id",
+        "document_version",
+        "retrieved_at",
+        "jurisdiction",
+        "excerpt",
+        "licence",
+        "review_status"
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "source_identifier": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "document_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "document_version": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "retrieved_at": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "jurisdiction": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "excerpt": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "licence": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "review_status": {
+          "enum": [
+            "clinician_reviewed",
+            "review_candidate"
+          ]
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "source_url"
+          ]
+        },
+        {
+          "required": [
+            "source_identifier"
+          ]
+        }
+      ]
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "source_versions"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "clinician_reviewed",
+            "review_candidate"
+          ]
+        },
+        "reviewer_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "reviewed_at": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "source_versions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "$comment": "The pair array must also be in deterministic code-point order; validateRulePack enforces this constraint.",
+      "required": [
+        "rule_id",
+        "pair",
+        "applicability",
+        "severity",
+        "mechanism",
+        "management",
+        "evidence",
+        "review"
+      ],
+      "properties": {
+        "rule_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "pair": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "applicability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "routes",
+            "dose_conditions",
+            "population_conditions"
+          ],
+          "properties": {
+            "routes": {
+              "$ref": "#/$defs/conditionList"
+            },
+            "dose_conditions": {
+              "$ref": "#/$defs/conditionList"
+            },
+            "population_conditions": {
+              "$ref": "#/$defs/conditionList"
+            }
+          }
+        },
+        "severity": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "mechanism": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "management": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "review": {
+          "$ref": "#/$defs/review"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "review": {
+                "properties": {
+                  "status": {
+                    "const": "clinician_reviewed"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "review": {
+                "required": [
+                  "reviewer_id",
+                  "reviewed_at"
+                ],
+                "properties": {
+                  "source_versions": {
+                    "minItems": 1
+                  }
+                }
+              },
+              "evidence": {
+                "items": {
+                  "properties": {
+                    "review_status": {
+                      "const": "clinician_reviewed"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "severity": {
+                "const": "unknown"
+              },
+              "mechanism": {
+                "const": null
+              },
+              "management": {
+                "const": null
+              },
+              "evidence": {
+                "items": {
+                  "properties": {
+                    "review_status": {
+                      "const": "review_candidate"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
