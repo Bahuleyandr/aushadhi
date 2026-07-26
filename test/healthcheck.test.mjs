@@ -1,9 +1,26 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const TMP = 'test/.tmp-healthcheck';
+let bashWorkingDirectory;
+
+function bashPath(value) {
+  if (bashWorkingDirectory === undefined) {
+    const bashCwd = spawnSync('bash', ['-c', 'pwd -P'], {
+      cwd: '.',
+      encoding: 'utf8',
+    });
+    if (bashCwd.status !== 0 || !bashCwd.stdout.trim()) {
+      throw new Error(`cannot resolve the Bash working directory: ${bashCwd.stderr}`);
+    }
+    bashWorkingDirectory = bashCwd.stdout.trim();
+  }
+  const relative = path.relative('.', path.resolve(value)).replaceAll('\\', '/');
+  return `${bashWorkingDirectory}/${relative}`;
+}
 
 test('healthcheck clears a prior discovery anomaly after later discovery progress', () => {
   fs.rmSync(TMP, { recursive: true, force: true });
@@ -26,16 +43,31 @@ esac
     ].join('\n') + '\n');
     fs.writeFileSync(state, JSON.stringify({ count: 1710 }));
 
-    const result = spawnSync('bash', ['scripts/healthcheck.sh'], {
+    const importedVariables = [
+      'AUSHADHI_TEST_BIN',
+      'AUSHADHI_SERVICE',
+      'AUSHADHI_LOG',
+      'AUSHADHI_STATE',
+      'AUSHADHI_OUTPUT',
+      'AUSHADHI_DAILY_CAP',
+    ];
+    const result = spawnSync('bash', [
+      '-c',
+      'PATH="$AUSHADHI_TEST_BIN:$PATH"; export PATH; exec bash scripts/healthcheck.sh',
+    ], {
       cwd: '.',
       encoding: 'utf8',
       env: {
         ...process.env,
-        PATH: `${process.cwd()}/${TMP}/bin:${process.env.PATH}`,
+        WSLENV: [
+          process.env.WSLENV,
+          ...importedVariables,
+        ].filter(Boolean).join(':'),
+        AUSHADHI_TEST_BIN: bashPath(`${TMP}/bin`),
         AUSHADHI_SERVICE: 'aushadhi-crawl.service',
-        AUSHADHI_LOG: log,
-        AUSHADHI_STATE: state,
-        AUSHADHI_OUTPUT: `${TMP}/normalized.jsonl`,
+        AUSHADHI_LOG: bashPath(log),
+        AUSHADHI_STATE: bashPath(state),
+        AUSHADHI_OUTPUT: bashPath(`${TMP}/normalized.jsonl`),
         AUSHADHI_DAILY_CAP: '12000',
       },
     });
