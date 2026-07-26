@@ -13,12 +13,27 @@ fuzzy matching, brand parsing, or a default systemic/oral route.
 
 ## Deterministic mapping review backlog
 
-Before querying an external terminology service, build the complete local
-review queue from the approved draft rule pack and the current catalogue:
+Before querying an external terminology service, filter the current catalogue
+through the interaction source policy:
+
+```powershell
+npm run interactions:catalogue -- `
+  --profile internal-evaluation
+```
+
+The filter retains a row only when every contributing source is allowed for
+product resolution in the selected profile. A mixed-provenance row is excluded
+as a whole; fields from a disallowed source are never copied into a
+policy-compatible product assertion. The generated `summary.json` binds the
+input hashes, retained source counts, and per-source exclusion reasons.
+
+Then build the complete local review queue from the approved draft rule pack
+and the filtered catalogue:
 
 ```powershell
 npm run interactions:mappings:backlog -- `
-  --profile internal-evaluation
+  --profile internal-evaluation `
+  --artifact data/interaction/internal-evaluation/product-catalogue/drugs.jsonl
 ```
 
 The command validates all draft rules, expands direct selectors, pinned inline
@@ -48,6 +63,27 @@ The command has no flag that accepts identities, infers presentations, or
 promotes runtime rules. In particular, catalogue `form_raw`, brand suffixes,
 and pack labels are preserved only as exact product assertions and never
 treated as clinical route or formulation evidence.
+
+## Bounded mapping pilots
+
+Extract a small, reproducible review packet from the complete backlog by rule
+ID. An optional exclusive-source filter retains only product assertions whose
+entire catalogue provenance comes from that one source:
+
+```powershell
+npm run interactions:mappings:pilot -- `
+  --profile internal-evaluation `
+  --rule-id warfarin__amiodarone `
+  --source-only janaushadhi
+```
+
+The generated packet is written below
+`data/interaction/internal-evaluation/mapping-pilots/`. Its summary pins the
+parent backlog and output hashes. Selector requirements unrelated to the
+chosen rule are removed, while each selected product assertion remains exact.
+The extractor validates that its parent backlog is candidate-only and refuses
+unknown rule IDs, changed input hashes, accepted identities, or inferred
+presentations. It cannot write either committed override file.
 
 ## Machine-assisted identity proposals
 
