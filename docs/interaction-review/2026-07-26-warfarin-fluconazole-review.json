@@ -2,7 +2,7 @@
   "schema_version": 1,
   "packet_id": "warfarin-fluconazole-pmbjp-oral-tablets-2026-07-26",
   "generated_at": "2026-07-26",
-  "review_status": "review_candidate",
+  "review_status": "clinician_reviewed",
   "release_profile": "internal-evaluation",
   "production_open_enabled": false,
   "ingredient_identity_candidate": {
@@ -48,7 +48,12 @@
         "retrieved_at": "2026-07-26"
       }
     ],
-    "approval": null
+    "approval": {
+      "status": "reviewed",
+      "reviewer_id": "clinician:subas",
+      "reviewed_at": "2026-07-26",
+      "approval_text": "I approve the fluconazole ingredient identity mapping as exact: observed fluconazole to RxNorm ingredient RxCUI 4450, UNII 8VZV102JFY. Reviewer ID: clinician:subas"
+    }
   },
   "product_presentation_candidates": [
     {
@@ -84,7 +89,12 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-26 warfarin-fluconazole review packet: codes 1246, 2771, 2772, and 2773. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "presentation:pmbjp:2771:oral-tablet",
@@ -119,7 +129,12 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-26 warfarin-fluconazole review packet: codes 1246, 2771, 2772, and 2773. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "presentation:pmbjp:2772:oral-tablet",
@@ -154,7 +169,12 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-26 warfarin-fluconazole review packet: codes 1246, 2771, 2772, and 2773. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "presentation:pmbjp:2773:oral-tablet",
@@ -187,13 +207,18 @@
           "note": "The exact RxNorm search returned no active concept. The proposed oral-tablet presentation is supported by the exact PMBI tender row, not inferred from RxNorm."
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-26 warfarin-fluconazole review packet: codes 1246, 2771, 2772, and 2773. Reviewer ID: clinician:subas"
+      }
     }
   ],
   "proposed_rule": {
     "rule_id": "warfarin__fluconazole",
     "draft_rule_sha256": "088bd06e472723bce36527b67d1c2b0d7c24694842c5929c25c1c4e693952f84",
-    "review_status": "review_candidate",
+    "review_status": "clinician_reviewed",
     "proposed_severity": "major",
     "proposed_dispense_action": "confirm_and_monitor",
     "scope": {
@@ -275,7 +300,12 @@
       "persistence_after_fluconazole_discontinuation": "4 to 5 days",
       "universal_pt_inr_schedule_asserted": false
     },
-    "approval": null
+    "approval": {
+      "status": "clinician_reviewed",
+      "reviewer_id": "clinician:subas",
+      "reviewed_at": "2026-07-26",
+      "approval_text": "I approve the warfarin-fluconazole clinical rule for internal evaluation only, limited to the seven reviewed PMBJP oral-tablet assertions (12 cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service warfarin dose review and PT/INR monitoring when fluconazole is started or stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling and state that fluconazole enzyme inhibition can persist 4 to 5 days after discontinuation without inventing a universal PT/INR schedule or a single-dose exception. Keep the unsupported Child-Pugh modifier removed; treat the clinical evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas"
+    }
   },
   "adversarial_verification": [
     {
@@ -304,9 +334,9 @@
       "detail": "The exact RxNorm SCD search returned no active concept; the PMBI tender directly identifies the 400 mg item as an uncoated tablet."
     },
     {
-      "check": "runtime leakage",
+      "check": "runtime scope isolation",
       "status": "pass",
-      "detail": "No fluconazole mapping, presentation, promotion, or runtime rule is committed by this packet."
+      "detail": "The reviewed mappings and promotion are limited to internal-evaluation and the 12 exact product pairs; production-open remains empty."
     }
   ]
 }

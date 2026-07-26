@@ -19,7 +19,7 @@ function readManifest(name) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, 'data-static', name), 'utf8'));
 }
 
-test('committed ingredient mappings contain only the two approved exact identities', () => {
+test('committed ingredient mappings contain only the three approved exact identities', () => {
   const manifest = readManifest('ingredient-mapping-overrides.json');
   assert.equal(validateIngredientMappingManifest(manifest), true);
   assert.deepEqual(
@@ -91,6 +91,61 @@ test('committed ingredient mappings contain only the two approved exact identiti
             source_url: 'https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/703/property.json?propName=UNII_CODE',
             retrieved_at: '2026-07-26',
             evidence_sha256: '39a640945784dcae592a68bddbb8f9cbfec716f3ef10f5d5299dce4fd115a408',
+          },
+        ],
+      },
+      {
+        mapping_id: 'ingredient:fluconazole:rxnorm-4450',
+        assertion_id: 'sha256:37cc87b734ee49f5f3ad5773f44aa5089c4bc93ab4fb50bc53048e2b69416bd0',
+        assertion_name: 'fluconazole',
+        clinical_ingredient_id: 'sha256:37cc87b734ee49f5f3ad5773f44aa5089c4bc93ab4fb50bc53048e2b69416bd0',
+        clinical_name: 'fluconazole',
+        runtime_drug: 'fluconazole',
+        relationship: 'exact',
+        rxnorm: {
+          rxcui: '4450',
+          name: 'fluconazole',
+          tty: 'IN',
+          version: '06-Jul-2026',
+          api_version: '3.1.354',
+          response_sha256: '47532ee45ed034f9ef2fdd5ad1619b783a8e7529fe1c2e56e0257fc6eb1d5200',
+        },
+        unii: {
+          code: '8VZV102JFY',
+          preferred_name: 'fluconazole',
+          response_sha256: '83cd6141875c11974b38feb2110ccb1ec55c5ac6f563c5190679ee3ee2534b9c',
+        },
+        review_status: 'reviewed',
+        reviewer_id: 'clinician:subas',
+        reviewed_at: '2026-07-26',
+        evidence: [
+          {
+            source_id: 'rxnorm',
+            identifier: 'rxnorm-version:06-Jul-2026',
+            source_url: 'https://rxnav.nlm.nih.gov/REST/version.json',
+            retrieved_at: '2026-07-26',
+            evidence_sha256: 'ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd',
+          },
+          {
+            source_id: 'rxnorm',
+            identifier: 'rxnorm-search:fluconazole',
+            source_url: 'https://rxnav.nlm.nih.gov/REST/rxcui.json?name=fluconazole&allsrc=0&search=0',
+            retrieved_at: '2026-07-26',
+            evidence_sha256: '613592116a78cb88eb2c85e7b2aec0f158f71535c5cbbbdeb0b95a0cb3383536',
+          },
+          {
+            source_id: 'rxnorm',
+            identifier: 'rxcui:4450',
+            source_url: 'https://rxnav.nlm.nih.gov/REST/rxcui/4450/properties.json',
+            retrieved_at: '2026-07-26',
+            evidence_sha256: '47532ee45ed034f9ef2fdd5ad1619b783a8e7529fe1c2e56e0257fc6eb1d5200',
+          },
+          {
+            source_id: 'rxnorm',
+            identifier: 'unii:8VZV102JFY',
+            source_url: 'https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/4450/property.json?propName=UNII_CODE',
+            retrieved_at: '2026-07-26',
+            evidence_sha256: '83cd6141875c11974b38feb2110ccb1ec55c5ac6f563c5190679ee3ee2534b9c',
           },
         ],
       },
@@ -289,6 +344,101 @@ const approvedProducts = [
       ['rxnorm', 'rxcui:855332', 'cd3b9c133ea6e273c771ac30790755b07e0d771d642d2b6e214959e0685b3db7'],
     ],
   },
+  {
+    mapping_id: 'presentation:pmbjp:1246:oral-tablet',
+    product_id: 'sha256:36c4c3041de7320c6bab438d11649fbed5c05348f9a821a7b60524a77fe1882e',
+    product_assertion_sha256: 'db7af4f8f150ecd174e7e444529d0e3ea166025134b6e68eff7436f4a305296f',
+    drug: 'fluconazole',
+    product: {
+      brand_name: 'Fluconazole Tablets IP 150 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "1's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'fluconazole',
+        strength_raw: '150 mg',
+        strength_value: 150,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '1246' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-tender:RC-222/2025:1246:pdf-page-69', '47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff'],
+      ['rxnorm', 'rxnorm-search:fluconazole-150-mg-oral-tablet', 'bcf5693e0b6ae1c6146ec3aee938d0411ae8a97b9fc463eaeb300c8407b648b1'],
+      ['rxnorm', 'rxcui:197699', '20d9ae89ab50b86a3e050d3f6584e6269bfafe36e6b0ff934cab0970c8bc67f8'],
+    ],
+  },
+  {
+    mapping_id: 'presentation:pmbjp:2771:oral-tablet',
+    product_id: 'sha256:7a10b77f1e3fe2826287663ebbaac467e22a2760236e1130d6e24056193ea1e1',
+    product_assertion_sha256: '94ecc3673fd6332ae543ff268685b14e847447ddbe2678bc7692e5c11a0f07a0',
+    drug: 'fluconazole',
+    product: {
+      brand_name: 'Fluconazole Tablets IP 50 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "4's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'fluconazole',
+        strength_raw: '50 mg',
+        strength_value: 50,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '2771' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-tender:RC-213/2024:2771:page-95', '9be3607e49a8cf47b6c9d6c54f34a02a38988546b94bdf863b2518150d0a1bda'],
+      ['rxnorm', 'rxnorm-search:fluconazole-50-mg-oral-tablet', '69f978c34a7d2d866b503cbe34b70e9de991463815ee908519d2a76eb7409e09'],
+      ['rxnorm', 'rxcui:197701', '58fde9055852dce3cf5cfadfb355a4449649f78a3f68544e935dd7da21504836'],
+    ],
+  },
+  {
+    mapping_id: 'presentation:pmbjp:2772:oral-tablet',
+    product_id: 'sha256:29bb5bbb4f23f5e02f1b3a83555ea3b577de0f5ae1b49ae0b8ba81e62b128381',
+    product_assertion_sha256: '7b9fffd9797b6a11c0ec0802a288c32ac95f9b4c854b6d62e0ec470a61fbc793',
+    drug: 'fluconazole',
+    product: {
+      brand_name: 'Fluconazole Tablets IP 200 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "4's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'fluconazole',
+        strength_raw: '200 mg',
+        strength_value: 200,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '2772' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-tender:RC-213/2024:2772:page-95', '9be3607e49a8cf47b6c9d6c54f34a02a38988546b94bdf863b2518150d0a1bda'],
+      ['rxnorm', 'rxnorm-search:fluconazole-200-mg-oral-tablet', '8623b49cfe2b3534e15acd62b8135f6e3dd832e01cc7f44499e5ec5cc9c3f43e'],
+      ['rxnorm', 'rxcui:197700', '78c0dff0d9af6a18d4f74521f561141a2ecfe3335fa078c23eb021641ff777e1'],
+    ],
+  },
+  {
+    mapping_id: 'presentation:pmbjp:2773:oral-tablet',
+    product_id: 'sha256:552bfd4142fa6a39f2fd53b7f45ad98c31073250899eb5509e6a4c7962b465c1',
+    product_assertion_sha256: 'b43f0509aebac0bc0021079be2e8375735e69feffbd59c76131447bd8f1dad9c',
+    drug: 'fluconazole',
+    product: {
+      brand_name: 'Fluconazole Tablets IP 400 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "1's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'fluconazole',
+        strength_raw: '400 mg',
+        strength_value: 400,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '2773' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-tender:RC-213/2024:2773:page-95', '9be3607e49a8cf47b6c9d6c54f34a02a38988546b94bdf863b2518150d0a1bda'],
+      ['rxnorm', 'rxnorm-exact-search:no-active-concept', '8a2600ea692ce58930504a533e4f62ed942a645d3804eef4013503d9498df6d5'],
+    ],
+  },
 ];
 
 function approvedRecords() {
@@ -302,7 +452,7 @@ function approvedRecords() {
   }));
 }
 
-test('committed product presentation mappings contain only the five approved PMBJP rows', () => {
+test('committed product presentation mappings contain only the nine approved PMBJP rows', () => {
   const presentationManifest = readManifest('product-presentation-overrides.json');
   const ingredientManifest = readManifest('ingredient-mapping-overrides.json');
   assert.equal(validateProductPresentationManifest(presentationManifest), true);
@@ -384,11 +534,13 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
   assert.equal(validateRulePack(productionPack), true);
   assert.equal(internalPack.profile, 'internal-evaluation');
   assert.equal(internalPack.declared_coverage, 'partial');
-  assert.equal(internalPack.rules.length, 1);
+  assert.equal(internalPack.rules.length, 2);
   assert.deepEqual(productionPack.rules, []);
   assert.equal(productionPack.declared_coverage, 'unknown');
 
-  const approvedRule = internalPack.rules[0];
+  const approvedRule = internalPack.rules.find(
+    (rule) => rule.rule_id === 'warfarin__amiodarone',
+  );
   assert.equal(approvedRule.severity, 'major');
   assert.equal(approvedRule.dispense_action, 'confirm_and_monitor');
   assert.equal(approvedRule.review.reviewer_id, 'clinician:subas');
@@ -467,6 +619,101 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
   });
   const productionAttempt = checkResolvedProducts({
     resolvedInputs: [mappedProduction[0], mappedProduction[2]],
+    rulePack: internalPack,
+  });
+  assert.deepEqual(productionAttempt.checked_pairs, []);
+  assert.deepEqual(productionAttempt.reviewed_findings, []);
+});
+
+test('the internal warfarin-fluconazole rule fires only for the 12 approved PMBJP product pairs', () => {
+  const ingredientManifest = readManifest('ingredient-mapping-overrides.json');
+  const presentationManifest = readManifest('product-presentation-overrides.json');
+  const internalPack = readManifest('interaction-rules.internal-evaluation.json');
+  const productionPack = readManifest('interaction-rules.json');
+  const approvedRule = internalPack.rules.find(
+    (rule) => rule.rule_id === 'warfarin__fluconazole',
+  );
+
+  assert.equal(validateRulePack(internalPack), true);
+  assert.equal(validateRulePack(productionPack), true);
+  assert.equal(approvedRule.severity, 'major');
+  assert.equal(approvedRule.dispense_action, 'confirm_and_monitor');
+  assert.equal(approvedRule.review.reviewer_id, 'clinician:subas');
+  assert.equal(approvedRule.product_pairs.length, 12);
+  assert.match(approvedRule.management, /prescriber or anticoagulation service/iu);
+  assert.match(approvedRule.management, /PT\/INR monitoring/iu);
+  assert.match(approvedRule.management, /started or stopped/iu);
+  assert.match(approvedRule.management, /4 to 5 days/iu);
+  assert.match(approvedRule.management, /bleeding or bruising/iu);
+  assert.match(approvedRule.management, /do not establish a single-dose exception/iu);
+  assert.doesNotMatch(
+    JSON.stringify(approvedRule),
+    /Child-Pugh|Indian regulatory-label claim/iu,
+  );
+  assert.ok(approvedRule.evidence.every((item) => item.jurisdiction === 'US'));
+
+  const mappedInternal = mapResolvedProducts({
+    records: approvedRecords(),
+    ingredientManifest,
+    presentationManifest,
+    profile: 'internal-evaluation',
+  });
+  const fluconazole = mappedInternal.filter((record) => (
+    record.product.ingredients[0].runtime_subject.drug === 'fluconazole'
+  ));
+  const warfarin = mappedInternal.filter((record) => (
+    record.product.ingredients[0].runtime_subject.drug === 'warfarin'
+  ));
+  const observedProductPairs = [];
+
+  for (const first of fluconazole) {
+    for (const second of warfarin) {
+      const result = checkResolvedProducts({
+        resolvedInputs: [first, second],
+        rulePack: internalPack,
+      });
+      assert.equal(result.reviewed_findings.length, 1);
+      assert.equal(result.reviewed_findings[0].rule_id, 'warfarin__fluconazole');
+      assert.equal(result.reviewed_findings[0].dispense_action, 'confirm_and_monitor');
+      assert.equal(result.checked_pairs.length, 1);
+      assert.equal(result.unresolved_inputs.length, 0);
+      assert.equal(result.coverage.presentation_mapping, 'complete');
+      observedProductPairs.push(result.checked_pairs[0].product_pairs[0]);
+
+      const reversed = checkResolvedProducts({
+        resolvedInputs: [second, first],
+        rulePack: internalPack,
+      });
+      assert.deepEqual(reversed.checked_pairs, result.checked_pairs);
+      assert.deepEqual(reversed.reviewed_findings, result.reviewed_findings);
+    }
+  }
+  assert.deepEqual(observedProductPairs.sort(), approvedRule.product_pairs);
+
+  const unapprovedProduct = structuredClone(fluconazole[0]);
+  unapprovedProduct.product.product_id = 'sha256:unapproved-fluconazole-product';
+  const unapproved = checkResolvedProducts({
+    resolvedInputs: [unapprovedProduct, warfarin[0]],
+    rulePack: internalPack,
+  });
+  assert.equal(unapproved.checked_pairs.length, 1);
+  assert.deepEqual(unapproved.reviewed_findings, []);
+
+  const fourHundred = presentationManifest.mappings.find(
+    (mapping) => mapping.mapping_id === 'presentation:pmbjp:2773:oral-tablet',
+  );
+  assert.ok(fourHundred.review.evidence.some(
+    (evidence) => evidence.identifier === 'rxnorm-exact-search:no-active-concept',
+  ));
+
+  const mappedProduction = mapResolvedProducts({
+    records: approvedRecords(),
+    ingredientManifest,
+    presentationManifest,
+    profile: 'production-open',
+  });
+  const productionAttempt = checkResolvedProducts({
+    resolvedInputs: [mappedProduction[5], mappedProduction[2]],
     rulePack: internalPack,
   });
   assert.deepEqual(productionAttempt.checked_pairs, []);

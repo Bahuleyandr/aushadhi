@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "pack_id": "aushadhi-internal-interactions",
-  "pack_version": "0.1.0",
+  "pack_version": "0.2.0",
   "licence": "CC-BY-4.0",
   "source_ids": [
     "aushadhi-open-clinician-rules"
@@ -13,7 +13,7 @@
       "licence_id": "CC-BY-4.0",
       "licence_url": "https://creativecommons.org/licenses/by/4.0/legalcode",
       "source_url": "https://github.com/Bahuleyandr/aushadhi",
-      "changes": "Clinician-reviewed internal-evaluation interaction rule deterministically promoted from the attested v2 draft and reviewed mappings."
+      "changes": "Clinician-reviewed internal-evaluation interaction rules deterministically promoted from the attested v2 draft and reviewed mappings."
     }
   },
   "declared_coverage": "partial",
@@ -92,6 +92,107 @@
         "reviewed_at": "2026-07-26",
         "source_versions": [
           "openfda-labels:f49d011f-5ca6-4f75-ba16-2099fe42f5aa:2",
+          "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__fluconazole",
+      "pair": [
+        "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06",
+        "sha256:37cc87b734ee49f5f3ad5773f44aa5089c4bc93ab4fb50bc53048e2b69416bd0"
+      ],
+      "product_pairs": [
+        [
+          "sha256:29bb5bbb4f23f5e02f1b3a83555ea3b577de0f5ae1b49ae0b8ba81e62b128381",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:29bb5bbb4f23f5e02f1b3a83555ea3b577de0f5ae1b49ae0b8ba81e62b128381",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:29bb5bbb4f23f5e02f1b3a83555ea3b577de0f5ae1b49ae0b8ba81e62b128381",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:36c4c3041de7320c6bab438d11649fbed5c05348f9a821a7b60524a77fe1882e",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:36c4c3041de7320c6bab438d11649fbed5c05348f9a821a7b60524a77fe1882e",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:36c4c3041de7320c6bab438d11649fbed5c05348f9a821a7b60524a77fe1882e",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:552bfd4142fa6a39f2fd53b7f45ad98c31073250899eb5509e6a4c7962b465c1",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:552bfd4142fa6a39f2fd53b7f45ad98c31073250899eb5509e6a4c7962b465c1",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:552bfd4142fa6a39f2fd53b7f45ad98c31073250899eb5509e6a4c7962b465c1",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:7a10b77f1e3fe2826287663ebbaac467e22a2760236e1130d6e24056193ea1e1",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:7a10b77f1e3fe2826287663ebbaac467e22a2760236e1130d6e24056193ea1e1",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:7a10b77f1e3fe2826287663ebbaac467e22a2760236e1130d6e24056193ea1e1",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ]
+      ],
+      "applicability": {
+        "routes": [
+          "oral tablet for both exact reviewed product assertions"
+        ],
+        "dose_conditions": [],
+        "population_conditions": []
+      },
+      "severity": "major",
+      "dispense_action": "confirm_and_monitor",
+      "mechanism": "Fluconazole inhibits CYP2C9 and CYP3A4 and can increase warfarin anticoagulant effect, PT/INR, and bleeding risk.",
+      "management": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when oral fluconazole is started or stopped. Do not independently stop either medicine or autonomously change the warfarin dose. Use prescriber-directed PT/INR monitoring during coadministration and after fluconazole discontinuation. The enzyme-inhibiting effect of fluconazole can persist for 4 to 5 days after discontinuation; the labels do not prescribe a universal PT/INR schedule for that interval. Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools. This review scope is limited to exact oral-tablet product assertions. Intravenous fluconazole may be source-relevant but is outside the proposed product scope. The labels do not establish a single-dose exception.",
+      "evidence": [
+        {
+          "source": "openFDA drug label: fluconazole",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%22f694c617-3383-416c-91b6-b94fda371204%22&limit=100",
+          "document_id": "f694c617-3383-416c-91b6-b94fda371204",
+          "document_version": "57",
+          "retrieved_at": "2026-07-26",
+          "jurisdiction": "US",
+          "excerpt": "The current U.S. fluconazole label reports increased prothrombin time and bleeding events with warfarin, recommends careful prothrombin-time monitoring, states that warfarin dose adjustment may be necessary, and says fluconazole enzyme inhibition persists 4 to 5 days after discontinuation.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        },
+        {
+          "source": "openFDA drug label: warfarin sodium tablets",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%2251e98fb6-ba76-497e-95d8-fe895ef0b7ed%22&limit=100",
+          "document_id": "51e98fb6-ba76-497e-95d8-fe895ef0b7ed",
+          "document_version": "7",
+          "retrieved_at": "2026-07-26",
+          "jurisdiction": "US",
+          "excerpt": "The current U.S. warfarin label lists fluconazole as a CYP2C9 and CYP3A4 inhibitor, requires closer INR monitoring when interacting medicines and antifungals are started or stopped, warns of major or fatal bleeding, and identifies reportable bleeding symptoms.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        }
+      ],
+      "review": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "source_versions": [
+          "openfda-labels:f694c617-3383-416c-91b6-b94fda371204:57",
           "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
         ]
       }

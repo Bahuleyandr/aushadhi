@@ -68,6 +68,67 @@
       }
     },
     {
+      "mapping_id": "ingredient:fluconazole:rxnorm-4450",
+      "assertion": {
+        "ingredient_id": "sha256:37cc87b734ee49f5f3ad5773f44aa5089c4bc93ab4fb50bc53048e2b69416bd0",
+        "canonical_name": "fluconazole"
+      },
+      "identity": {
+        "clinical_ingredient_id": "sha256:37cc87b734ee49f5f3ad5773f44aa5089c4bc93ab4fb50bc53048e2b69416bd0",
+        "canonical_name": "fluconazole",
+        "runtime_drug": "fluconazole",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "4450",
+          "name": "fluconazole",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "response_sha256": "47532ee45ed034f9ef2fdd5ad1619b783a8e7529fe1c2e56e0257fc6eb1d5200"
+        },
+        "unii": {
+          "code": "8VZV102JFY",
+          "preferred_name": "fluconazole",
+          "response_sha256": "83cd6141875c11974b38feb2110ccb1ec55c5ac6f563c5190679ee3ee2534b9c"
+        }
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-version:06-Jul-2026",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/version.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:fluconazole",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=fluconazole&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "613592116a78cb88eb2c85e7b2aec0f158f71535c5cbbbdeb0b95a0cb3383536"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:4450",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/4450/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "47532ee45ed034f9ef2fdd5ad1619b783a8e7529fe1c2e56e0257fc6eb1d5200"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "unii:8VZV102JFY",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/4450/property.json?propName=UNII_CODE",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "83cd6141875c11974b38feb2110ccb1ec55c5ac6f563c5190679ee3ee2534b9c"
+          }
+        ]
+      }
+    },
+    {
       "mapping_id": "ingredient:warfarin:rxnorm-11289",
       "assertion": {
         "ingredient_id": "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06",

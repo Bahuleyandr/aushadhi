@@ -4,7 +4,7 @@
   "output_pack": {
     "schema_version": "1.0.0",
     "pack_id": "aushadhi-internal-interactions",
-    "pack_version": "0.1.0",
+    "pack_version": "0.2.0",
     "licence": "CC-BY-4.0",
     "source_ids": [
       "aushadhi-open-clinician-rules"
@@ -16,7 +16,7 @@
         "licence_id": "CC-BY-4.0",
         "licence_url": "https://creativecommons.org/licenses/by/4.0/legalcode",
         "source_url": "https://github.com/Bahuleyandr/aushadhi",
-        "changes": "Clinician-reviewed internal-evaluation interaction rule deterministically promoted from the attested v2 draft and reviewed mappings."
+        "changes": "Clinician-reviewed internal-evaluation interaction rules deterministically promoted from the attested v2 draft and reviewed mappings."
       }
     },
     "declared_coverage": "partial"
@@ -55,6 +55,46 @@
             "presentation_mapping_ids": [
               "presentation:pmbjp:1502:oral-tablet",
               "presentation:pmbjp:430:oral-tablet"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__fluconazole",
+      "draft_rule_sha256": "088bd06e472723bce36527b67d1c2b0d7c24694842c5929c25c1c4e693952f84",
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve the warfarin-fluconazole clinical rule for internal evaluation only, limited to the seven reviewed PMBJP oral-tablet assertions (12 cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service warfarin dose review and PT/INR monitoring when fluconazole is started or stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling and state that fluconazole enzyme inhibition can persist 4 to 5 days after discontinuation without inventing a universal PT/INR schedule or a single-dose exception. Keep the unsupported Child-Pugh modifier removed; treat the clinical evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas",
+        "source_versions": [
+          "openfda-labels:f694c617-3383-416c-91b6-b94fda371204:57",
+          "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      },
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "expected_product_pair_count": 12,
+        "sides": [
+          {
+            "draft_role": "object",
+            "ingredient_mapping_id": "ingredient:warfarin:rxnorm-11289",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:2141:oral-tablet",
+              "presentation:pmbjp:2142:oral-tablet",
+              "presentation:pmbjp:452:oral-tablet"
+            ]
+          },
+          {
+            "draft_role": "perpetrator",
+            "ingredient_mapping_id": "ingredient:fluconazole:rxnorm-4450",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:1246:oral-tablet",
+              "presentation:pmbjp:2771:oral-tablet",
+              "presentation:pmbjp:2772:oral-tablet",
+              "presentation:pmbjp:2773:oral-tablet"
             ]
           }
         ]

@@ -14,6 +14,15 @@ function readJson(relativePath) {
 const packet = readJson(
   'docs/interaction-review/2026-07-26-warfarin-fluconazole-review.json',
 );
+const approvalRecord = fs.readFileSync(
+  path.join(
+    root,
+    'docs',
+    'interaction-review',
+    '2026-07-26-warfarin-fluconazole-clinician-approval.md',
+  ),
+  'utf8',
+);
 const ingredientMappings = readJson('data-static/ingredient-mapping-overrides.json');
 const presentationMappings = readJson('data-static/product-presentation-overrides.json');
 const promotions = readJson(
@@ -40,12 +49,15 @@ const fluconazoleLine = sectionLines.find(
 const draftRule = JSON.parse(fluconazoleLine);
 
 test('warfarin-fluconazole packet binds one exact ingredient and four exact PMBJP assertions', () => {
-  assert.equal(packet.review_status, 'review_candidate');
+  assert.equal(packet.review_status, 'clinician_reviewed');
   assert.equal(packet.release_profile, 'internal-evaluation');
   assert.equal(packet.production_open_enabled, false);
+  assert.match(approvalRecord, /Approval response: `approval given`/u);
+  assert.match(approvalRecord, /Reviewer: `clinician:subas`/u);
 
   const ingredient = packet.ingredient_identity_candidate;
-  assert.equal(ingredient.approval, null);
+  assert.equal(ingredient.approval.status, 'reviewed');
+  assert.equal(ingredient.approval.reviewer_id, 'clinician:subas');
   assert.equal(ingredient.proposed_identity.relationship, 'exact');
   assert.deepEqual(
     {
@@ -72,7 +84,8 @@ test('warfarin-fluconazole packet binds one exact ingredient and four exact PMBJ
     ],
   );
   for (const candidate of packet.product_presentation_candidates) {
-    assert.equal(candidate.approval, null, candidate.mapping_id);
+    assert.equal(candidate.approval.status, 'reviewed', candidate.mapping_id);
+    assert.equal(candidate.approval.reviewer_id, 'clinician:subas');
     assert.deepEqual(
       candidate.proposed_presentation,
       { route: 'oral', formulation: 'tablet' },
@@ -95,10 +108,11 @@ test('warfarin-fluconazole packet binds one exact ingredient and four exact PMBJ
   );
 });
 
-test('proposed clinical scope is the complete 4 by 3 cross product and remains unapproved', () => {
+test('approved clinical scope is the complete 4 by 3 cross product', () => {
   const proposed = packet.proposed_rule;
-  assert.equal(proposed.approval, null);
-  assert.equal(proposed.review_status, 'review_candidate');
+  assert.equal(proposed.approval.status, 'clinician_reviewed');
+  assert.equal(proposed.approval.reviewer_id, 'clinician:subas');
+  assert.equal(proposed.review_status, 'clinician_reviewed');
   assert.equal(proposed.proposed_severity, 'major');
   assert.equal(proposed.proposed_dispense_action, 'confirm_and_monitor');
   assert.equal(proposed.scope.expected_product_pair_count, 12);
@@ -169,30 +183,48 @@ test('the reconciled draft removes unsupported modifiers and exactly matches the
   );
 });
 
-test('review packet cannot leak into committed mappings, promotion, or either runtime profile', () => {
-  assert.equal(
-    ingredientMappings.mappings.some(
-      (mapping) => mapping.identity.runtime_drug === 'fluconazole',
-    ),
-    false,
+test('approved packet maps and promotes only its exact internal-evaluation scope', () => {
+  const ingredient = ingredientMappings.mappings.find(
+    (mapping) => mapping.identity.runtime_drug === 'fluconazole',
   );
-  const pendingPresentationIds = new Set(
+  assert.equal(ingredient.mapping_id, packet.ingredient_identity_candidate.mapping_id);
+  assert.equal(ingredient.review.status, 'reviewed');
+  assert.equal(ingredient.review.reviewer_id, 'clinician:subas');
+
+  const approvedPresentationIds = new Set(
     packet.product_presentation_candidates.map((candidate) => candidate.mapping_id),
   );
-  assert.equal(
-    presentationMappings.mappings.some(
-      (mapping) => pendingPresentationIds.has(mapping.mapping_id),
-    ),
-    false,
+  const reviewedPresentations = presentationMappings.mappings.filter(
+    (mapping) => approvedPresentationIds.has(mapping.mapping_id),
   );
-  assert.equal(
-    promotions.promotions.some((promotion) => promotion.rule_id === 'warfarin__fluconazole'),
-    false,
+  assert.equal(reviewedPresentations.length, 4);
+  assert.ok(reviewedPresentations.every((mapping) => (
+    mapping.review.status === 'reviewed'
+    && mapping.review.reviewer_id === 'clinician:subas'
+    && mapping.allowed_profiles.length === 1
+    && mapping.allowed_profiles[0] === 'internal-evaluation'
+  )));
+
+  const promotion = promotions.promotions.find(
+    (entry) => entry.rule_id === 'warfarin__fluconazole',
   );
+  assert.equal(promotion.draft_rule_sha256, packet.proposed_rule.draft_rule_sha256);
+  assert.equal(promotion.scope.expected_product_pair_count, 12);
+  assert.equal(promotion.approval.status, 'clinician_reviewed');
+  assert.equal(promotion.approval.reviewer_id, 'clinician:subas');
+  assert.deepEqual(promotion.approval.source_versions, packet.proposed_rule.source_versions);
   assert.equal(
-    internalPack.rules.some((rule) => rule.rule_id === 'warfarin__fluconazole'),
-    false,
+    promotion.approval.approval_text,
+    packet.proposed_rule.approval.approval_text,
   );
+
+  const runtimeRule = internalPack.rules.find(
+    (rule) => rule.rule_id === 'warfarin__fluconazole',
+  );
+  assert.equal(runtimeRule.product_pairs.length, 12);
+  assert.equal(runtimeRule.review.reviewer_id, 'clinician:subas');
+  assert.deepEqual(runtimeRule.product_pairs, packet.proposed_rule.scope.product_pairs);
+
   assert.equal(productionPack.rules.length, 0);
   assert.equal(productionPack.declared_coverage, 'unknown');
 });

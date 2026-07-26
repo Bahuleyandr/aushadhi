@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,10 +47,10 @@ function inputs() {
   };
 }
 
-function mutateDraft(source, mutateRule) {
+function mutateDraft(source, mutateRule, ruleId = 'warfarin__amiodarone') {
   const text = Buffer.from(source.draftPackBytes).toString('utf8');
   const rules = text.trimEnd().split('\n').map(JSON.parse);
-  mutateRule(rules.find((rule) => rule.rule_id === 'warfarin__amiodarone'));
+  mutateRule(rules.find((rule) => rule.rule_id === ruleId));
   const draftPackBytes = Buffer.from(
     `${rules.map((rule) => JSON.stringify(rule)).join('\n')}\n`,
   );
@@ -74,15 +75,29 @@ test('the promotion manifest deterministically compiles the checked-in internal 
     'utf8',
   );
   assert.equal(serializeInteractionRuntimePack(compiled), checkedIn);
-  assert.equal(compiled.rules.length, 1);
-  assert.equal(compiled.rules[0].rule_id, 'warfarin__amiodarone');
-  assert.equal(compiled.rules[0].product_pairs.length, 6);
-  assert.equal(compiled.rules[0].review.reviewer_id, 'clinician:subas');
-  assert.match(compiled.rules[0].management, /prescriber or anticoagulation service/iu);
-  assert.match(compiled.rules[0].management, /PT\/INR monitoring/iu);
-  assert.match(compiled.rules[0].management, /weeks to months/iu);
-  assert.match(compiled.rules[0].management, /bleeding or bruising/iu);
-  assert.match(compiled.rules[0].management, /not an autonomous pharmacy action/iu);
+  assert.equal(compiled.rules.length, 2);
+  const amiodarone = compiled.rules.find(
+    (rule) => rule.rule_id === 'warfarin__amiodarone',
+  );
+  const fluconazole = compiled.rules.find(
+    (rule) => rule.rule_id === 'warfarin__fluconazole',
+  );
+  assert.equal(amiodarone.product_pairs.length, 6);
+  assert.equal(amiodarone.review.reviewer_id, 'clinician:subas');
+  assert.match(amiodarone.management, /prescriber or anticoagulation service/iu);
+  assert.match(amiodarone.management, /PT\/INR monitoring/iu);
+  assert.match(amiodarone.management, /weeks to months/iu);
+  assert.match(amiodarone.management, /bleeding or bruising/iu);
+  assert.match(amiodarone.management, /not an autonomous pharmacy action/iu);
+  assert.equal(fluconazole.product_pairs.length, 12);
+  assert.equal(fluconazole.review.reviewer_id, 'clinician:subas');
+  assert.match(fluconazole.management, /prescriber or anticoagulation service/iu);
+  assert.match(fluconazole.management, /PT\/INR monitoring/iu);
+  assert.match(fluconazole.management, /4 to 5 days/iu);
+  assert.match(fluconazole.management, /bleeding or bruising/iu);
+  assert.match(fluconazole.management, /do not independently stop/iu);
+  assert.match(fluconazole.management, /autonomously change/iu);
+  assert.match(fluconazole.management, /do not establish a single-dose exception/iu);
   assert.doesNotMatch(JSON.stringify(compiled), /Child-Pugh|Indian regulatory-label claim/iu);
 });
 
@@ -92,6 +107,14 @@ test('promotion rejects draft hash drift even when the draft attestation is refr
   });
   assert.throws(
     () => compileInteractionRuntimePack(source),
+    /draft rule SHA-256 does not match/iu,
+  );
+
+  const secondSource = mutateDraft(inputs(), (rule) => {
+    rule.management.monitoring = `${rule.management.monitoring} Changed without renewed approval.`;
+  }, 'warfarin__fluconazole');
+  assert.throws(
+    () => compileInteractionRuntimePack(secondSource),
     /draft rule SHA-256 does not match/iu,
   );
 });
@@ -126,6 +149,25 @@ test('promotion requires the exact approved source versions', () => {
   assert.throws(
     () => compileInteractionRuntimePack(source),
     /source_versions does not match/iu,
+  );
+});
+
+test('promotion accepts only explicit machine-confirmed citation states', () => {
+  const source = mutateDraft(inputs(), (rule) => {
+    rule.evidence[0].citation_status = 'machine_confirmed_but_not_promotable';
+  }, 'warfarin__fluconazole');
+  const line = Buffer.from(source.draftPackBytes)
+    .toString('utf8')
+    .trimEnd()
+    .split('\n')
+    .find((entry) => JSON.parse(entry).rule_id === 'warfarin__fluconazole');
+  source.promotionManifest.promotions.find(
+    (promotion) => promotion.rule_id === 'warfarin__fluconazole',
+  ).draft_rule_sha256 = createHash('sha256').update(line, 'utf8').digest('hex');
+
+  assert.throws(
+    () => compileInteractionRuntimePack(source),
+    /evidence is not eligible for clinician-gated internal promotion/iu,
   );
 });
 

@@ -272,6 +272,159 @@
           }
         ]
       }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:1246:oral-tablet",
+      "product_id": "sha256:36c4c3041de7320c6bab438d11649fbed5c05348f9a821a7b60524a77fe1882e",
+      "product_assertion_sha256": "db7af4f8f150ecd174e7e444529d0e3ea166025134b6e68eff7436f4a305296f",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-222/2025:1246:pdf-page-69",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-222_30042025.pdf",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:fluconazole-150-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=fluconazole%20150%20MG%20Oral%20Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "bcf5693e0b6ae1c6146ec3aee938d0411ae8a97b9fc463eaeb300c8407b648b1"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:197699",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/197699/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "20d9ae89ab50b86a3e050d3f6584e6269bfafe36e6b0ff934cab0970c8bc67f8"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2771:oral-tablet",
+      "product_id": "sha256:7a10b77f1e3fe2826287663ebbaac467e22a2760236e1130d6e24056193ea1e1",
+      "product_assertion_sha256": "94ecc3673fd6332ae543ff268685b14e847447ddbe2678bc7692e5c11a0f07a0",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-213/2024:2771:page-95",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20eTender_213_22032024.pdf",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "9be3607e49a8cf47b6c9d6c54f34a02a38988546b94bdf863b2518150d0a1bda"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:fluconazole-50-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=fluconazole%2050%20MG%20Oral%20Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "69f978c34a7d2d866b503cbe34b70e9de991463815ee908519d2a76eb7409e09"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:197701",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/197701/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "58fde9055852dce3cf5cfadfb355a4449649f78a3f68544e935dd7da21504836"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2772:oral-tablet",
+      "product_id": "sha256:29bb5bbb4f23f5e02f1b3a83555ea3b577de0f5ae1b49ae0b8ba81e62b128381",
+      "product_assertion_sha256": "7b9fffd9797b6a11c0ec0802a288c32ac95f9b4c854b6d62e0ec470a61fbc793",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-213/2024:2772:page-95",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20eTender_213_22032024.pdf",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "9be3607e49a8cf47b6c9d6c54f34a02a38988546b94bdf863b2518150d0a1bda"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:fluconazole-200-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=fluconazole%20200%20MG%20Oral%20Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "8623b49cfe2b3534e15acd62b8135f6e3dd832e01cc7f44499e5ec5cc9c3f43e"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:197700",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/197700/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "78c0dff0d9af6a18d4f74521f561141a2ecfe3335fa078c23eb021641ff777e1"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2773:oral-tablet",
+      "product_id": "sha256:552bfd4142fa6a39f2fd53b7f45ad98c31073250899eb5509e6a4c7962b465c1",
+      "product_assertion_sha256": "b43f0509aebac0bc0021079be2e8375735e69feffbd59c76131447bd8f1dad9c",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-213/2024:2773:page-95",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20eTender_213_22032024.pdf",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "9be3607e49a8cf47b6c9d6c54f34a02a38988546b94bdf863b2518150d0a1bda"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-exact-search:no-active-concept",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=fluconazole%20400%20MG%20Oral%20Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "8a2600ea692ce58930504a533e4f62ed942a645d3804eef4013503d9498df6d5"
+          }
+        ]
+      }
     }
   ]
 }
