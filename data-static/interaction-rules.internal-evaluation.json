@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "pack_id": "aushadhi-internal-interactions",
-  "pack_version": "0.2.0",
+  "pack_version": "0.3.0",
   "licence": "CC-BY-4.0",
   "source_ids": [
     "aushadhi-open-clinician-rules"
@@ -193,6 +193,213 @@
         "reviewed_at": "2026-07-26",
         "source_versions": [
           "openfda-labels:f694c617-3383-416c-91b6-b94fda371204:57",
+          "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__ketoconazole_oral",
+      "pair": [
+        "sha256:0a5ac69ba4a0e934d85bbe7089ec9bf3ecad050f2744e65cb78bed9225b5c755",
+        "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06"
+      ],
+      "product_pairs": [
+        [
+          "sha256:1ce7e99945760bf965229ddd3017bc76bb830d8ee7ae1d098cec3991d2b36b67",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:1ce7e99945760bf965229ddd3017bc76bb830d8ee7ae1d098cec3991d2b36b67",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:1ce7e99945760bf965229ddd3017bc76bb830d8ee7ae1d098cec3991d2b36b67",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ]
+      ],
+      "applicability": {
+        "routes": [
+          "oral tablet for both exact reviewed product assertions"
+        ],
+        "dose_conditions": [],
+        "population_conditions": []
+      },
+      "severity": "major",
+      "dispense_action": "confirm_and_monitor",
+      "mechanism": "Oral ketoconazole may enhance warfarin anticoagulant effect; the current warfarin label lists ketoconazole as a CYP3A4 inhibitor with potential to increase warfarin effect.",
+      "management": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when oral ketoconazole is started or stopped. Do not independently stop either medicine or autonomously change the warfarin dose. Use prescriber-directed PT/INR monitoring during coadministration and when the interacting medicine is started or stopped. Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools. This review scope is limited to the exact oral-tablet product assertion. Ketoconazole soap, lotion, shampoo, cream, and other topical products are excluded.",
+      "evidence": [
+        {
+          "source": "openFDA drug label: ketoconazole (oral)",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%22bc189ce2-3f10-260d-e053-2a95a90ae808%22&limit=100",
+          "document_id": "bc189ce2-3f10-260d-e053-2a95a90ae808",
+          "document_version": "2",
+          "retrieved_at": "2026-07-24",
+          "jurisdiction": "US",
+          "excerpt": "The current U.S. oral ketoconazole label states that ketoconazole may enhance the anticoagulant effect of coumarin-like drugs and that the effect should be carefully titrated and monitored.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        },
+        {
+          "source": "openFDA drug label: warfarin sodium tablets",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%2251e98fb6-ba76-497e-95d8-fe895ef0b7ed%22&limit=100",
+          "document_id": "51e98fb6-ba76-497e-95d8-fe895ef0b7ed",
+          "document_version": "7",
+          "retrieved_at": "2026-07-26",
+          "jurisdiction": "US",
+          "excerpt": "The current U.S. warfarin label lists Ketoconazole as a CYP inhibitor, requires closer INR monitoring when interacting medicines, antibiotics, or antifungals are started or stopped, and identifies reportable bleeding symptoms.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        }
+      ],
+      "review": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "source_versions": [
+          "openfda-labels:bc189ce2-3f10-260d-e053-2a95a90ae808:2",
+          "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__metronidazole",
+      "pair": [
+        "sha256:2cfce43b6ba7f9dc5199dddfb775a891d05ef3b1843760d3b1a1a7661c507d00",
+        "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06"
+      ],
+      "product_pairs": [
+        [
+          "sha256:80ca56ce18156f053a97dbd7dbe969bc537e7eba9e8722ddb34147387c42910d",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:80ca56ce18156f053a97dbd7dbe969bc537e7eba9e8722ddb34147387c42910d",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:80ca56ce18156f053a97dbd7dbe969bc537e7eba9e8722ddb34147387c42910d",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:8bff49d5c03a2d12ea18972a6fc617dac8d096d67ab011bdc5261950c1d2555e",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:8bff49d5c03a2d12ea18972a6fc617dac8d096d67ab011bdc5261950c1d2555e",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:8bff49d5c03a2d12ea18972a6fc617dac8d096d67ab011bdc5261950c1d2555e",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ]
+      ],
+      "applicability": {
+        "routes": [
+          "oral tablet for both exact reviewed product assertions"
+        ],
+        "dose_conditions": [],
+        "population_conditions": []
+      },
+      "severity": "major",
+      "dispense_action": "confirm_and_monitor",
+      "mechanism": "Metronidazole can potentiate warfarin anticoagulant effect and prolong prothrombin time; the current warfarin label also lists metronidazole as a CYP2C9 inhibitor.",
+      "management": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when oral metronidazole is started or stopped. Do not independently stop either medicine or autonomously change the warfarin dose. Use prescriber-directed PT/INR monitoring during coadministration and when the interacting medicine is started or stopped. Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools. This review scope is limited to exact oral-tablet product assertions. Tinidazole, topical metronidazole, and metronidazole combination suspensions are outside the proposed scope.",
+      "evidence": [
+        {
+          "source": "openFDA drug label: metronidazole",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%22a2883ca1-5a9a-4259-9d80-46ab67274384%22&limit=100",
+          "document_id": "a2883ca1-5a9a-4259-9d80-46ab67274384",
+          "document_version": "25",
+          "retrieved_at": "2026-07-24",
+          "jurisdiction": "US",
+          "excerpt": "The current U.S. metronidazole label reports potentiation of warfarin with prolonged prothrombin time and requires careful PT/INR monitoring. It supports metronidazole only, not tinidazole.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        },
+        {
+          "source": "openFDA drug label: warfarin sodium tablets",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%2251e98fb6-ba76-497e-95d8-fe895ef0b7ed%22&limit=100",
+          "document_id": "51e98fb6-ba76-497e-95d8-fe895ef0b7ed",
+          "document_version": "7",
+          "retrieved_at": "2026-07-26",
+          "jurisdiction": "US",
+          "excerpt": "The current U.S. warfarin label lists Metronidazole as a CYP inhibitor, requires closer INR monitoring when interacting medicines, antibiotics, or antifungals are started or stopped, and identifies reportable bleeding symptoms.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        }
+      ],
+      "review": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "source_versions": [
+          "openfda-labels:a2883ca1-5a9a-4259-9d80-46ab67274384:25",
+          "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__voriconazole",
+      "pair": [
+        "sha256:1b256adbbd2342e39f3e1b78d36313735db6cdc065eb0f3c82ff0f99f183a20a",
+        "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06"
+      ],
+      "product_pairs": [
+        [
+          "sha256:4383af48fd1aba0c81ec7d4cff6d5eb1620998607fd578f5b7bf6a4696b9952f",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:4383af48fd1aba0c81ec7d4cff6d5eb1620998607fd578f5b7bf6a4696b9952f",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:4383af48fd1aba0c81ec7d4cff6d5eb1620998607fd578f5b7bf6a4696b9952f",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ]
+      ],
+      "applicability": {
+        "routes": [
+          "oral tablet for both exact reviewed product assertions"
+        ],
+        "dose_conditions": [],
+        "population_conditions": []
+      },
+      "severity": "major",
+      "dispense_action": "confirm_and_monitor",
+      "mechanism": "Voriconazole inhibits CYP2C9 and can significantly increase prothrombin time and warfarin anticoagulant effect.",
+      "management": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when oral voriconazole is started or stopped. Do not independently stop either medicine or autonomously change the warfarin dose. Use prescriber-directed PT/INR monitoring during coadministration and when the interacting medicine is started or stopped. Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools. This review scope is limited to the exact oral-tablet product assertion. Intravenous and other voriconazole presentations are outside the proposed product scope.",
+      "evidence": [
+        {
+          "source": "openFDA drug label: voriconazole",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%2267c174da-41b8-4738-8a22-dd814b8e96b8%22&limit=100",
+          "document_id": "67c174da-41b8-4738-8a22-dd814b8e96b8",
+          "document_version": "27",
+          "retrieved_at": "2026-07-24",
+          "jurisdiction": "US",
+          "excerpt": "The current U.S. voriconazole label reports significantly increased prothrombin time with warfarin through CYP2C9 inhibition and directs close-interval anticoagulation monitoring with clinician-directed dose adjustment.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        },
+        {
+          "source": "openFDA drug label: warfarin sodium tablets",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%2251e98fb6-ba76-497e-95d8-fe895ef0b7ed%22&limit=100",
+          "document_id": "51e98fb6-ba76-497e-95d8-fe895ef0b7ed",
+          "document_version": "7",
+          "retrieved_at": "2026-07-26",
+          "jurisdiction": "US",
+          "excerpt": "The current U.S. warfarin label lists Voriconazole as a CYP inhibitor, requires closer INR monitoring when interacting medicines, antibiotics, or antifungals are started or stopped, and identifies reportable bleeding symptoms.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        }
+      ],
+      "review": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "source_versions": [
+          "openfda-labels:67c174da-41b8-4738-8a22-dd814b8e96b8:27",
           "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
         ]
       }

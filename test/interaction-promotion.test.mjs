@@ -75,12 +75,21 @@ test('the promotion manifest deterministically compiles the checked-in internal 
     'utf8',
   );
   assert.equal(serializeInteractionRuntimePack(compiled), checkedIn);
-  assert.equal(compiled.rules.length, 2);
+  assert.equal(compiled.rules.length, 5);
   const amiodarone = compiled.rules.find(
     (rule) => rule.rule_id === 'warfarin__amiodarone',
   );
   const fluconazole = compiled.rules.find(
     (rule) => rule.rule_id === 'warfarin__fluconazole',
+  );
+  const metronidazole = compiled.rules.find(
+    (rule) => rule.rule_id === 'warfarin__metronidazole',
+  );
+  const ketoconazole = compiled.rules.find(
+    (rule) => rule.rule_id === 'warfarin__ketoconazole_oral',
+  );
+  const voriconazole = compiled.rules.find(
+    (rule) => rule.rule_id === 'warfarin__voriconazole',
   );
   assert.equal(amiodarone.product_pairs.length, 6);
   assert.equal(amiodarone.review.reviewer_id, 'clinician:subas');
@@ -94,6 +103,20 @@ test('the promotion manifest deterministically compiles the checked-in internal 
   assert.match(fluconazole.management, /prescriber or anticoagulation service/iu);
   assert.match(fluconazole.management, /PT\/INR monitoring/iu);
   assert.match(fluconazole.management, /4 to 5 days/iu);
+  assert.equal(metronidazole.product_pairs.length, 6);
+  assert.equal(ketoconazole.product_pairs.length, 3);
+  assert.equal(voriconazole.product_pairs.length, 3);
+  for (const rule of [metronidazole, ketoconazole, voriconazole]) {
+    assert.equal(rule.review.reviewer_id, 'clinician:subas');
+    assert.match(rule.management, /prescriber or anticoagulation service/iu);
+    assert.match(rule.management, /PT\/INR monitoring/iu);
+    assert.match(rule.management, /started or stopped/iu);
+    assert.match(rule.management, /bleeding or bruising/iu);
+    assert.doesNotMatch(
+      JSON.stringify(rule),
+      /Child-Pugh|Indian regulatory-label claim/iu,
+    );
+  }
   assert.match(fluconazole.management, /bleeding or bruising/iu);
   assert.match(fluconazole.management, /do not independently stop/iu);
   assert.match(fluconazole.management, /autonomously change/iu);

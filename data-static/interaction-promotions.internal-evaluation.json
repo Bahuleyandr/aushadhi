@@ -4,7 +4,7 @@
   "output_pack": {
     "schema_version": "1.0.0",
     "pack_id": "aushadhi-internal-interactions",
-    "pack_version": "0.2.0",
+    "pack_version": "0.3.0",
     "licence": "CC-BY-4.0",
     "source_ids": [
       "aushadhi-open-clinician-rules"
@@ -95,6 +95,118 @@
               "presentation:pmbjp:2771:oral-tablet",
               "presentation:pmbjp:2772:oral-tablet",
               "presentation:pmbjp:2773:oral-tablet"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__metronidazole",
+      "draft_rule_sha256": "2f6e13a141107149c32c82df764a0710a423265e5600b35155ece4d53222df3f",
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve the warfarin-metronidazole clinical rule for internal evaluation only, limited to the five reviewed PMBJP oral-tablet assertions (six cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service warfarin dose review and PT/INR monitoring when metronidazole is started or stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling; exclude tinidazole, topical metronidazole, combination suspensions, and other non-tablet presentations; remove the unsupported Child-Pugh B modifier; do not invent a universal PT/INR schedule or fixed post-discontinuation interval; treat the evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas",
+        "source_versions": [
+          "openfda-labels:a2883ca1-5a9a-4259-9d80-46ab67274384:25",
+          "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      },
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "expected_product_pair_count": 6,
+        "sides": [
+          {
+            "draft_role": "object",
+            "ingredient_mapping_id": "ingredient:warfarin:rxnorm-11289",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:2141:oral-tablet",
+              "presentation:pmbjp:2142:oral-tablet",
+              "presentation:pmbjp:452:oral-tablet"
+            ]
+          },
+          {
+            "draft_role": "perpetrator",
+            "ingredient_mapping_id": "ingredient:metronidazole:rxnorm-6922",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:201:oral-tablet",
+              "presentation:pmbjp:202:oral-tablet"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__ketoconazole_oral",
+      "draft_rule_sha256": "1657195ba626a2337c8b390679e64f32006c26fd758948560a4faf97875d8a3e",
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve the warfarin-ketoconazole clinical rule for internal evaluation only, limited to the four reviewed PMBJP oral-tablet assertions (three cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service warfarin dose review and PT/INR monitoring when oral ketoconazole is started or stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling; exclude ketoconazole soap and every other topical or non-tablet presentation; remove the unsupported Child-Pugh B modifier; do not invent a universal PT/INR schedule or fixed post-discontinuation interval; treat the evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas",
+        "source_versions": [
+          "openfda-labels:bc189ce2-3f10-260d-e053-2a95a90ae808:2",
+          "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      },
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "expected_product_pair_count": 3,
+        "sides": [
+          {
+            "draft_role": "object",
+            "ingredient_mapping_id": "ingredient:warfarin:rxnorm-11289",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:2141:oral-tablet",
+              "presentation:pmbjp:2142:oral-tablet",
+              "presentation:pmbjp:452:oral-tablet"
+            ]
+          },
+          {
+            "draft_role": "perpetrator",
+            "ingredient_mapping_id": "ingredient:ketoconazole:rxnorm-6135",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:400:oral-tablet"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__voriconazole",
+      "draft_rule_sha256": "b8e0d94d6a94d2a765ff8690d9a9b4bff66c333747eeb2cc0bb57e2c95997cf8",
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve the warfarin-voriconazole clinical rule for internal evaluation only, limited to the four reviewed PMBJP oral-tablet assertions (three cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service warfarin dose review and prescriber-directed PT/INR monitoring when voriconazole is started or stopped; it must not direct the pharmacy to change a dose, stop either medicine independently, or mandate substitution to another antifungal. Include bleeding-symptom counselling; exclude intravenous and other non-tablet voriconazole presentations; remove the unsupported Child-Pugh B modifier; do not invent a universal PT/INR schedule or fixed post-discontinuation interval; treat the evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas",
+        "source_versions": [
+          "openfda-labels:67c174da-41b8-4738-8a22-dd814b8e96b8:27",
+          "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      },
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "expected_product_pair_count": 3,
+        "sides": [
+          {
+            "draft_role": "object",
+            "ingredient_mapping_id": "ingredient:warfarin:rxnorm-11289",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:2141:oral-tablet",
+              "presentation:pmbjp:2142:oral-tablet",
+              "presentation:pmbjp:452:oral-tablet"
+            ]
+          },
+          {
+            "draft_role": "perpetrator",
+            "ingredient_mapping_id": "ingredient:voriconazole:rxnorm-121243",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:2034:oral-tablet"
             ]
           }
         ]

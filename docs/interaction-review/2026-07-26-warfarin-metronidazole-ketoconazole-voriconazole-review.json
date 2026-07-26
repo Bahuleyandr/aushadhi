@@ -2,7 +2,7 @@
   "schema_version": 1,
   "packet_id": "warfarin-metronidazole-ketoconazole-voriconazole-pmbjp-oral-tablets-2026-07-26",
   "generated_at": "2026-07-26",
-  "review_status": "review_candidate",
+  "review_status": "clinician_reviewed",
   "release_profile": "internal-evaluation",
   "production_open_enabled": false,
   "ingredient_identity_candidates": [
@@ -49,7 +49,12 @@
           "retrieved_at": "2026-07-26"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all three ingredient identity mappings as exact: observed metronidazole to RxNorm ingredient RxCUI 6922, UNII 140QMO216E; observed ketoconazole to RxNorm ingredient RxCUI 6135, UNII R9400W927I; and observed voriconazole to RxNorm ingredient RxCUI 121243, UNII JFU09I87TR. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "ingredient:metronidazole:rxnorm-6922",
@@ -94,7 +99,12 @@
           "retrieved_at": "2026-07-26"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all three ingredient identity mappings as exact: observed metronidazole to RxNorm ingredient RxCUI 6922, UNII 140QMO216E; observed ketoconazole to RxNorm ingredient RxCUI 6135, UNII R9400W927I; and observed voriconazole to RxNorm ingredient RxCUI 121243, UNII JFU09I87TR. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "ingredient:voriconazole:rxnorm-121243",
@@ -139,7 +149,12 @@
           "retrieved_at": "2026-07-26"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all three ingredient identity mappings as exact: observed metronidazole to RxNorm ingredient RxCUI 6922, UNII 140QMO216E; observed ketoconazole to RxNorm ingredient RxCUI 6135, UNII R9400W927I; and observed voriconazole to RxNorm ingredient RxCUI 121243, UNII JFU09I87TR. Reviewer ID: clinician:subas"
+      }
     }
   ],
   "product_presentation_candidates": [
@@ -176,7 +191,12 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-26 warfarin-metronidazole-ketoconazole-voriconazole review packet: codes 201, 202, 400, and 2034. This approval excludes ketoconazole soap code 1672, metronidazole ointment code 2441, metronidazole combination suspension code 2616, and all tinidazole products. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "presentation:pmbjp:202:oral-tablet",
@@ -211,7 +231,12 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-26 warfarin-metronidazole-ketoconazole-voriconazole review packet: codes 201, 202, 400, and 2034. This approval excludes ketoconazole soap code 1672, metronidazole ointment code 2441, metronidazole combination suspension code 2616, and all tinidazole products. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "presentation:pmbjp:400:oral-tablet",
@@ -246,7 +271,12 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-26 warfarin-metronidazole-ketoconazole-voriconazole review packet: codes 201, 202, 400, and 2034. This approval excludes ketoconazole soap code 1672, metronidazole ointment code 2441, metronidazole combination suspension code 2616, and all tinidazole products. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "presentation:pmbjp:2034:oral-tablet",
@@ -281,14 +311,19 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-26 warfarin-metronidazole-ketoconazole-voriconazole review packet: codes 201, 202, 400, and 2034. This approval excludes ketoconazole soap code 1672, metronidazole ointment code 2441, metronidazole combination suspension code 2616, and all tinidazole products. Reviewer ID: clinician:subas"
+      }
     }
   ],
   "proposed_rules": [
     {
       "rule_id": "warfarin__metronidazole",
       "draft_rule_sha256": "2f6e13a141107149c32c82df764a0710a423265e5600b35155ece4d53222df3f",
-      "review_status": "review_candidate",
+      "review_status": "clinician_reviewed",
       "proposed_severity": "major",
       "proposed_dispense_action": "confirm_and_monitor",
       "scope": {
@@ -351,12 +386,17 @@
         "metronidazole combination suspension",
         "non-tablet metronidazole presentations"
       ],
-      "approval": null
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve the warfarin-metronidazole clinical rule for internal evaluation only, limited to the five reviewed PMBJP oral-tablet assertions (six cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service warfarin dose review and PT/INR monitoring when metronidazole is started or stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling; exclude tinidazole, topical metronidazole, combination suspensions, and other non-tablet presentations; remove the unsupported Child-Pugh B modifier; do not invent a universal PT/INR schedule or fixed post-discontinuation interval; treat the evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas"
+      }
     },
     {
       "rule_id": "warfarin__ketoconazole_oral",
       "draft_rule_sha256": "1657195ba626a2337c8b390679e64f32006c26fd758948560a4faf97875d8a3e",
-      "review_status": "review_candidate",
+      "review_status": "clinician_reviewed",
       "proposed_severity": "major",
       "proposed_dispense_action": "confirm_and_monitor",
       "scope": {
@@ -404,12 +444,17 @@
         "ketoconazole soap",
         "ketoconazole lotion, shampoo, cream, and other topical presentations"
       ],
-      "approval": null
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve the warfarin-ketoconazole clinical rule for internal evaluation only, limited to the four reviewed PMBJP oral-tablet assertions (three cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service warfarin dose review and PT/INR monitoring when oral ketoconazole is started or stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling; exclude ketoconazole soap and every other topical or non-tablet presentation; remove the unsupported Child-Pugh B modifier; do not invent a universal PT/INR schedule or fixed post-discontinuation interval; treat the evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas"
+      }
     },
     {
       "rule_id": "warfarin__voriconazole",
       "draft_rule_sha256": "b8e0d94d6a94d2a765ff8690d9a9b4bff66c333747eeb2cc0bb57e2c95997cf8",
-      "review_status": "review_candidate",
+      "review_status": "clinician_reviewed",
       "proposed_severity": "major",
       "proposed_dispense_action": "confirm_and_monitor",
       "scope": {
@@ -456,7 +501,12 @@
       "explicit_exclusions": [
         "intravenous and all non-tablet voriconazole presentations"
       ],
-      "approval": null
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve the warfarin-voriconazole clinical rule for internal evaluation only, limited to the four reviewed PMBJP oral-tablet assertions (three cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service warfarin dose review and prescriber-directed PT/INR monitoring when voriconazole is started or stopped; it must not direct the pharmacy to change a dose, stop either medicine independently, or mandate substitution to another antifungal. Include bleeding-symptom counselling; exclude intravenous and other non-tablet voriconazole presentations; remove the unsupported Child-Pugh B modifier; do not invent a universal PT/INR schedule or fixed post-discontinuation interval; treat the evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas"
+      }
     }
   ],
   "excluded_catalogue_assertions": [
@@ -511,7 +561,7 @@
     {
       "check": "runtime isolation",
       "status": "pass",
-      "detail": "No ingredient or presentation candidate is committed, no promotion entry exists, and both runtime packs remain unchanged; production-open stays empty."
+      "detail": "The three reviewed ingredient identities and four exact oral-tablet presentations are committed for internal-evaluation. The three clinician-approved promotions bind exactly 12 product pairs in the internal pack; production-open remains empty and cannot inherit them."
     }
   ]
 }

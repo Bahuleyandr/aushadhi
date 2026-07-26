@@ -188,6 +188,189 @@
           }
         ]
       }
+    },
+    {
+      "mapping_id": "ingredient:ketoconazole:rxnorm-6135",
+      "assertion": {
+        "ingredient_id": "sha256:0a5ac69ba4a0e934d85bbe7089ec9bf3ecad050f2744e65cb78bed9225b5c755",
+        "canonical_name": "ketoconazole"
+      },
+      "identity": {
+        "clinical_ingredient_id": "sha256:0a5ac69ba4a0e934d85bbe7089ec9bf3ecad050f2744e65cb78bed9225b5c755",
+        "canonical_name": "ketoconazole",
+        "runtime_drug": "ketoconazole",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "6135",
+          "name": "ketoconazole",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "response_sha256": "d2baa2da582add7052a1155c3396ee3de5787279bc41fc3ed9a8e60df3fe360e"
+        },
+        "unii": {
+          "code": "R9400W927I",
+          "preferred_name": "ketoconazole",
+          "response_sha256": "092cb643e7118fef7ef2284f14a9c06c18f961a218464a5ed4ae3699c2d6abdc"
+        }
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-version:06-Jul-2026",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/version.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:ketoconazole",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=ketoconazole&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "78d6e9f2f4daf311e436203096154ccb1f5d73dd881d1c5029d8dda64248a2c0"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:6135",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/6135/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "d2baa2da582add7052a1155c3396ee3de5787279bc41fc3ed9a8e60df3fe360e"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "unii:R9400W927I",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/6135/property.json?propName=UNII_CODE",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "092cb643e7118fef7ef2284f14a9c06c18f961a218464a5ed4ae3699c2d6abdc"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "ingredient:metronidazole:rxnorm-6922",
+      "assertion": {
+        "ingredient_id": "sha256:2cfce43b6ba7f9dc5199dddfb775a891d05ef3b1843760d3b1a1a7661c507d00",
+        "canonical_name": "metronidazole"
+      },
+      "identity": {
+        "clinical_ingredient_id": "sha256:2cfce43b6ba7f9dc5199dddfb775a891d05ef3b1843760d3b1a1a7661c507d00",
+        "canonical_name": "metronidazole",
+        "runtime_drug": "metronidazole",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "6922",
+          "name": "metronidazole",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "response_sha256": "eb299294e4467e13dafb4caa2813b10e4ca2263f987ccf6f92101e0738092fc3"
+        },
+        "unii": {
+          "code": "140QMO216E",
+          "preferred_name": "metronidazole",
+          "response_sha256": "1da2980cc5b77bb44e6c1b930a44fe83f2faf4444052f992f24a4042605f8433"
+        }
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-version:06-Jul-2026",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/version.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:metronidazole",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=metronidazole&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "1396e54cb42c48b3086a63c67089cecc3ab1dbdedefbc0ec7765bb26dca143a1"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:6922",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/6922/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "eb299294e4467e13dafb4caa2813b10e4ca2263f987ccf6f92101e0738092fc3"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "unii:140QMO216E",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/6922/property.json?propName=UNII_CODE",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "1da2980cc5b77bb44e6c1b930a44fe83f2faf4444052f992f24a4042605f8433"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "ingredient:voriconazole:rxnorm-121243",
+      "assertion": {
+        "ingredient_id": "sha256:1b256adbbd2342e39f3e1b78d36313735db6cdc065eb0f3c82ff0f99f183a20a",
+        "canonical_name": "voriconazole"
+      },
+      "identity": {
+        "clinical_ingredient_id": "sha256:1b256adbbd2342e39f3e1b78d36313735db6cdc065eb0f3c82ff0f99f183a20a",
+        "canonical_name": "voriconazole",
+        "runtime_drug": "voriconazole",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "121243",
+          "name": "voriconazole",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "response_sha256": "04d3ae88f55db85f1a483bc9bfe39346fd53a7c3734bc8c8de5569ce57133f47"
+        },
+        "unii": {
+          "code": "JFU09I87TR",
+          "preferred_name": "voriconazole",
+          "response_sha256": "8629d7d2e6fd59e501e19308ed87d738190431647d40268f0eba5a465b1b9c9b"
+        }
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "evidence": [
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-version:06-Jul-2026",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/version.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:voriconazole",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=voriconazole&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "fc6b6faaff7bc7b1786cf8991ae682ebb5b1bd675e66abb7a8cacb7aeaa89fc8"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:121243",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/121243/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "04d3ae88f55db85f1a483bc9bfe39346fd53a7c3734bc8c8de5569ce57133f47"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "unii:JFU09I87TR",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/121243/property.json?propName=UNII_CODE",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "8629d7d2e6fd59e501e19308ed87d738190431647d40268f0eba5a465b1b9c9b"
+          }
+        ]
+      }
     }
   ]
 }

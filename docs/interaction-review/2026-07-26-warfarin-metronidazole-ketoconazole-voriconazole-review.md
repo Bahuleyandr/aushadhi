@@ -2,14 +2,14 @@
 
 Date: 2026-07-26
 
-Status: review candidate only
+Status: clinician reviewed
 
-Release profile: proposed for `internal-evaluation` only
+Release profile: approved for `internal-evaluation` only
 
 Production-open status: disabled
 
-This packet prepares, but does not approve, three exact ingredient identities,
-four PMBJP oral-tablet presentations, and three separate clinical rules. The
+This packet records approval of three exact ingredient identities, four PMBJP
+oral-tablet presentations, and three separate clinical rules. The
 machine-readable bindings are in
 `docs/interaction-review/2026-07-26-warfarin-metronidazole-ketoconazole-voriconazole-review.json`.
 
@@ -22,8 +22,8 @@ machine-readable bindings are in
 | voriconazole | `121243` | `IN` | `JFU09I87TR` | `sha256:1b256adbbd2342e39f3e1b78d36313735db6cdc065eb0f3c82ff0f99f183a20a` |
 
 All three exact searches returned one active RxNorm ingredient concept in
-release `06-Jul-2026`, API `3.1.354`. The mappings remain absent from the
-committed override manifest until separately approved.
+release `06-Jul-2026`, API `3.1.354`. The exact reviewed mappings are committed
+to the internal-evaluation override manifest.
 
 ## Product-presentation candidates
 
@@ -47,16 +47,16 @@ The packet explicitly excludes:
 - ofloxacin-metronidazole oral suspension code `2616`; and
 - every tinidazole product.
 
-## Clinical candidates
+## Approved clinical rules
 
-| Rule | Interacting tablets | Warfarin tablets | Exact pairs | Proposed severity/action |
+| Rule | Interacting tablets | Warfarin tablets | Exact pairs | Approved severity/action |
 |---|---:|---:|---:|---|
 | `warfarin__metronidazole` | 2 | 3 | 6 | major / confirm-and-monitor |
 | `warfarin__ketoconazole_oral` | 1 | 3 | 3 | major / confirm-and-monitor |
 | `warfarin__voriconazole` | 1 | 3 | 3 | major / confirm-and-monitor |
 
 The old nitroimidazole class selector has been replaced with an exact
-metronidazole selector; tinidazole is no longer present. All three candidates
+metronidazole selector; tinidazole is no longer present. All three rules
 are limited to exact reviewed oral-tablet assertions. They require
 prescriber/anticoagulation-service warfarin dose review and PT/INR monitoring
 when the interacting medicine is started or stopped. They do not authorize
@@ -64,7 +64,7 @@ the pharmacy to change a dose or stop either medicine independently.
 
 The unsupported Child-Pugh B pair modifiers were removed. Voriconazole no
 longer carries an unsupported instruction to substitute another antifungal.
-No candidate invents a universal PT/INR schedule or fixed monitoring interval
+No approved rule invents a universal PT/INR schedule or fixed monitoring interval
 after discontinuation.
 
 ## Evidence and adversarial findings
@@ -89,11 +89,14 @@ after discontinuation.
   `367fe4cba0e6680835fc11ac2c9079a0ff14aaac78598a79c3bc66b7374f7008`.
 - The clinical sources are U.S.-label evidence, not Indian
   regulatory-label claims. PMBI evidence establishes presentations only.
-- No candidate has entered either runtime pack; production-open remains empty.
+- The approved rules enter only the exact internal-evaluation product pairs;
+  production-open remains empty.
 
 ## Approval statements
 
-These are deliberately separate decisions.
+These separate decisions were approved by `clinician:subas` on 2026-07-26 and
+are recorded in
+`2026-07-26-warfarin-metronidazole-ketoconazole-voriconazole-clinician-approval.md`.
 
 ### Ingredient identities
 
