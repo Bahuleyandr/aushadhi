@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0.0",
+  "pack_id": "aushadhi-internal-interactions",
+  "pack_version": "0.1.0",
+  "profile": "internal-evaluation",
+  "licence": "CC-BY-4.0",
+  "source_ids": [
+    "aushadhi-open-clinician-rules"
+  ],
+  "licence_notices": {
+    "aushadhi-open-clinician-rules": {
+      "attribution": "Aushadhi contributors",
+      "licence_notice": "Creative Commons Attribution 4.0 International",
+      "licence_id": "CC-BY-4.0",
+      "licence_url": "https://creativecommons.org/licenses/by/4.0/legalcode",
+      "source_url": "https://github.com/Bahuleyandr/aushadhi",
+      "changes": "Clinician-reviewed internal-evaluation interaction rule structured for Aushadhi."
+    }
+  },
+  "declared_coverage": "partial",
+  "rules": [
+    {
+      "rule_id": "warfarin__amiodarone",
+      "pair": [
+        "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06",
+        "sha256:817ad85b37a6bcf67237e7936edbefb6cde6363267e6fa378a1089048f596b8a"
+      ],
+      "product_pairs": [
+        [
+          "sha256:5eaf19c6b773adf00509d55047b68d226ba2d80f1141402677f5e211b2caf186",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:5eaf19c6b773adf00509d55047b68d226ba2d80f1141402677f5e211b2caf186",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:5eaf19c6b773adf00509d55047b68d226ba2d80f1141402677f5e211b2caf186",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:6c6694d33f35f51e843d4aaf3a4914fb738f2baaf7d1f5494f6db6c638536626",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:6c6694d33f35f51e843d4aaf3a4914fb738f2baaf7d1f5494f6db6c638536626",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:6c6694d33f35f51e843d4aaf3a4914fb738f2baaf7d1f5494f6db6c638536626",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ]
+      ],
+      "applicability": {
+        "routes": [
+          "oral tablet for both exact reviewed product assertions"
+        ],
+        "dose_conditions": [],
+        "population_conditions": []
+      },
+      "severity": "major",
+      "dispense_action": "confirm_and_monitor",
+      "mechanism": "Amiodarone potentiates warfarin's anticoagulant response, increasing PT/INR and the risk of serious or fatal bleeding.",
+      "management": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when amiodarone is started, stopped, or changed. Do not independently stop either established medicine or autonomously change the warfarin dose. Continue prescriber-directed monitoring after amiodarone discontinuation because the interaction can persist for weeks to months. Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools.",
+      "evidence": [
+        {
+          "source": "openFDA drug label: amiodarone hydrochloride tablets",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%22f49d011f-5ca6-4f75-ba16-2099fe42f5aa%22&limit=100",
+          "document_id": "f49d011f-5ca6-4f75-ba16-2099fe42f5aa",
+          "document_version": "2",
+          "retrieved_at": "2026-07-26",
+          "jurisdiction": "US",
+          "excerpt": "The label states that amiodarone potentiates warfarin's anticoagulant response, can cause serious or fatal bleeding, requires warfarin dose reduction and prothrombin-time monitoring, and can persist after amiodarone discontinuation.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        },
+        {
+          "source": "openFDA drug label: warfarin sodium tablets",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%2251e98fb6-ba76-497e-95d8-fe895ef0b7ed%22&limit=100",
+          "document_id": "51e98fb6-ba76-497e-95d8-fe895ef0b7ed",
+          "document_version": "7",
+          "retrieved_at": "2026-07-26",
+          "jurisdiction": "US",
+          "excerpt": "The label lists amiodarone among CYP2C9 and CYP3A4 inhibitors, calls for closer INR monitoring when interacting inhibitors are started, stopped, or changed, and instructs patients to report bleeding symptoms.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        }
+      ],
+      "review": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "source_versions": [
+          "openfda-labels:f49d011f-5ca6-4f75-ba16-2099fe42f5aa:2",
+          "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      }
+    }
+  ]
+}

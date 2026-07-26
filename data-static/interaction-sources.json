@@ -376,7 +376,7 @@
       "allowed_uses": ["interaction-rules"],
       "required_storage_zones": {
         "production-open": ["data-static", "data/interaction/production-open"],
-        "internal-evaluation": ["data/interaction/internal-evaluation"]
+        "internal-evaluation": ["data-static", "data/interaction/internal-evaluation"]
       },
       "redistribution_obligations": {
         "attribution": "Aushadhi contributors",

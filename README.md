@@ -39,7 +39,10 @@ The interaction checker resolves exact products, expands fixed-dose
 combinations, and checks every unique cross-product ingredient pair against a
 versioned clinician-reviewed rule pack. It never treats a missing rule as proof
 of safety: the committed open rule pack currently declares coverage as
-`unknown` and contains no invented clinical rules.
+`unknown` and contains no invented clinical rules. The internal-evaluation pack
+contains one clinician-approved warfarin-amiodarone rule, restricted to six
+combinations of five exact reviewed PMBJP oral-tablet assertions; it is not
+loaded by `production-open`.
 
 Every run requires an explicit release profile. `production-open` accepts only
 sources whose licences and storage zones are approved for redistribution.
@@ -50,6 +53,8 @@ reported as unresolved instead of being auto-selected or silently mapped.
 Observed ingredient strings require a human-reviewed typed RxNorm/UNII
 mapping, and a runtime subject requires a separately reviewed concrete product
 route and formulation. Brand and pack text never infer either.
+Clinical matching also requires that reviewed runtime subject at check time and
+an exact product pair listed by the reviewed rule.
 
 Structured disambiguation is accepted as JSON, for example:
 

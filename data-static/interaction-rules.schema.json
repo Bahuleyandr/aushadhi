@@ -45,6 +45,12 @@
         "minLength": 1
       }
     },
+    "licence_notices": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/licenceNotice"
+      }
+    },
     "declared_coverage": {
       "enum": [
         "complete",
@@ -93,6 +99,42 @@
         "$ref": "#/$defs/nonEmptyString"
       }
     },
+    "licenceNotice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attribution",
+        "licence_notice",
+        "licence_id",
+        "licence_url",
+        "source_url",
+        "changes"
+      ],
+      "properties": {
+        "attribution": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "licence_notice": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "licence_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "licence_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "changes": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
     "evidence": {
       "type": "object",
       "additionalProperties": false,
@@ -125,7 +167,7 @@
           "$ref": "#/$defs/nonEmptyString"
         },
         "retrieved_at": {
-          "oneOf": [
+          "anyOf": [
             {
               "type": "string",
               "format": "date"
@@ -183,7 +225,7 @@
           "$ref": "#/$defs/nonEmptyString"
         },
         "reviewed_at": {
-          "oneOf": [
+          "anyOf": [
             {
               "type": "string",
               "format": "date"
@@ -211,6 +253,7 @@
         "pair",
         "applicability",
         "severity",
+        "dispense_action",
         "mechanism",
         "management",
         "evidence",
@@ -227,6 +270,20 @@
           "uniqueItems": true,
           "items": {
             "$ref": "#/$defs/nonEmptyString"
+          }
+        },
+        "product_pairs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/nonEmptyString"
+            }
           }
         },
         "applicability": {
@@ -251,6 +308,21 @@
         },
         "severity": {
           "$ref": "#/$defs/nonEmptyString"
+        },
+        "dispense_action": {
+          "oneOf": [
+            {
+              "enum": [
+                "supply_with_counselling",
+                "space_doses",
+                "confirm_and_monitor",
+                "withhold_and_clarify"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "mechanism": {
           "type": [
@@ -294,6 +366,9 @@
             }
           },
           "then": {
+            "required": [
+              "product_pairs"
+            ],
             "properties": {
               "review": {
                 "required": [
@@ -314,11 +389,19 @@
                     }
                   }
                 }
+              },
+              "dispense_action": {
+                "not": {
+                  "type": "null"
+                }
               }
             }
           },
           "else": {
             "properties": {
+              "dispense_action": {
+                "const": null
+              },
               "severity": {
                 "const": "unknown"
               },

@@ -10,9 +10,29 @@ import {
   validateRulePack,
 } from '../src/lib/interaction-checker.mjs';
 
-const ingredient = (ingredient_id, mapping_status = 'exact') => ({ ingredient_id, mapping_status });
-const product = (product_id, ingredientIds) => ({
+const ingredient = (
+  ingredient_id,
+  mapping_status = 'exact',
+  runtime_subject = {
+    drug: ingredient_id,
+    route: 'oral',
+    formulation: 'tablet',
+  },
+) => ({
+  ingredient_id,
+  mapping_status,
+  runtime_drug: ingredient_id,
+  runtime_subject,
+});
+const product = (product_id, ingredientIds, {
+  presentation = {
+    status: 'reviewed_override',
+    route: 'oral',
+    formulation: 'tablet',
+  },
+} = {}) => ({
   product_id,
+  presentation,
   ingredients: ingredientIds.map((id) => typeof id === 'string' ? ingredient(id) : id),
 });
 const resolved = (input, value) => ({ input, status: 'resolved', product: value });
@@ -34,17 +54,23 @@ const rule = ({
   pair = ['ingredient:a', 'ingredient:b'],
   status = 'clinician_reviewed',
   severity = status === 'clinician_reviewed' ? 'major' : 'unknown',
+  dispense_action = status === 'clinician_reviewed' ? 'confirm_and_monitor' : null,
   mechanism = status === 'clinician_reviewed' ? 'Clinician-authored mechanism.' : null,
   management = status === 'clinician_reviewed' ? 'Clinician-authored management.' : null,
+  product_pairs = status === 'clinician_reviewed'
+    ? [['product:1', 'product:2']]
+    : undefined,
 } = {}) => ({
   rule_id: id,
   pair,
+  ...(product_pairs === undefined ? {} : { product_pairs }),
   applicability: {
     routes: [],
     dose_conditions: [],
     population_conditions: [],
   },
   severity,
+  dispense_action,
   mechanism,
   management,
   evidence: [evidence(status)],
@@ -176,6 +202,7 @@ test('only fully clinician-reviewed rules expose severity, mechanism, and manage
 
   assert.equal(result.reviewed_findings.length, 1);
   assert.equal(result.reviewed_findings[0].severity, 'major');
+  assert.equal(result.reviewed_findings[0].dispense_action, 'confirm_and_monitor');
   assert.equal(result.reviewed_findings[0].mechanism, 'Clinician-authored mechanism.');
   assert.equal(result.reviewed_findings[0].management, 'Clinician-authored management.');
 
@@ -215,6 +242,7 @@ test('ambiguous products and unmapped ingredients are explicit and coverage uses
   assert.deepEqual(result.coverage, {
     product_resolution: 'partial',
     ingredient_mapping: 'partial',
+    presentation_mapping: 'complete',
     interaction_knowledge: 'partial',
     overall: 'partial',
   });
@@ -242,6 +270,7 @@ test('a non-empty complete declared pack can report checked coverage but retains
   assert.deepEqual(result.coverage, {
     product_resolution: 'complete',
     ingredient_mapping: 'complete',
+    presentation_mapping: 'complete',
     interaction_knowledge: 'complete',
     overall: 'complete',
   });
@@ -260,6 +289,87 @@ test('empty and invalid rule packs fail closed and cannot claim complete coverag
 
   const reversedPair = rule({ pair: ['ingredient:b', 'ingredient:a'] });
   assert.throws(() => validateRulePack(pack({ rules: [reversedPair] })), /canonical order/i);
+
+  const missingProductPairs = rule();
+  delete missingProductPairs.product_pairs;
+  assert.throws(
+    () => validateRulePack(pack({ rules: [missingProductPairs] })),
+    /product_pairs.*at least one/i,
+  );
+
+  assert.throws(
+    () => validateRulePack(pack({ rules: [rule({
+      product_pairs: [['product:2', 'product:1']],
+    })] })),
+    /product_pairs.*canonical order/i,
+  );
+  assert.throws(
+    () => validateRulePack(pack({ rules: [rule({
+      product_pairs: [
+        ['product:1', 'product:2'],
+        ['product:1', 'product:2'],
+      ],
+    })] })),
+    /product_pairs.*unique/i,
+  );
+  assert.throws(
+    () => validateRulePack(pack({ rules: [rule({ dispense_action: 'change_dose' })] })),
+    /dispense_action.*invalid/i,
+  );
+  assert.throws(
+    () => validateRulePack(pack({ rules: [rule({
+      status: 'review_candidate',
+      dispense_action: 'confirm_and_monitor',
+    })] })),
+    /review_candidate dispense_action must be null/i,
+  );
+});
+
+test('a reviewed rule is restricted to its exact approved product pairs', () => {
+  const reviewedRule = rule();
+  const approved = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Brand B', product('product:2', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+  assert.equal(approved.reviewed_findings.length, 1);
+
+  const unapproved = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Different Brand B', product('product:3', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+  assert.equal(unapproved.checked_pairs.length, 1);
+  assert.deepEqual(unapproved.reviewed_findings, []);
+});
+
+test('a mapped ingredient cannot enter clinical matching without its reviewed presentation subject', () => {
+  const noPresentation = product('product:1', [
+    ingredient('ingredient:a', 'exact', null),
+  ], { presentation: { status: 'unmapped' } });
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', noPresentation),
+      resolved('Brand B', product('product:2', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [rule()], declared_coverage: 'partial' }),
+  });
+
+  assert.deepEqual(result.reviewed_findings, []);
+  assert.deepEqual(result.checked_pairs, []);
+  assert.equal(result.unresolved_inputs.length, 1);
+  assert.equal(result.unresolved_inputs[0].status, 'unmapped_presentation');
+  assert.deepEqual(result.coverage, {
+    product_resolution: 'complete',
+    ingredient_mapping: 'complete',
+    presentation_mapping: 'partial',
+    interaction_knowledge: 'partial',
+    overall: 'partial',
+  });
 });
 
 test('the committed open rule pack is empty and declares unknown coverage', () => {

@@ -13,6 +13,7 @@ import {
   productAssertionHashForRow,
   productIdForRow,
 } from '../src/lib/product-resolver.mjs';
+import { parseArgs } from '../src/cli/interactions.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CLI = path.join(ROOT, 'src', 'cli', 'interactions.mjs');
@@ -169,6 +170,25 @@ test('CLI requires an explicit release profile', () => {
   assert.equal(result.stdout, '');
 });
 
+test('CLI selects the rule pack for the explicit release profile by default', () => {
+  const production = parseArgs([
+    '--profile', 'production-open',
+    '--drug', 'First',
+    '--drug', 'Second',
+  ]);
+  const internal = parseArgs([
+    '--profile', 'internal-evaluation',
+    '--drug', 'First',
+    '--drug', 'Second',
+  ]);
+
+  assert.equal(path.basename(production.rulesPath), 'interaction-rules.json');
+  assert.equal(
+    path.basename(internal.rulesPath),
+    'interaction-rules.internal-evaluation.json',
+  );
+});
+
 test('CLI does not permit a source-policy manifest override', () => {
   const result = runCli([
     '--profile', 'production-open',
@@ -199,6 +219,7 @@ test('CLI resolves exact products, expands FDCs and reports unknown open-rule co
     assert.deepEqual(output.reviewed_findings, []);
     assert.equal(output.coverage.product_resolution, 'complete');
     assert.equal(output.coverage.ingredient_mapping, 'complete');
+    assert.equal(output.coverage.presentation_mapping, 'complete');
     assert.equal(output.coverage.interaction_knowledge, 'unknown');
     assert.deepEqual(output.mapping_summary, {
       resolved_products: 2,
