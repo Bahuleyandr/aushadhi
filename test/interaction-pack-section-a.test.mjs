@@ -321,10 +321,24 @@ test('dabigatran avoid actions map conservatively to major and unsupported renal
   );
 });
 
-test('unsupported CYP and induction time-course claims are absent from repaired Section A rows', () => {
+test('unsupported CYP claims stay absent while the approved amiodarone persistence is retained', () => {
+  const fluconazole = ruleById('warfarin__fluconazole');
   assert.doesNotMatch(
-    ruleById('warfarin__fluconazole').mechanism,
+    fluconazole.mechanism,
     /S-warfarin|dose-dependent/iu,
+  );
+  assert.deepEqual(fluconazole.object.formulation, ['tablet']);
+  assert.deepEqual(fluconazole.perpetrator.route, ['oral']);
+  assert.deepEqual(fluconazole.perpetrator.formulation, ['tablet']);
+  assert.deepEqual(fluconazole.context_modifiers, []);
+  assert.match(fluconazole.management.duration, /4 to 5 days after discontinuation/iu);
+  assert.match(fluconazole.management.prescriber_action, /do not independently stop/iu);
+  assert.equal(fluconazole.evidence.length, 2);
+  assert.ok(
+    fluconazole.evidence.every((evidence) =>
+      evidence.does_not_by_itself_support.includes(
+        'An exact Child-Pugh B interaction modifier.',
+      )),
   );
   assert.doesNotMatch(
     ruleById('warfarin__ketoconazole_systemic').mechanism,
@@ -332,9 +346,13 @@ test('unsupported CYP and induction time-course claims are absent from repaired 
   );
   assert.doesNotMatch(
     ruleById('warfarin__amiodarone').mechanism,
-    /CYP2C9|CYP3A|long half-life|weeks/iu,
+    /CYP2C9|CYP3A|long half-life/iu,
   );
-  assert.equal(ruleById('warfarin__amiodarone').management.duration, null);
+  assert.match(
+    ruleById('warfarin__amiodarone').management.duration,
+    /weeks to months after amiodarone discontinuation/iu,
+  );
+  assert.deepEqual(ruleById('warfarin__amiodarone').context_modifiers, []);
   assert.doesNotMatch(
     ruleById('warfarin__fluoroquinolone').mechanism,
     /CYP-mediated|gut-flora|vitamin-K/iu,
@@ -569,7 +587,7 @@ test('the standalone rivaroxaban hepatic restriction is not exposed as a pair ma
 
 test('Section A openFDA evidence carries the complete reconciled provenance contract', () => {
   const records = openFdaEvidenceRecords();
-  assert.equal(records.length, 32);
+  assert.equal(records.length, 34);
 
   for (const { evidence, ruleId } of records) {
     const label = `${ruleId}/${evidence.source_id}`;
@@ -584,7 +602,13 @@ test('Section A openFDA evidence carries the complete reconciled provenance cont
     assert.equal(evidence.document_id, evidence.provenance.set_id, label);
     assert.equal(evidence.document_version, evidence.provenance.version, label);
     assert.equal(String(evidence.spl_version), evidence.provenance.version, label);
-    assert.equal(evidence.retrieved_at, '2026-07-24', label);
+    assert.equal(
+      evidence.retrieved_at,
+      ['warfarin__amiodarone', 'warfarin__fluconazole'].includes(ruleId)
+        ? '2026-07-26'
+        : '2026-07-24',
+      label,
+    );
     assert.equal(evidence.jurisdiction, 'US', label);
     assert.equal(evidence.review_status, 'review_candidate', label);
     assert.equal(evidence.source_date_type, 'openFDA SPL effective_time', label);
@@ -722,8 +746,8 @@ test('Section A citations use exact unique hashes and the strict v2 effect/actio
       }
     }
   }
-  assert.equal(evidenceCount, 34);
-  assert.equal(fragmentCount, 53);
+  assert.equal(evidenceCount, 36);
+  assert.equal(fragmentCount, 64);
 });
 
 test('Section A machine evidence excludes restricted eMC/ACR text and identifies GOV.UK OGL records', () => {

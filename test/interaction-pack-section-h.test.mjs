@@ -24,7 +24,7 @@ const MEMBERS = JSON.parse(
   fs.readFileSync(path.join(ROOT, 'data-static', 'interaction-member-sets.json'), 'utf8'),
 ).classes;
 
-const EXPECTED_SHA256 = '0daf3e31f9fbb296266f47662f0351e08c2b0aa74af86e46a1fec443e02c49b6';
+const EXPECTED_SHA256 = '7848b2958c21052ba05fd7fd357bba512bb5251fa481b95853fe48f21db4854c';
 const EXPECTED_IDS = [
   'rifampicin__hormonal_contraceptive',
   'rifabutin__etonogestrel_implant',
@@ -172,8 +172,12 @@ test('Section H evidence is licence-cleared openFDA material with reproducible f
       evidence.provenance.source_paths,
       evidence.source_id,
     );
-    assert.equal(evidence.accessed_at, '2026-07-23', evidence.source_id);
-    assert.equal(evidence.currentness_checked_at, '2026-07-23', evidence.source_id);
+    const expectedReviewDate = evidence.provenance.set_id
+      === '8d409411-aa9f-4f3a-a52c-fbcb0c3ec053'
+      ? '2026-07-26'
+      : '2026-07-23';
+    assert.equal(evidence.accessed_at, expectedReviewDate, evidence.source_id);
+    assert.equal(evidence.currentness_checked_at, expectedReviewDate, evidence.source_id);
     assert.match(evidence.currentness_status, /^checked_current_openfda$/u, evidence.source_id);
     assert.match(
       evidence.citation_status,

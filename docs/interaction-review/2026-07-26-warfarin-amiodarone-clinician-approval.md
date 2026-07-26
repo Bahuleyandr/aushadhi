@@ -57,11 +57,11 @@ The evidence is U.S.-label support, not an Indian regulatory-label claim:
 - Amiodarone hydrochloride tablets, set ID
   `f49d011f-5ca6-4f75-ba16-2099fe42f5aa`, version 2, canonical openFDA
   payload SHA-256
-  `efe97f77331c76897a077b62d15a776986b6f1b2315bf2354850e4fafc2ef2b4`.
+  `efe97f1d109d8a6f98ed8d48f98aa024ea7b69057e50534128aa2d4870ee46be`.
 - Warfarin sodium tablets, set ID
   `51e98fb6-ba76-497e-95d8-fe895ef0b7ed`, version 7, canonical openFDA
   payload SHA-256
-  `bcb1e61f908c62018e95b8c58b214f517e5730dbd3feecbf6bafcb0d4da0ec1d`.
+  `bcb1e6db5ac6619c0c93ede9f0c689dfd8ffdff4f187067335c243046b5d3e04`.
 
 The previously drafted Child-Pugh B modifier was not supported for this
 pair-specific rule and is absent from the approved runtime rule.

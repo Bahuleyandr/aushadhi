@@ -56,6 +56,22 @@ route and formulation. Brand and pack text never infer either.
 Clinical matching also requires that reviewed runtime subject at check time and
 an exact product pair listed by the reviewed rule.
 
+The internal pack is generated, not hand-edited. Its promotion manifest binds
+the exact attested draft row, clinician approval, source versions, reviewed
+ingredient identities, reviewed product presentations, and allowed product
+pairs. Verify deterministic regeneration with:
+
+```powershell
+npm run interactions:promote:check
+```
+
+Results distinguish reviewed clinical findings, source-grounded review
+candidates, unresolved input gaps, therapeutic duplication, and checks that
+were not performed. `clinical_interaction_status`, `outcome_code`,
+`checks_performed`, and `capability_limitations` make those states explicit.
+Review candidates always expose `severity: "unknown"` with null mechanism and
+management until a clinician-reviewed promotion authorizes them.
+
 Structured disambiguation is accepted as JSON, for example:
 
 ```

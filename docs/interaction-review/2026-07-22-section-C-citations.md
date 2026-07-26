@@ -1,11 +1,11 @@
 # Section C — citation sign-off worksheet
 
-**24 evidence records** across **21 rules**, containing **34 hashed fragments**. This worksheet deterministically formats the existing evidence fields; it does not add or revise clinical claims.
+**24 evidence records** across **21 rules**, containing **35 hashed fragments**. This worksheet deterministically formats the existing evidence fields; it does not add or revise clinical claims.
 
 Machine-generated from enriched evidence. Citation status and clinician-review state are reported exactly as stored in the JSONL.
 
 - Section: `C`
-- JSONL SHA-256: `9fa5a18bb0f303c0a2fa876daeade2904eb88929f9710d9457246944c64e72f6`
+- JSONL SHA-256: `d5ef02f6b4d2e3295bc138bedaede16d69b6cfb44e0f01d6eb09f7a2c609ffef`
 - Commit: `worktree-uncommitted`
 - citation_status: `{"machine_confirmed_openfda_reconciled_pending_clinician":24}`
 
@@ -394,23 +394,24 @@ Machine-generated from enriched evidence. Citation status and clinician-review s
 - source: openFDA drug-label record (company-submitted SPL); DailyMed reference locator — gabapentin | regulator="FDA (United States)" | product="gabapentin" | section: "Warnings and Precautions, Respiratory Depression (5.8)"
 - url: https://api.fda.gov/drug/label.json?search=set_id%3A%22c7f21eaa-68ee-420c-9c98-e997cc73a297%22&limit=100 (host api.fda.gov; setid c7f21eaa-68ee-420c-9c98-e997cc73a297)
 - policy: `openfda-labels` / `interaction-evidence` | licence: `CC0-1.0`
-- document: `c7f21eaa-68ee-420c-9c98-e997cc73a297` @ `3` | retrieved: 2026-07-23 | jurisdiction: `US`
-- date: 2025-05-01 (`openFDA SPL effective_time`) | accessed: 2026-07-23
+- document: `c7f21eaa-68ee-420c-9c98-e997cc73a297` @ `4` | retrieved: 2026-07-26 | jurisdiction: `US`
+- date: 2026-06-23 (`openFDA SPL effective_time`) | accessed: 2026-07-26
 - reference_url: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=c7f21eaa-68ee-420c-9c98-e997cc73a297
-- provenance: `{"set_id":"c7f21eaa-68ee-420c-9c98-e997cc73a297","version":"3","effective_time":"20250501","payload_sha256":"974f16968dd93447cfcd27fa379adc576775a191c1fec96e329b5ea1ba2b20b0","payload_canonicalization":"sorted-json-keys-v1","normalization_version":"openfda-spl-text-v1","source_paths":["warnings_and_cautions[0]"]}`
-- currentness: `checked_current_openfda` @2026-07-23
-- quote_integrity: `single_verbatim`
-- proposition: Gabapentin can cause respiratory depression with CNS depressants including opioids; monitor and adjust dosage.
+- provenance: `{"set_id":"c7f21eaa-68ee-420c-9c98-e997cc73a297","version":"4","effective_time":"20260623","payload_sha256":"7c09583f778a0e7e9da9077eeb93f73f8fa555e1c6b38e5652ff9f5fe2f78eaf","payload_canonicalization":"sorted-json-keys-v1","normalization_version":"openfda-spl-text-v1","source_paths":["warnings_and_cautions[0]","warnings_and_cautions[0]"]}`
+- currentness: `checked_current_openfda` @2026-07-26
+- quote_integrity: `multi_fragment_verbatim`
+- proposition: Gabapentin can cause serious, life-threatening, or fatal respiratory depression with CNS depressants including opioids; monitor for respiratory depression and sedation and consider a low starting dose.
 - interaction_exists: `true`
-- source_effect: `["respiratory_depression"]`
-- label_action: `["monitor_patients","adjust_dosage_as_appropriate"]`
+- source_effect: `["serious_life_threatening_or_fatal_respiratory_depression"]`
+- label_action: `["monitor_for_respiratory_depression_and_sedation","consider_low_starting_dose"]`
 - runtime_severity_is_local_mapping: `true`
 - scope: `{"scope_type":"source_named_product_and_class","object_members":["gabapentin"],"perpetrator_class":"opioids"}`
 - jurisdictions: `["US"]`
 - does NOT by itself support:
   - This record does not by itself support pregabalin.
 - fragments:
-  - [Warnings and Precautions, Respiratory Depression (5.8)] (source_path `warnings_and_cautions[0]`; sha256 35b2488a653cace9028ba525b7d256004b1407a0b152955db4751205a3d73030) "Respiratory Depression: May occur with gabapentin when used with concomitant central nervous system (CNS) depressants, including opioids, or in the setting of underlying respiratory impairment. Monitor patients and adjust dosage as appropriate (5.8)"
+  - [Warnings and Precautions, Respiratory Depression (5.8)] (source_path `warnings_and_cautions[0]`; sha256 fe19636cf8f70ed2ab884ac35b61c3eab991752b6cde6cc1d2d764ef299d462b) "There is evidence from case reports, human studies, and animal studies associating gabapentin with serious, life-threatening, or fatal respiratory depression when coadministered with CNS depressants, including opioids, or in the setting of underlying respiratory impairment."
+  - [Warnings and Precautions, Respiratory Depression (5.8)] (source_path `warnings_and_cautions[0]`; sha256 7ba9363607091419fdc1ab4914385db9472ab7514e58177f1b16633d23016b5e) "When the decision is made to co-prescribe gabapentin capsules with another CNS depressant, particularly an opioid, or to prescribe gabapentin capsules to patients with underlying respiratory impairment, monitor patients for symptoms of respiratory depression and sedation, and consider initiating gabapentin capsules at a low dose."
 
 ### opioid__gabapentinoid — evidence[1] — `machine_confirmed_openfda_reconciled_pending_clinician`
 

@@ -2,7 +2,7 @@
 
 Machine evidence: **21** records across **12** rules.
 
-- JSONL SHA-256: `e4306afed14ad8130e4505607558bef57ef8895f50c31dde5e49994ace8596f3`
+- JSONL SHA-256: `f38886d7052f3029395360b18a90ff9aae4573994af527830194e33053576b5e`
 - Schema validation: `validateDraftRules` passes; evidence and member
   allowlists remain frozen and every rule remains `promotion_eligible:false`.
 
@@ -47,6 +47,7 @@ Excluded or rights-unclear sources are not linked, quoted, summarized, or repres
 - runtime_enabled: `false`
 - machine_evidence: `6`
 - evidence `J-US06`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`4ac6d01a-af26-44e7-ae2e-3618de0080aa@17`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%224ac6d01a-af26-44e7-ae2e-3618de0080aa%22&limit=100
+- 2026-07-26 current payload SHA-256: `3d254b9a5645496e888077b9b79472ba9f6896c6ec4655e952efa7501d27b4d9`; the qualifying-eGFR fragment is repinned to the current `mL/min/1.73 m 2` rendering.
 - evidence `J-US07`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`eee15ebe-d349-4497-acef-6abe7a8247fb@19`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%22eee15ebe-d349-4497-acef-6abe7a8247fb%22&limit=100
 - evidence `J-US10`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`a216a7d5-3c28-482b-956a-93ae146e3763@3`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%22a216a7d5-3c28-482b-956a-93ae146e3763%22&limit=100
 - evidence `J-US08`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`ae8c18c9-3e7d-4515-b980-120025a88fc1@22`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%22ae8c18c9-3e7d-4515-b980-120025a88fc1%22&limit=100

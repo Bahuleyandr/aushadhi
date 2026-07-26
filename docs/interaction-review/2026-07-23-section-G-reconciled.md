@@ -5,7 +5,7 @@ slice. Every row remains runtime-disabled and `promotion_eligible:false`;
 pair-executable rows are available only as diagnostic draft findings.
 
 - Source: `docs/interaction-review/batch-01-v2/sections/G.verified.jsonl`
-- JSONL SHA-256: `8398ebb73c022924c0d8bb91a77278c48e0327010241e82b09f671c55191d2eb`
+- JSONL SHA-256: `55748038490527f8f3c175e2d7a5230db8414dfc5241bc0336a8aa83ed548ac6`
 - Inventory: 28 rules, 29 evidence records, 51 exact hashed fragments.
 - Draft runtime status: 0 enabled rows and 28 diagnostic-only rows.
 - Pair matcher: 23 executable selectors and 5 deliberately non-executable
@@ -37,6 +37,11 @@ pair-executable rows are available only as diagnostic draft findings.
   `apixaban__pgp_moderate_cyp3a4_inhibitor`.
 
 ## Validation
+
+- The 2026-07-26 live recheck confirmed both pimozide records at SPL version
+  3/effective time 20260710 and all five retained fragments. The canonical
+  openFDA payload bytes had changed, so both provenance hashes and retrieval
+  dates were refreshed without widening either source-bounded roster.
 
 - Per-slice draft validation: pass, 28/28 rules.
 - Focused Section A/B/G/H/J suite: pass.

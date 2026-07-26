@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "packet_id": "warfarin-fluconazole-pmbjp-oral-tablets-2026-07-26",
+  "generated_at": "2026-07-26",
+  "review_status": "review_candidate",
+  "release_profile": "internal-evaluation",
+  "production_open_enabled": false,
+  "ingredient_identity_candidate": {
+    "mapping_id": "ingredient:fluconazole:rxnorm-4450",
+    "assertion": {
+      "ingredient_id": "sha256:37cc87b734ee49f5f3ad5773f44aa5089c4bc93ab4fb50bc53048e2b69416bd0",
+      "canonical_name": "fluconazole",
+      "observed_name": "fluconazole"
+    },
+    "proposed_identity": {
+      "clinical_ingredient_id": "sha256:37cc87b734ee49f5f3ad5773f44aa5089c4bc93ab4fb50bc53048e2b69416bd0",
+      "canonical_name": "fluconazole",
+      "runtime_drug": "fluconazole",
+      "relationship": "exact",
+      "rxnorm": {
+        "rxcui": "4450",
+        "name": "fluconazole",
+        "tty": "IN",
+        "version": "06-Jul-2026",
+        "api_version": "3.1.354",
+        "search_response_sha256": "613592116a78cb88eb2c85e7b2aec0f158f71535c5cbbbdeb0b95a0cb3383536",
+        "properties_response_sha256": "47532ee45ed034f9ef2fdd5ad1619b783a8e7529fe1c2e56e0257fc6eb1d5200"
+      },
+      "unii": {
+        "code": "8VZV102JFY",
+        "response_sha256": "83cd6141875c11974b38feb2110ccb1ec55c5ac6f563c5190679ee3ee2534b9c"
+      }
+    },
+    "evidence": [
+      {
+        "source_id": "rxnorm",
+        "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=fluconazole&allsrc=0&search=0",
+        "retrieved_at": "2026-07-26"
+      },
+      {
+        "source_id": "rxnorm",
+        "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/4450/properties.json",
+        "retrieved_at": "2026-07-26"
+      },
+      {
+        "source_id": "rxnorm",
+        "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/4450/property.json?propName=UNII_CODE",
+        "retrieved_at": "2026-07-26"
+      }
+    ],
+    "approval": null
+  },
+  "product_presentation_candidates": [
+    {
+      "mapping_id": "presentation:pmbjp:1246:oral-tablet",
+      "source_product_id": "janaushadhi:1246",
+      "product_id": "sha256:36c4c3041de7320c6bab438d11649fbed5c05348f9a821a7b60524a77fe1882e",
+      "product_assertion_sha256": "db7af4f8f150ecd174e7e444529d0e3ea166025134b6e68eff7436f4a305296f",
+      "product_assertion": {
+        "brand_name": "Fluconazole Tablets IP 150 mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "1's",
+        "ingredient": "fluconazole 150 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-222/2025:1246:pdf-page-69",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-222_30042025.pdf",
+          "document_sha256": "47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff",
+          "text": "Fluconazole Tablets IP 150 mg; Each uncoated tablet contains: Fluconazole IP 150mg; 1's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:197699",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/197699/properties.json",
+          "search_response_sha256": "bcf5693e0b6ae1c6146ec3aee938d0411ae8a97b9fc463eaeb300c8407b648b1",
+          "properties_response_sha256": "20d9ae89ab50b86a3e050d3f6584e6269bfafe36e6b0ff934cab0970c8bc67f8",
+          "name": "fluconazole 150 MG Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2771:oral-tablet",
+      "source_product_id": "janaushadhi:2771",
+      "product_id": "sha256:7a10b77f1e3fe2826287663ebbaac467e22a2760236e1130d6e24056193ea1e1",
+      "product_assertion_sha256": "94ecc3673fd6332ae543ff268685b14e847447ddbe2678bc7692e5c11a0f07a0",
+      "product_assertion": {
+        "brand_name": "Fluconazole Tablets IP 50 mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "4's",
+        "ingredient": "fluconazole 50 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-213/2024:2771:page-95",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20eTender_213_22032024.pdf",
+          "document_sha256": "9be3607e49a8cf47b6c9d6c54f34a02a38988546b94bdf863b2518150d0a1bda",
+          "text": "Fluconazole Tablets IP 50 mg; Each uncoated tablet contains: Fluconazole IP 50mg; 4's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:197701",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/197701/properties.json",
+          "search_response_sha256": "69f978c34a7d2d866b503cbe34b70e9de991463815ee908519d2a76eb7409e09",
+          "properties_response_sha256": "58fde9055852dce3cf5cfadfb355a4449649f78a3f68544e935dd7da21504836",
+          "name": "fluconazole 50 MG Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2772:oral-tablet",
+      "source_product_id": "janaushadhi:2772",
+      "product_id": "sha256:29bb5bbb4f23f5e02f1b3a83555ea3b577de0f5ae1b49ae0b8ba81e62b128381",
+      "product_assertion_sha256": "7b9fffd9797b6a11c0ec0802a288c32ac95f9b4c854b6d62e0ec470a61fbc793",
+      "product_assertion": {
+        "brand_name": "Fluconazole Tablets IP 200 mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "4's",
+        "ingredient": "fluconazole 200 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-213/2024:2772:page-95",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20eTender_213_22032024.pdf",
+          "document_sha256": "9be3607e49a8cf47b6c9d6c54f34a02a38988546b94bdf863b2518150d0a1bda",
+          "text": "Fluconazole Tablets IP 200 mg; Each uncoated tablet contains: Fluconazole IP 200mg; 4's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:197700",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/197700/properties.json",
+          "search_response_sha256": "8623b49cfe2b3534e15acd62b8135f6e3dd832e01cc7f44499e5ec5cc9c3f43e",
+          "properties_response_sha256": "78c0dff0d9af6a18d4f74521f561141a2ecfe3335fa078c23eb021641ff777e1",
+          "name": "fluconazole 200 MG Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2773:oral-tablet",
+      "source_product_id": "janaushadhi:2773",
+      "product_id": "sha256:552bfd4142fa6a39f2fd53b7f45ad98c31073250899eb5509e6a4c7962b465c1",
+      "product_assertion_sha256": "b43f0509aebac0bc0021079be2e8375735e69feffbd59c76131447bd8f1dad9c",
+      "product_assertion": {
+        "brand_name": "Fluconazole Tablets IP 400 mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "1's",
+        "ingredient": "fluconazole 400 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-213/2024:2773:page-95",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20eTender_213_22032024.pdf",
+          "document_sha256": "9be3607e49a8cf47b6c9d6c54f34a02a38988546b94bdf863b2518150d0a1bda",
+          "text": "Fluconazole Tablets IP 400 mg; Each uncoated tablet contains: Fluconazole IP 400mg; 1's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxnorm-exact-search:no-active-concept",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=fluconazole%20400%20MG%20Oral%20Tablet&allsrc=0&search=0",
+          "search_response_sha256": "8a2600ea692ce58930504a533e4f62ed942a645d3804eef4013503d9498df6d5",
+          "note": "The exact RxNorm search returned no active concept. The proposed oral-tablet presentation is supported by the exact PMBI tender row, not inferred from RxNorm."
+        }
+      ],
+      "approval": null
+    }
+  ],
+  "proposed_rule": {
+    "rule_id": "warfarin__fluconazole",
+    "draft_rule_sha256": "088bd06e472723bce36527b67d1c2b0d7c24694842c5929c25c1c4e693952f84",
+    "review_status": "review_candidate",
+    "proposed_severity": "major",
+    "proposed_dispense_action": "confirm_and_monitor",
+    "scope": {
+      "route": "oral",
+      "formulation": "tablet",
+      "warfarin_product_ids": [
+        "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+        "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+        "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+      ],
+      "fluconazole_product_ids": [
+        "sha256:29bb5bbb4f23f5e02f1b3a83555ea3b577de0f5ae1b49ae0b8ba81e62b128381",
+        "sha256:36c4c3041de7320c6bab438d11649fbed5c05348f9a821a7b60524a77fe1882e",
+        "sha256:552bfd4142fa6a39f2fd53b7f45ad98c31073250899eb5509e6a4c7962b465c1",
+        "sha256:7a10b77f1e3fe2826287663ebbaac467e22a2760236e1130d6e24056193ea1e1"
+      ],
+      "expected_product_pair_count": 12,
+      "product_pairs": [
+        [
+          "sha256:29bb5bbb4f23f5e02f1b3a83555ea3b577de0f5ae1b49ae0b8ba81e62b128381",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:29bb5bbb4f23f5e02f1b3a83555ea3b577de0f5ae1b49ae0b8ba81e62b128381",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:29bb5bbb4f23f5e02f1b3a83555ea3b577de0f5ae1b49ae0b8ba81e62b128381",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:36c4c3041de7320c6bab438d11649fbed5c05348f9a821a7b60524a77fe1882e",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:36c4c3041de7320c6bab438d11649fbed5c05348f9a821a7b60524a77fe1882e",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:36c4c3041de7320c6bab438d11649fbed5c05348f9a821a7b60524a77fe1882e",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:552bfd4142fa6a39f2fd53b7f45ad98c31073250899eb5509e6a4c7962b465c1",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:552bfd4142fa6a39f2fd53b7f45ad98c31073250899eb5509e6a4c7962b465c1",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:552bfd4142fa6a39f2fd53b7f45ad98c31073250899eb5509e6a4c7962b465c1",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:7a10b77f1e3fe2826287663ebbaac467e22a2760236e1130d6e24056193ea1e1",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:7a10b77f1e3fe2826287663ebbaac467e22a2760236e1130d6e24056193ea1e1",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:7a10b77f1e3fe2826287663ebbaac467e22a2760236e1130d6e24056193ea1e1",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ]
+      ]
+    },
+    "source_versions": [
+      "openfda-labels:f694c617-3383-416c-91b6-b94fda371204:57",
+      "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+    ],
+    "management_boundary": {
+      "requires_prescriber_or_anticoagulation_service_review": true,
+      "requires_pt_inr_monitoring": true,
+      "autonomous_pharmacy_dose_change": false,
+      "autonomous_stop_either_medicine": false,
+      "bleeding_symptom_counselling": true,
+      "persistence_after_fluconazole_discontinuation": "4 to 5 days",
+      "universal_pt_inr_schedule_asserted": false
+    },
+    "approval": null
+  },
+  "adversarial_verification": [
+    {
+      "check": "current bilateral U.S. label support",
+      "status": "pass",
+      "detail": "The exact current fluconazole and warfarin SPL payloads were reverified live on 2026-07-26."
+    },
+    {
+      "check": "unsupported Child-Pugh modifier",
+      "status": "removed",
+      "detail": "The draft pair rule has no Child-Pugh context modifier; hepatic impairment is not silently promoted as pair-specific evidence."
+    },
+    {
+      "check": "single-dose exception",
+      "status": "not_supported",
+      "detail": "No single-dose fluconazole exception is asserted."
+    },
+    {
+      "check": "post-discontinuation persistence",
+      "status": "source_supported_boundary",
+      "detail": "The label states that enzyme inhibition persists 4 to 5 days, but does not prescribe a universal PT/INR schedule."
+    },
+    {
+      "check": "400 mg RxNorm corroboration",
+      "status": "transparent_gap",
+      "detail": "The exact RxNorm SCD search returned no active concept; the PMBI tender directly identifies the 400 mg item as an uncoated tablet."
+    },
+    {
+      "check": "runtime leakage",
+      "status": "pass",
+      "detail": "No fluconazole mapping, presentation, promotion, or runtime rule is committed by this packet."
+    }
+  ]
+}

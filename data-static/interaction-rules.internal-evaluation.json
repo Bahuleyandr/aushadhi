@@ -2,7 +2,6 @@
   "schema_version": "1.0.0",
   "pack_id": "aushadhi-internal-interactions",
   "pack_version": "0.1.0",
-  "profile": "internal-evaluation",
   "licence": "CC-BY-4.0",
   "source_ids": [
     "aushadhi-open-clinician-rules"
@@ -14,10 +13,11 @@
       "licence_id": "CC-BY-4.0",
       "licence_url": "https://creativecommons.org/licenses/by/4.0/legalcode",
       "source_url": "https://github.com/Bahuleyandr/aushadhi",
-      "changes": "Clinician-reviewed internal-evaluation interaction rule structured for Aushadhi."
+      "changes": "Clinician-reviewed internal-evaluation interaction rule deterministically promoted from the attested v2 draft and reviewed mappings."
     }
   },
   "declared_coverage": "partial",
+  "profile": "internal-evaluation",
   "rules": [
     {
       "rule_id": "warfarin__amiodarone",
@@ -61,7 +61,7 @@
       "severity": "major",
       "dispense_action": "confirm_and_monitor",
       "mechanism": "Amiodarone potentiates warfarin's anticoagulant response, increasing PT/INR and the risk of serious or fatal bleeding.",
-      "management": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when amiodarone is started, stopped, or changed. Do not independently stop either established medicine or autonomously change the warfarin dose. Continue prescriber-directed monitoring after amiodarone discontinuation because the interaction can persist for weeks to months. Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools.",
+      "management": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when amiodarone is started, stopped, or changed. Do not independently stop either established medicine or autonomously change the warfarin dose. Use prescriber-directed PT/INR monitoring during coadministration and after amiodarone discontinuation. The interaction can persist for weeks to months after amiodarone discontinuation. Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools. The U.S. amiodarone label's numerical warfarin dose-reduction instruction is evidence only and is not an autonomous pharmacy action.",
       "evidence": [
         {
           "source": "openFDA drug label: amiodarone hydrochloride tablets",
@@ -70,7 +70,7 @@
           "document_version": "2",
           "retrieved_at": "2026-07-26",
           "jurisdiction": "US",
-          "excerpt": "The label states that amiodarone potentiates warfarin's anticoagulant response, can cause serious or fatal bleeding, requires warfarin dose reduction and prothrombin-time monitoring, and can persist after amiodarone discontinuation.",
+          "excerpt": "The current U.S. label states that amiodarone potentiates warfarin's anticoagulant response, can cause serious or fatal bleeding, requires prothrombin-time monitoring, and can persist for weeks to months after amiodarone discontinuation.",
           "licence": "CC0-1.0",
           "review_status": "clinician_reviewed"
         },
@@ -81,7 +81,7 @@
           "document_version": "7",
           "retrieved_at": "2026-07-26",
           "jurisdiction": "US",
-          "excerpt": "The label lists amiodarone among CYP2C9 and CYP3A4 inhibitors, calls for closer INR monitoring when interacting inhibitors are started, stopped, or changed, and instructs patients to report bleeding symptoms.",
+          "excerpt": "The current U.S. warfarin label lists amiodarone among relevant CYP inhibitors, requires closer INR monitoring when interacting medicines are started, stopped, or changed, warns of major or fatal bleeding, and identifies reportable bleeding symptoms.",
           "licence": "CC0-1.0",
           "review_status": "clinician_reviewed"
         }

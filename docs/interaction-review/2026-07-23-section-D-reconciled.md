@@ -5,7 +5,7 @@ Engineering-reconciled local worktree packet. Every rule remains
 
 - Source slice: `batch-01-v2/sections/D.verified.jsonl`
 - Worktree state: `worktree-uncommitted`
-- JSONL SHA-256: `ef4b282bb497f2981c0f7f54f6e6a6f3884b6167a7da068aaffbcc6248c6d6e6`
+- JSONL SHA-256: `d4f40c39c950625db2a28f8985ec7138dee7a93542565b8bb86d5fa9de2d6b94`
 - Rules: 14
 - Runtime-enabled: 0
 - Diagnostic-only: 14
@@ -20,6 +20,10 @@ Engineering-reconciled local worktree packet. Every rule remains
   openFDA SPL records under the `openfda-labels` CC0 policy. Each record pins
   the exact set ID, SPL version, effective time, canonical payload hash, and
   source path; DailyMed remains a reference locator only.
+- The 2026-07-26 live recheck confirmed all citalopram fragments and its SPL
+  version/effective time; only the canonical openFDA payload bytes changed,
+  so the provenance hash and retrieval date were refreshed without changing
+  the draft clinical claim.
 - The three domperidone records use the
   `mhra-govuk-drug-safety-updates` OGL policy. Their fragments bind to the
   official GOV.UK Content API payload, while the public page independently

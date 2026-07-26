@@ -185,3 +185,21 @@ reviewed ingredient identity without its exact reviewed presentation is
 excluded from clinical pair generation, and a different product carrying the
 same ingredient does not inherit the approval. Reviewed mapping completeness
 does not otherwise promote a clinical rule.
+
+The internal-evaluation runtime pack is deterministically compiled from
+`data-static/interaction-promotions.internal-evaluation.json`; it is not a
+second clinical source of truth. Each promotion binds the exact SHA-256 of an
+attested v2 draft row, the clinician's verbatim approval and reviewer ID, the
+validated label versions, reviewed ingredient mapping IDs, reviewed
+presentation mapping IDs, and the expected product-pair count. The compiler
+fails closed if any bound input drifts:
+
+```powershell
+npm run interactions:promote
+npm run interactions:promote:check
+```
+
+The first command regenerates the pack. The second derives it in memory and
+requires exact byte equality with the committed artifact. This promotion path
+targets `internal-evaluation` only; the `production-open` pack remains empty
+and cannot inherit an internal approval.

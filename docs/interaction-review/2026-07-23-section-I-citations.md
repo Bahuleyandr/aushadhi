@@ -7,7 +7,7 @@ Machine-generated from enriched evidence. Citation, licensing, provenance, juris
 Applicability is U.S.-only where retained interaction evidence supports an action. `doxycycline__polyvalent_cation` remains unscoped because its retained labels supply no action. Three no-effect records are explicitly typed as `interaction-counterevidence`; they cannot satisfy an interaction-action gate.
 
 - Section: `I`
-- JSONL SHA-256: `56ac5366d655442643d7cf2b9c7ac34d19fc5dc9b7a96a3318093bf7fca7ca71`
+- JSONL SHA-256: `2d4bd7d469295c18abb8b812f463c1dcf0b644956bddcc32e278e24a26dbb408`
 - citation_status: `{"machine_confirmed_openfda_reconciled_pending_clinician":33}`
 - source_policy_use: `{"interaction-counterevidence":3,"interaction-evidence":30}`
 - source policy: `openfda-labels` / `CC0-1.0`
@@ -898,11 +898,11 @@ Applicability is U.S.-only where retained interaction evidence supports an actio
 - DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=a4d555fa-787c-40fb-bb7d-b0d4f7318fd0
 - policy: source=`openfda-labels` | use=`interaction-evidence` | licence=`CC0-1.0` | type=`company_submitted_spl_via_openfda`
 - SPL identity: set_id=`a4d555fa-787c-40fb-bb7d-b0d4f7318fd0` | version=`31` | effective_time=`20260713`
-- canonical payload: sha256 `c4944e240cd5d4e274e6e7dd51b7941a43546698001238ebeba313fa0ee2652c` | `sorted-json-keys-v1` | `openfda-spl-text-v1`
-- date: 2026-07-13 (`openFDA SPL effective_time`) | retrieved: 2026-07-23 | accessed: 2026-07-23
+- canonical payload: sha256 `b30f6fd29e285d1507167ba96ef057a1487b85a1e539750975f261d4b0676a94` | `sorted-json-keys-v1` | `openfda-spl-text-v1`
+- date: 2026-07-13 (`openFDA SPL effective_time`) | retrieved: 2026-07-26 | accessed: 2026-07-26
 - DailyMed reference page updated: 2026-07-15
 - jurisdiction/review: `US` / `review_candidate`
-- currentness: `checked_current_openfda` @2026-07-23
+- currentness: `checked_current_openfda` @2026-07-26
 - quote_integrity: `multi_fragment_verbatim`
 - proposition: For conventional SPORANOX capsules, reduced acidity lowers absorption; take with a full meal, separate neutralizers by 2 hours, and use an acidic beverage under studied conditions.
 - interaction_exists: `true`

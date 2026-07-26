@@ -5,7 +5,7 @@ remains `promotion_eligible:false`; local severity and management remain
 clinician-governance decisions.
 
 - Source: `docs/interaction-review/batch-01-v2/sections/J.verified.jsonl`
-- JSONL SHA-256: `e4306afed14ad8130e4505607558bef57ef8895f50c31dde5e49994ace8596f3`
+- JSONL SHA-256: `f38886d7052f3029395360b18a90ff9aae4573994af527830194e33053576b5e`
 - Inventory: 12 rules, 21 evidence records, 41 exact hashed fragments.
 - Draft runtime status: 0 enabled rows and 12 diagnostic-only rows.
 - Pair matcher: 10 executable selectors and 2 deliberately non-executable
@@ -23,6 +23,10 @@ clinician-governance decisions.
 - `metformin__iodinated_contrast_media` now expresses its applicability as the
   required singleton array:
   `["peri-procedural imaging with iodinated contrast"]`.
+- The 2026-07-26 live recheck confirmed the same metformin SPL
+  version/effective time and clinical boundaries. Its canonical openFDA
+  payload changed, and the exact qualifying-eGFR fragment was repinned to the
+  current unit rendering; the rule remains runtime-disabled.
 - The miconazole row remains an evidence-empty, non-executable backlog
   candidate. No action, jurisdiction, or product scope was inferred.
 - The co-trimoxazole row is now pair-matcher-incomplete because the current
