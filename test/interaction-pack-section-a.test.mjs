@@ -200,12 +200,22 @@ test('Section A draft review enforces source jurisdiction and remains outside th
 
 test('Section A schema reconciliation preserves dose scope while normalizing indication and n-ary metadata', () => {
   for (const ruleId of [
-    'warfarin__tramadol',
     'edoxaban__pgp_inducer',
     'clopidogrel__cyp2c19_inhibiting_ppi',
   ]) {
     const rule = ruleById(ruleId);
     assert.match(rule.management.action_target, /newly_added/u);
+    assert.equal(rule.runtime_status.clinical_context_complete, false, ruleId);
+  }
+
+  for (const ruleId of [
+    'warfarin__tramadol',
+    'warfarin__azithromycin_oral',
+  ]) {
+    const rule = ruleById(ruleId);
+    assert.equal(rule.management.action_target, null, ruleId);
+    assert.deepEqual(rule.object.formulation, ['tablet'], ruleId);
+    assert.deepEqual(rule.perpetrator.formulation, ['tablet'], ruleId);
     assert.equal(rule.runtime_status.clinical_context_complete, false, ruleId);
   }
 

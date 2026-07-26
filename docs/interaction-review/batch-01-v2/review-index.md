@@ -22,7 +22,7 @@ Runtime `off` rows are diagnostic-only. A `pair matcher` value of `no` means the
 | `warfarin__ssri_snri` | warfarin <-> ssri_snri | additive_pd | moderate | - | supply_with_counselling | off | yes | US | H |
 | `warfarin__tramadol` | warfarin <-> tramadol | observed_clinical_multifactorial | major | - | confirm_and_monitor | off | yes | UK | M |
 | `warfarin__rifampicin` | warfarin <-> rifampicin | pk_perpetrator | major | - | confirm_and_monitor | off | yes | US | H |
-| `warfarin__azithromycin_oral` | warfarin <-> azithromycin | observed_clinical_multifactorial | moderate | - | supply_with_counselling | off | yes | US | M |
+| `warfarin__azithromycin_oral` | warfarin <-> azithromycin | observed_clinical_multifactorial | moderate | - | confirm_and_monitor | off | yes | US | M |
 | `apixaban__strong_cyp3a4_pgp_inhibitor` | apixaban <-> cyp3a4_pgp_inhibitor [strong] | pk_perpetrator | major | - | withhold_and_clarify | off | yes | US | M |
 | `rivaroxaban__strong_cyp3a4_pgp_inhibitor` | rivaroxaban <-> cyp3a4_pgp_inhibitor [strong] | pk_perpetrator | major | hepatic:child_pugh_b->major/withhold_and_clarify(base); hepatic:child_pugh_c->major/withhold_and_clarify(base) | withhold_and_clarify | off | yes | US | H |
 | `rivaroxaban__hepatic_impairment_child_pugh_b_c` | rivaroxaban <-> condition only | contraindication | major | hepatic:child_pugh_b->major/withhold_and_clarify(base); hepatic:child_pugh_c->major/withhold_and_clarify(base) | withhold_and_clarify | off | no | US | H |

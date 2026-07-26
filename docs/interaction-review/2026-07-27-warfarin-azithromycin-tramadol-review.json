@@ -1,0 +1,464 @@
+{
+  "schema_version": 1,
+  "packet_id": "warfarin-azithromycin-tramadol-pmbjp-oral-tablets-2026-07-27",
+  "generated_at": "2026-07-27",
+  "review_status": "review_candidate",
+  "release_profile": "internal-evaluation",
+  "production_open_enabled": false,
+  "catalogue_snapshot": {
+    "source": "preserved-crawler-data-drop",
+    "snapshot_date": "2026-07-20",
+    "matching_pmbjp_assertion_count": 12
+  },
+  "ingredient_identity_candidates": [
+    {
+      "mapping_id": "ingredient:azithromycin:rxnorm-18631",
+      "assertion": {
+        "ingredient_id": "sha256:a11cef0dcf59d647cc50aa3f94174e67599b079a0abc989a22ae61649ca2b783",
+        "canonical_name": "azithromycin",
+        "observed_name": "azithromycin"
+      },
+      "proposed_identity": {
+        "clinical_ingredient_id": "sha256:a11cef0dcf59d647cc50aa3f94174e67599b079a0abc989a22ae61649ca2b783",
+        "canonical_name": "azithromycin",
+        "runtime_drug": "azithromycin",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "18631",
+          "name": "azithromycin",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "version_response_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd",
+          "search_response_sha256": "ef8711e62781db914dc748e061ba9059bf5317abe4a27b2b4c0f58f41f7f4600",
+          "properties_response_sha256": "42d957f36937eab5f7d89ba38e8a4bbf70299193e8d409c36d75191a503fd0c1"
+        },
+        "unii": {
+          "code": "F94OW58Y8V",
+          "response_sha256": "293b8ebdb43c86d1345f43b8534c48e9fb105458b7a59a497edf3a5c8d740b71"
+        }
+      },
+      "evidence": [
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=azithromycin&allsrc=0&search=0",
+          "retrieved_at": "2026-07-26"
+        },
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/18631/properties.json",
+          "retrieved_at": "2026-07-26"
+        },
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/18631/property.json?propName=UNII_CODE",
+          "retrieved_at": "2026-07-26"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "ingredient:tramadol:rxnorm-10689",
+      "assertion": {
+        "ingredient_id": "sha256:7d4536b14c06903f91096e57cf43df6161f83c9bd2ac24738ca1da7d2d4dafc7",
+        "canonical_name": "tramadol",
+        "observed_name": "tramadol"
+      },
+      "proposed_identity": {
+        "clinical_ingredient_id": "sha256:7d4536b14c06903f91096e57cf43df6161f83c9bd2ac24738ca1da7d2d4dafc7",
+        "canonical_name": "tramadol",
+        "runtime_drug": "tramadol",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "10689",
+          "name": "tramadol",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "version_response_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd",
+          "search_response_sha256": "d7583de12086d6e9d979d6c9a3809cc6395edb0c9dac9d645c2e8ed37ea194b3",
+          "properties_response_sha256": "4b4e02db0e2103f038a66dbbfc9d14cb029e03337c9ec9311129af64d608371f"
+        },
+        "unii": {
+          "code": "39J1LGJ30J",
+          "response_sha256": "a58a094019cb1784d3e8eeeb3eb4bcc6a7a41ec7a944c48d19a750de8696fb4c"
+        }
+      },
+      "evidence": [
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=tramadol&allsrc=0&search=0",
+          "retrieved_at": "2026-07-26"
+        },
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/10689/properties.json",
+          "retrieved_at": "2026-07-26"
+        },
+        {
+          "source_id": "rxnorm",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/10689/property.json?propName=UNII_CODE",
+          "retrieved_at": "2026-07-26"
+        }
+      ],
+      "approval": null
+    }
+  ],
+  "product_presentation_candidates": [
+    {
+      "mapping_id": "presentation:pmbjp:18:oral-tablet",
+      "source_product_id": "janaushadhi:18",
+      "product_id": "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+      "product_assertion_sha256": "8857d75b73ec7f1e2600928d0d601e8c283dbd177ea8081ec83f7d93f996286d",
+      "product_assertion": {
+        "brand_name": "Azithromycin Tablets IP 250 mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "6's",
+        "ingredient": "azithromycin 250 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-219/2024:18:page-57",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-219_09082024.pdf",
+          "document_sha256": "cf5c444a41a1e633b3cd7a6346dd97e7b0c73a652869815b16ade89eba461d98",
+          "text": "Azithromycin Tablets IP 250 mg; Each film coated tablet contains: Azithromycin Dihydrate IP equivalent to Azithromycin Anhydrous 250mg; 6's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:308460",
+          "search_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=azithromycin+250+MG+Oral+Tablet&allsrc=0&search=0",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/308460/properties.json",
+          "search_response_sha256": "3a9408ccb754184c2bdeb451647f3c847531efb26afc3b7c430c1fba100ed64f",
+          "properties_response_sha256": "b6476625370c9776d0c01d755441a96a62b094965e0039c010f670e879b7f5af",
+          "name": "azithromycin 250 MG Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "presentation:pmbjp:28:oral-tablet",
+      "source_product_id": "janaushadhi:28",
+      "product_id": "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+      "product_assertion_sha256": "4e2bfd35afcc31cdb65fadf293c6d5a39e2ecbf5ecf58b428889132cb6816630",
+      "product_assertion": {
+        "brand_name": "Tramadol Tablets 50mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "10's",
+        "ingredient": "tramadol 50 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-221/2025:28:page-57",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-221_04042025.pdf",
+          "document_sha256": "c885a7b5f438678cd25956f16eb070a44880dd7219ad8f0c46319f2b22113f15",
+          "text": "Tramadol Tablets 50mg; Each Film-coated tablet contains: Tramadol Hydrochloride 50mg; 10's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:835603",
+          "search_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=tramadol+50+MG+Oral+Tablet&allsrc=0&search=0",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/835603/properties.json",
+          "search_response_sha256": "97828c9aecf9373dcf2e1ae0829a2d0090ba934e652b727be35fa26b3263c60c",
+          "properties_response_sha256": "d6535ef2ab4f282eb14b13143f2c51968cc1e2fdf23a8efc1df6427d1da8a8e6",
+          "name": "tramadol hydrochloride 50 MG Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "presentation:pmbjp:521:oral-tablet",
+      "source_product_id": "janaushadhi:521",
+      "product_id": "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4",
+      "product_assertion_sha256": "ebb760346acbcc1945168a642a25ecb265326476fbd6a723aeb5edba3629b829",
+      "product_assertion": {
+        "brand_name": "Tramadol Prolonged Release Tablets IP 100 mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "10's",
+        "ingredient": "tramadol 100 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-218/2024:521:page-63",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-218_07112024.pdf",
+          "document_sha256": "c28dcc3bdd7add664887d240de9ca373ff09d37928201d16e32e34e00b3b968e",
+          "text": "Tramadol Prolonged Release Tablets IP 100 mg; Each prolonged release tablet contains: Tramadol IP 100mg; 10's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:833709",
+          "search_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=24+HR+tramadol+hydrochloride+100+MG+Extended+Release+Oral+Tablet&allsrc=0&search=0",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/833709/properties.json",
+          "search_response_sha256": "63e713977e92111b0a487e75ffe14fd265002999b0e8311f69cbce68fdd989ab",
+          "properties_response_sha256": "4e5afde5a5e46bf57e9fe6e7ebc316990f620374deceac75531b464f418c1d81",
+          "name": "24 HR tramadol hydrochloride 100 MG Extended Release Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    },
+    {
+      "mapping_id": "presentation:pmbjp:72:oral-tablet",
+      "source_product_id": "janaushadhi:72",
+      "product_id": "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25",
+      "product_assertion_sha256": "486892da381243eee3d79a37e4708e2b74e38d9c35ed0fe0fb409f5455fe5db3",
+      "product_assertion": {
+        "brand_name": "Azithromycin Tablets IP 500 mg",
+        "manufacturer": "PMBJP (Jan Aushadhi)",
+        "pack_label": "3's",
+        "ingredient": "azithromycin 500 mg"
+      },
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "evidence": [
+        {
+          "source_id": "janaushadhi",
+          "identifier": "pmbjp-tender:RC-219/2024:72:page-57",
+          "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-219_09082024.pdf",
+          "document_sha256": "cf5c444a41a1e633b3cd7a6346dd97e7b0c73a652869815b16ade89eba461d98",
+          "text": "Azithromycin Tablets IP 500 mg; Each film coated tablet contains: Azithromycin Dihydrate IP equivalent to Azithromycin Anhydrous 500mg; 3's"
+        },
+        {
+          "source_id": "rxnorm",
+          "identifier": "rxcui:248656",
+          "search_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=azithromycin+500+MG+Oral+Tablet&allsrc=0&search=0",
+          "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/248656/properties.json",
+          "search_response_sha256": "9afe76108a8d83ad539c07ffc0e549ba62dee93f7021a201822d5972085edb62",
+          "properties_response_sha256": "66bf94a37c21d4f4818282b30cf3c97118bcada71510b3ecd3c09c24d1c76b70",
+          "name": "azithromycin 500 MG Oral Tablet",
+          "tty": "SCD"
+        }
+      ],
+      "approval": null
+    }
+  ],
+  "proposed_rules": [
+    {
+      "rule_id": "warfarin__azithromycin_oral",
+      "draft_rule_sha256": "f3cd2ac4598e2d602d9f48b452d354564aac185db473baf0e23f66c987b66ced",
+      "review_status": "review_candidate",
+      "proposed_severity": "moderate",
+      "proposed_dispense_action": "confirm_and_monitor",
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "warfarin_product_ids": [
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        "interacting_product_ids": [
+          "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+          "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25"
+        ],
+        "expected_product_pair_count": 6,
+        "product_pairs": [
+          [
+            "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+            "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+          ],
+          [
+            "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+            "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+          ],
+          [
+            "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+            "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+          ],
+          [
+            "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+            "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25"
+          ],
+          [
+            "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+            "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25"
+          ],
+          [
+            "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca",
+            "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25"
+          ]
+        ]
+      },
+      "source_versions": [
+        "openfda-labels:db52b91e-79f7-4cc1-9564-f2eee8e31c45:48"
+      ],
+      "management_boundary": {
+        "requires_prescriber_or_anticoagulation_service_review": true,
+        "autonomous_pharmacy_dose_change": false,
+        "autonomous_stop_either_medicine": false,
+        "bleeding_symptom_counselling": true,
+        "universal_pt_inr_schedule_asserted": false,
+        "fixed_post_discontinuation_interval_asserted": false,
+        "pt_inr_monitoring_during_concomitant_use": true,
+        "prescriber_directed_follow_up_decision_when_course_ends": true,
+        "dedicated_study_no_pt_effect_disclosed": true
+      },
+      "explicit_exclusions": [
+        "PMBJP code 48 because the local 10-tablet assertion conflicts with the amended 3-tablet unit size",
+        "azithromycin oral suspensions",
+        "dispersible tablets and every other unreviewed azithromycin presentation"
+      ],
+      "approval": null
+    },
+    {
+      "rule_id": "warfarin__tramadol",
+      "draft_rule_sha256": "6fc7fe11082347ebc877d5a64469a67fe28f5a18c3942da10a1d45078212156b",
+      "review_status": "review_candidate",
+      "proposed_severity": "major",
+      "proposed_dispense_action": "confirm_and_monitor",
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "warfarin_product_ids": [
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        "interacting_product_ids": [
+          "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+          "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4"
+        ],
+        "expected_product_pair_count": 6,
+        "product_pairs": [
+          [
+            "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+            "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+          ],
+          [
+            "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+            "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+          ],
+          [
+            "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+            "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+          ],
+          [
+            "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+            "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4"
+          ],
+          [
+            "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+            "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4"
+          ],
+          [
+            "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4",
+            "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+          ]
+        ]
+      },
+      "source_versions": [
+        "mhra-govuk-drug-safety-updates:warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol:2024-06-20T11:11:09+01:00"
+      ],
+      "management_boundary": {
+        "requires_prescriber_or_anticoagulation_service_review": true,
+        "autonomous_pharmacy_dose_change": false,
+        "autonomous_stop_either_medicine": false,
+        "bleeding_symptom_counselling": true,
+        "universal_pt_inr_schedule_asserted": false,
+        "fixed_post_discontinuation_interval_asserted": false,
+        "additional_pt_inr_monitoring_when_started": true,
+        "prescriber_directed_follow_up_decision_when_stopped": true
+      },
+      "explicit_exclusions": [
+        "tramadol injections",
+        "tramadol combination products",
+        "every other unreviewed or non-tablet tramadol presentation"
+      ],
+      "approval": null
+    }
+  ],
+  "excluded_catalogue_assertions": [
+    {
+      "source_product_id": "janaushadhi:26",
+      "product_name": "Tramadol Hydrochloride Injection 100 mg per 2 ml",
+      "reason": "injection; outside exact oral-tablet scope"
+    },
+    {
+      "source_product_id": "janaushadhi:27",
+      "product_name": "Tramadol HCl Injection 50mg 1 ml",
+      "reason": "injection; outside exact oral-tablet scope"
+    },
+    {
+      "source_product_id": "janaushadhi:47",
+      "product_name": "Azithromycin Oral Suspension IP 100mg per 5ml",
+      "reason": "oral suspension; outside exact tablet scope"
+    },
+    {
+      "source_product_id": "janaushadhi:48",
+      "product_name": "Azithromycin Dispersible Tablets 100mg",
+      "reason": "stale product assertion: local pack_label is 10's, while PMBI Amendment 2 to RC-221/2025 authorizes a 3's unit and 3's x 10 pack",
+      "local_pack_label": "10's",
+      "current_official_unit_size": "3's",
+      "evidence": {
+        "source_id": "janaushadhi",
+        "identifier": "pmbjp-amendment:RC-221/2025:amendment-2:48:page-2",
+        "source_url": "https://www.pmbi.co.in/tender/Proc%20Amendment-2%20Tender-221_29042025.pdf",
+        "document_sha256": "c64a3d5d76a8037b6dd9ceef1242e0312d0753530cfb9763d36ca46298f8e8db",
+        "text": "Drug code 48 Azithromycin Dispersible Tablets 100mg: Amendment in the unit size is hereby authorized as Unit size 3's; Pack size 3's x 10"
+      }
+    },
+    {
+      "source_product_id": "janaushadhi:510",
+      "product_name": "Paracetamol 325mg and Tramadol 37.5mg Tablets",
+      "reason": "combination product; outside exact single-ingredient tramadol scope"
+    },
+    {
+      "source_product_id": "janaushadhi:1521",
+      "product_name": "Azithromycin Oral Suspension IP 200 mg",
+      "reason": "oral suspension; outside exact tablet scope"
+    },
+    {
+      "source_product_id": "janaushadhi:1747",
+      "product_name": "Paracetamol 162.5 mg and Tramadol 18.75 mg Tablet",
+      "reason": "combination product; outside exact single-ingredient tramadol scope"
+    },
+    {
+      "source_product_id": "janaushadhi:2649",
+      "product_name": "Tramadol Hydrochloride (IR) 50mg and Diclofenac Sodium (SR) 75mg Tablets",
+      "reason": "combination product; outside exact single-ingredient tramadol scope"
+    }
+  ],
+  "evidence_reverification": {
+    "checked_at": "2026-07-27",
+    "section_a_live_verifier": {
+      "records_verified": 39,
+      "openfda_records_verified": 37,
+      "govuk_records_verified": 2,
+      "unique_openfda_set_ids": 23,
+      "unique_govuk_pages": 2
+    },
+    "draft_pack_assembly": {
+      "rule_count": 199,
+      "evidence_records_verified": 244,
+      "pack_sha256": "42b50292f7bfc03398f4ac8c2916c77816cfe458e7a0c12c4ff8a89140df974a",
+      "member_sets_sha256": "9131ce12b555afa7df03b7180639041880e97d3ec384f766aab889480e8cd304"
+    },
+    "rxnorm_identity_candidates": "live_exact_single_candidate",
+    "rxnorm_presentation_concepts": "live_exact_scd",
+    "pmbjp_documents": "downloaded_from_official_host_and_sha256_bound"
+  },
+  "approval_required": {
+    "ingredient_identity_approvals": 2,
+    "product_presentation_approvals": 4,
+    "clinical_rule_approvals": 2,
+    "promotion_remains_blocked_until_explicit_clinician_review": true
+  }
+}

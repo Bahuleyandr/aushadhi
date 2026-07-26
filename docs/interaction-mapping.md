@@ -182,10 +182,12 @@ The committed production rule pack remains empty and declares unknown
 coverage. The internal-evaluation pack contains the clinician-approved
 warfarin-amiodarone rule for six exact PMBJP oral-tablet product pairs and the
 clinician-approved warfarin-fluconazole rule for 12 exact PMBJP oral-tablet
-product pairs. A reviewed ingredient identity without its exact reviewed
-presentation is excluded from clinical pair generation, and a different
-product carrying the same ingredient does not inherit the approval. Reviewed
-mapping completeness does not otherwise promote a clinical rule.
+product pairs. It also contains separately clinician-approved warfarin rules
+for metronidazole (six pairs), oral ketoconazole (three pairs), and
+voriconazole (three pairs). A reviewed ingredient identity without its exact
+reviewed presentation is excluded from clinical pair generation, and a
+different product carrying the same ingredient does not inherit the approval.
+Reviewed mapping completeness does not otherwise promote a clinical rule.
 
 The internal-evaluation runtime pack is deterministically compiled from
 `data-static/interaction-promotions.internal-evaluation.json`; it is not a
