@@ -19,7 +19,14 @@ import { scanProductQueries } from '../lib/product-resolver.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const DEFAULT_ARTIFACT = path.join(ROOT, 'dist', 'latest', 'drugs.jsonl');
-const DEFAULT_RULES = path.join(ROOT, 'data-static', 'interaction-rules.json');
+const DEFAULT_RULES_BY_PROFILE = {
+  'production-open': path.join(ROOT, 'data-static', 'interaction-rules.json'),
+  'internal-evaluation': path.join(
+    ROOT,
+    'data-static',
+    'interaction-rules.internal-evaluation.json',
+  ),
+};
 const DEFAULT_INGREDIENT_MAPPINGS = path.join(
   ROOT,
   'data-static',
@@ -43,7 +50,7 @@ export function parseArgs(args) {
   const options = {
     profile: null,
     artifactPath: DEFAULT_ARTIFACT,
-    rulesPath: DEFAULT_RULES,
+    rulesPath: null,
     ingredientMappingsPath: DEFAULT_INGREDIENT_MAPPINGS,
     presentationMappingsPath: DEFAULT_PRESENTATION_MAPPINGS,
     queries: [],
@@ -78,6 +85,7 @@ export function parseArgs(args) {
   if (!['production-open', 'internal-evaluation'].includes(options.profile)) {
     throw new Error(`unsupported --profile ${options.profile}`);
   }
+  options.rulesPath ??= DEFAULT_RULES_BY_PROFILE[options.profile];
   if (options.queries.length < 2) throw new Error('at least two --drug inputs are required');
   return options;
 }

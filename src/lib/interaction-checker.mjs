@@ -3,6 +3,12 @@ export const DISCLAIMER = 'No listed interaction does not establish safety. Veri
 const COVERAGE_VALUES = new Set(['complete', 'partial', 'unknown']);
 const MAPPED_STATUSES = new Set(['exact', 'reviewed_override']);
 const REVIEW_STATUSES = new Set(['clinician_reviewed', 'review_candidate']);
+const DISPENSE_ACTIONS = new Set([
+  'supply_with_counselling',
+  'space_doses',
+  'confirm_and_monitor',
+  'withhold_and_clarify',
+]);
 
 function compareStrings(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
@@ -69,6 +75,21 @@ function normalizePairArguments(first, second) {
 
 export function pairKey(first, second) {
   return normalizePairArguments(first, second).join('|');
+}
+
+function normalizeProductPair(value, label) {
+  if (!Array.isArray(value) || value.length !== 2) {
+    throw new TypeError(`${label} must contain exactly two product identifiers`);
+  }
+  const pair = value.map((id, index) => requireString(id, `${label}[${index}]`));
+  if (pair[0] === pair[1]) {
+    throw new TypeError(`${label} requires two different product identifiers`);
+  }
+  return pair.sort(compareStrings);
+}
+
+function productPairKey(value) {
+  return JSON.stringify(value);
 }
 
 function ingredientId(value, label) {
@@ -187,14 +208,37 @@ function validateApplicability(value, label) {
   }
 }
 
+function validateProductPairs(value, label) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new TypeError(`${label} must contain at least one product pair`);
+  }
+  const seen = new Set();
+  let previous = null;
+  for (let index = 0; index < value.length; index += 1) {
+    const pair = normalizeProductPair(value[index], `${label}[${index}]`);
+    if (pair[0] !== value[index][0] || pair[1] !== value[index][1]) {
+      throw new TypeError(`${label}[${index}] must use canonical order`);
+    }
+    const key = productPairKey(pair);
+    if (seen.has(key)) throw new TypeError(`${label} must contain unique product pairs`);
+    if (previous !== null && compareStrings(previous, key) >= 0) {
+      throw new TypeError(`${label} must use deterministic canonical order`);
+    }
+    seen.add(key);
+    previous = key;
+  }
+}
+
 function validateRule(value, index) {
   const label = `rules[${index}]`;
   assertObject(value, label);
   assertExactKeys(value, new Set([
     'rule_id',
     'pair',
+    'product_pairs',
     'applicability',
     'severity',
+    'dispense_action',
     'mechanism',
     'management',
     'evidence',
@@ -210,6 +254,10 @@ function validateRule(value, index) {
   }
   validateApplicability(value.applicability, `${label}.applicability`);
   requireString(value.severity, `${label}.severity`);
+  if (value.dispense_action !== null
+    && !DISPENSE_ACTIONS.has(value.dispense_action)) {
+    throw new TypeError(`${label}.dispense_action is invalid`);
+  }
   if (value.mechanism !== null) requireString(value.mechanism, `${label}.mechanism`);
   if (value.management !== null) requireString(value.management, `${label}.management`);
   if (!Array.isArray(value.evidence) || value.evidence.length === 0) {
@@ -226,6 +274,10 @@ function validateRule(value, index) {
   assertStringArray(value.review.source_versions, `${label}.review.source_versions`);
 
   if (value.review.status === 'clinician_reviewed') {
+    validateProductPairs(value.product_pairs, `${label}.product_pairs`);
+    if (!DISPENSE_ACTIONS.has(value.dispense_action)) {
+      throw new TypeError(`${label}.dispense_action is required for clinician-reviewed rules`);
+    }
     requireString(value.review.reviewer_id, `${label}.review.reviewer_id`);
     if (!isIsoDate(value.review.reviewed_at)) {
       throw new TypeError(`${label}.review.reviewed_at must be an ISO date`);
@@ -234,6 +286,9 @@ function validateRule(value, index) {
       throw new TypeError(`${label}.review.source_versions must contain at least one item`);
     }
   } else {
+    if (value.dispense_action !== null) {
+      throw new TypeError(`${label} review_candidate dispense_action must be null`);
+    }
     if (value.severity !== 'unknown') {
       throw new TypeError(`${label} review_candidate severity must be unknown`);
     }
@@ -333,6 +388,26 @@ function mappingIssue(record, ingredient, ingredientIndex, status) {
   return issue;
 }
 
+function hasReviewedRuntimeSubject(record, ingredient) {
+  const presentation = record.product.presentation;
+  const subject = ingredient?.runtime_subject;
+  if (presentation?.status !== 'reviewed_override' || !isObject(subject)) return false;
+  for (const field of ['drug', 'route', 'formulation']) {
+    if (typeof subject[field] !== 'string' || subject[field].trim() === '') return false;
+  }
+  if (subject.route !== presentation.route || subject.formulation !== presentation.formulation) {
+    return false;
+  }
+  return ingredient.runtime_drug === undefined || subject.drug === ingredient.runtime_drug;
+}
+
+function presentationIssueStatus(record) {
+  const status = record.product.presentation?.status;
+  if (status === 'stale') return 'stale_presentation';
+  if (status === 'operational_error') return 'operational_error';
+  return 'unmapped_presentation';
+}
+
 function duplicateIngredients(products) {
   const productOccurrences = new Map();
   for (const product of normalizeProducts(products)) {
@@ -370,6 +445,12 @@ function combineCoverage(values) {
   if (values.includes('unknown')) return 'unknown';
   if (values.includes('partial')) return 'partial';
   return 'complete';
+}
+
+function checkedPairMatchesRule(checkedPair, rule) {
+  if (!Array.isArray(rule.product_pairs)) return true;
+  const allowed = new Set(rule.product_pairs.map(productPairKey));
+  return checkedPair.product_pairs.some((pair) => allowed.has(productPairKey(pair)));
 }
 
 function validateReviewCandidate(value, index) {
@@ -425,6 +506,9 @@ export function checkResolvedProducts({
   let mappedIngredientCount = 0;
   let unresolvedIngredientCount = 0;
   let mappingOperationalError = false;
+  let mappedPresentationCount = 0;
+  let unresolvedPresentationCount = 0;
+  let presentationOperationalError = false;
 
   for (let inputIndex = 0; inputIndex < resolvedInputs.length; inputIndex += 1) {
     const record = resolvedInputs[inputIndex];
@@ -440,6 +524,14 @@ export function checkResolvedProducts({
       throw new TypeError(`resolvedInputs[${inputIndex}].product.ingredients must be an array`);
     }
     resolved.push(structuredClone(record));
+    if (record.product.presentation?.status === 'reviewed_override') {
+      mappedPresentationCount += 1;
+    } else {
+      unresolvedPresentationCount += 1;
+      if (record.product.presentation?.status === 'operational_error') {
+        presentationOperationalError = true;
+      }
+    }
     const mappedIngredients = [];
     for (let ingredientIndex = 0; ingredientIndex < record.product.ingredients.length; ingredientIndex += 1) {
       const ingredient = record.product.ingredients[ingredientIndex];
@@ -453,8 +545,17 @@ export function checkResolvedProducts({
         }
       }
       if (id !== null) {
-        mappedIngredients.push({ ingredient_id: id });
         mappedIngredientCount += 1;
+        if (hasReviewedRuntimeSubject(record, ingredient)) {
+          mappedIngredients.push({ ingredient_id: id });
+        } else {
+          unresolved.push(mappingIssue(
+            record,
+            ingredient,
+            ingredientIndex,
+            presentationIssueStatus(record),
+          ));
+        }
       } else {
         const issueStatus = status === 'operational_error' ? status : (status || 'unmapped');
         unresolvedIngredientCount += 1;
@@ -469,11 +570,13 @@ export function checkResolvedProducts({
   }
 
   const checked_pairs = generateCrossDrugPairs(mappedProducts);
-  const checkedKeys = new Set(checked_pairs.map((entry) => entry.pair_key));
+  const checkedByKey = new Map(checked_pairs.map((entry) => [entry.pair_key, entry]));
+  const checkedKeys = new Set(checkedByKey.keys());
   const reviewed_findings = [];
   const packCandidates = [];
   for (const value of rulePack.rules) {
-    if (!checkedKeys.has(pairKey(value.pair))) continue;
+    const checkedPair = checkedByKey.get(pairKey(value.pair));
+    if (!checkedPair || !checkedPairMatchesRule(checkedPair, value)) continue;
     if (value.review.status === 'clinician_reviewed') reviewed_findings.push(structuredClone(value));
     else packCandidates.push(structuredClone(value));
   }
@@ -496,12 +599,23 @@ export function checkResolvedProducts({
     unresolvedIngredientCount,
     mappingOperationalError,
   );
+  const presentation_mapping = coverageIngredientMapping(
+    mappedPresentationCount,
+    unresolvedPresentationCount,
+    presentationOperationalError,
+  );
   const interaction_knowledge = rulePack.declared_coverage;
   const coverage = {
     product_resolution,
     ingredient_mapping,
+    presentation_mapping,
     interaction_knowledge,
-    overall: combineCoverage([product_resolution, ingredient_mapping, interaction_knowledge]),
+    overall: combineCoverage([
+      product_resolution,
+      ingredient_mapping,
+      presentation_mapping,
+      interaction_knowledge,
+    ]),
   };
 
   return {

@@ -8,6 +8,10 @@ import {
   validateIngredientMappingManifest,
   validateProductPresentationManifest,
 } from '../src/lib/interaction-mapping.mjs';
+import {
+  checkResolvedProducts,
+  validateRulePack,
+} from '../src/lib/interaction-checker.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -287,6 +291,17 @@ const approvedProducts = [
   },
 ];
 
+function approvedRecords() {
+  return approvedProducts.map((entry) => ({
+    input: { brand_name: entry.product.brand_name },
+    status: 'resolved',
+    product: {
+      ...structuredClone(entry.product),
+      product_id: entry.product_id,
+    },
+  }));
+}
+
 test('committed product presentation mappings contain only the five approved PMBJP rows', () => {
   const presentationManifest = readManifest('product-presentation-overrides.json');
   const ingredientManifest = readManifest('ingredient-mapping-overrides.json');
@@ -320,14 +335,7 @@ test('committed product presentation mappings contain only the five approved PMB
     })),
   );
 
-  const records = approvedProducts.map((entry) => ({
-    input: { brand_name: entry.product.brand_name },
-    status: 'resolved',
-    product: {
-      ...structuredClone(entry.product),
-      product_id: entry.product_id,
-    },
-  }));
+  const records = approvedRecords();
   const mappedInternal = mapResolvedProducts({
     records,
     ingredientManifest,
@@ -365,4 +373,102 @@ test('committed product presentation mappings contain only the five approved PMB
     record.product.presentation.status === 'unmapped'
     && record.product.ingredients[0].runtime_subject === null
   )));
+});
+
+test('the internal warfarin-amiodarone rule fires only for the six approved PMBJP product pairs', () => {
+  const ingredientManifest = readManifest('ingredient-mapping-overrides.json');
+  const presentationManifest = readManifest('product-presentation-overrides.json');
+  const internalPack = readManifest('interaction-rules.internal-evaluation.json');
+  const productionPack = readManifest('interaction-rules.json');
+  assert.equal(validateRulePack(internalPack), true);
+  assert.equal(validateRulePack(productionPack), true);
+  assert.equal(internalPack.profile, 'internal-evaluation');
+  assert.equal(internalPack.declared_coverage, 'partial');
+  assert.equal(internalPack.rules.length, 1);
+  assert.deepEqual(productionPack.rules, []);
+  assert.equal(productionPack.declared_coverage, 'unknown');
+
+  const approvedRule = internalPack.rules[0];
+  assert.equal(approvedRule.severity, 'major');
+  assert.equal(approvedRule.dispense_action, 'confirm_and_monitor');
+  assert.equal(approvedRule.review.reviewer_id, 'clinician:subas');
+  assert.equal(approvedRule.product_pairs.length, 6);
+  assert.match(approvedRule.management, /prescriber or anticoagulation service/i);
+  assert.match(approvedRule.management, /PT\/INR monitoring/i);
+  assert.match(approvedRule.management, /Do not independently stop either established medicine/i);
+  assert.match(approvedRule.management, /weeks to months/i);
+  assert.match(approvedRule.management, /bleeding or bruising/i);
+  assert.doesNotMatch(JSON.stringify(approvedRule), /Child-Pugh|hepatic impairment/i);
+  assert.ok(approvedRule.evidence.every((item) => item.jurisdiction === 'US'));
+
+  const mappedInternal = mapResolvedProducts({
+    records: approvedRecords(),
+    ingredientManifest,
+    presentationManifest,
+    profile: 'internal-evaluation',
+  });
+  const amiodarone = mappedInternal.filter((record) => (
+    record.product.ingredients[0].runtime_subject.drug === 'amiodarone'
+  ));
+  const warfarin = mappedInternal.filter((record) => (
+    record.product.ingredients[0].runtime_subject.drug === 'warfarin'
+  ));
+  const observedProductPairs = [];
+
+  for (const first of amiodarone) {
+    for (const second of warfarin) {
+      const result = checkResolvedProducts({
+        resolvedInputs: [first, second],
+        rulePack: internalPack,
+      });
+      assert.equal(result.reviewed_findings.length, 1);
+      assert.equal(result.reviewed_findings[0].rule_id, 'warfarin__amiodarone');
+      assert.equal(result.reviewed_findings[0].dispense_action, 'confirm_and_monitor');
+      assert.equal(result.checked_pairs.length, 1);
+      assert.equal(result.unresolved_inputs.length, 0);
+      assert.equal(result.coverage.presentation_mapping, 'complete');
+      observedProductPairs.push(result.checked_pairs[0].product_pairs[0]);
+
+      const reversed = checkResolvedProducts({
+        resolvedInputs: [second, first],
+        rulePack: internalPack,
+      });
+      assert.deepEqual(reversed.checked_pairs, result.checked_pairs);
+      assert.deepEqual(reversed.reviewed_findings, result.reviewed_findings);
+    }
+  }
+  assert.deepEqual(observedProductPairs.sort(), approvedRule.product_pairs);
+
+  const unapprovedProduct = structuredClone(warfarin[0]);
+  unapprovedProduct.product.product_id = 'sha256:unapproved-warfarin-product';
+  const unapproved = checkResolvedProducts({
+    resolvedInputs: [amiodarone[0], unapprovedProduct],
+    rulePack: internalPack,
+  });
+  assert.equal(unapproved.checked_pairs.length, 1);
+  assert.deepEqual(unapproved.reviewed_findings, []);
+
+  const stalePresentation = structuredClone(amiodarone[0]);
+  stalePresentation.product.presentation.status = 'stale';
+  stalePresentation.product.ingredients[0].runtime_subject = null;
+  const stale = checkResolvedProducts({
+    resolvedInputs: [stalePresentation, warfarin[0]],
+    rulePack: internalPack,
+  });
+  assert.deepEqual(stale.checked_pairs, []);
+  assert.deepEqual(stale.reviewed_findings, []);
+  assert.equal(stale.unresolved_inputs[0].status, 'stale_presentation');
+
+  const mappedProduction = mapResolvedProducts({
+    records: approvedRecords(),
+    ingredientManifest,
+    presentationManifest,
+    profile: 'production-open',
+  });
+  const productionAttempt = checkResolvedProducts({
+    resolvedInputs: [mappedProduction[0], mappedProduction[2]],
+    rulePack: internalPack,
+  });
+  assert.deepEqual(productionAttempt.checked_pairs, []);
+  assert.deepEqual(productionAttempt.reviewed_findings, []);
 });

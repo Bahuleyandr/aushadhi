@@ -166,8 +166,8 @@ have reviewed mappings:
 ```
 
 The ordinary read-only interaction CLI loads the two committed override files
-by default and reports a `mapping_summary`. Test or review fixtures can use
-explicit files:
+and the rule pack for the explicit release profile by default, then reports a
+`mapping_summary`. Test or review fixtures can use explicit files:
 
 ```powershell
 node src/cli/interactions.mjs `
@@ -179,4 +179,9 @@ node src/cli/interactions.mjs `
 ```
 
 The committed production rule pack remains empty and declares unknown
-coverage. Reviewed mapping completeness does not promote a clinical rule.
+coverage. The internal-evaluation pack contains the clinician-approved
+warfarin-amiodarone rule for six exact PMBJP oral-tablet product pairs. A
+reviewed ingredient identity without its exact reviewed presentation is
+excluded from clinical pair generation, and a different product carrying the
+same ingredient does not inherit the approval. Reviewed mapping completeness
+does not otherwise promote a clinical rule.
