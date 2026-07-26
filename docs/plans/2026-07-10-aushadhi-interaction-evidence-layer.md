@@ -174,13 +174,65 @@ when clinician review metadata is absent.
 
 ```json
 {
+  "clinical_interaction_status": "reviewed_interaction_found|review_candidate_found|no_reviewed_interaction_found|not_evaluated",
+  "outcome_code": "reviewed_action_required|manual_review_required|input_gaps|therapeutic_duplication_only|no_cross_drug_pair|no_reviewed_finding",
+  "checks_performed": {
+    "profile": "production-open|internal-evaluation",
+    "rule_pack_id": "string",
+    "rule_pack_version": "string",
+    "product_resolution": {
+      "status": "complete|partial|unknown",
+      "input_count": 0,
+      "resolved_count": 0
+    },
+    "ingredient_identity_mapping": {
+      "status": "complete|partial|unknown",
+      "mapped_count": 0,
+      "unresolved_count": 0
+    },
+    "product_presentation_mapping": {
+      "status": "complete|partial|unknown",
+      "mapped_count": 0,
+      "unresolved_count": 0
+    },
+    "therapeutic_duplication": {
+      "status": "performed",
+      "finding_count": 0
+    },
+    "cross_drug_pair_generation": {
+      "status": "performed",
+      "checked_pair_count": 0
+    },
+    "reviewed_rule_matching": {
+      "status": "performed|not_performed",
+      "reviewed_finding_count": 0,
+      "review_candidate_count": 0
+    },
+    "checked_pair_count": 0
+  },
+  "input_gaps": [],
+  "not_evaluated": [],
+  "capability_limitations": [],
   "resolved_inputs": [],
   "reviewed_findings": [],
-  "review_candidates": [],
+  "review_candidates": [
+    {
+      "candidate_id": "string",
+      "pair": ["ingredient-a", "ingredient-b"],
+      "pair_key": "ingredient-a__ingredient-b",
+      "evidence": [],
+      "review_status": "review_candidate",
+      "severity": "unknown",
+      "mechanism": null,
+      "management": null,
+      "inference_class": "source_grounded_review_candidate"
+    }
+  ],
   "unresolved_inputs": [],
   "coverage": {
     "product_resolution": "complete|partial|unknown",
     "ingredient_mapping": "complete|partial|unknown",
+    "presentation_mapping": "complete|partial|unknown",
     "interaction_knowledge": "complete|partial|unknown",
     "overall": "complete|partial|unknown"
   },
@@ -191,6 +243,12 @@ when clinician review metadata is absent.
 `interaction_knowledge: complete` means only that every generated pair was
 checked against the declared rule-pack version. It does not claim universal
 clinical completeness and does not alter the disclaimer.
+
+`review_candidates` are deliberately non-clinical DTOs: they may carry
+source-grounded evidence, but their severity remains `unknown` and mechanism
+and management remain null until a clinician-reviewed promotion compiles them
+into the runtime rule pack. `not_evaluated` and `input_gaps` prevent absence of
+a finding from being mistaken for a completed check.
 
 ---
 

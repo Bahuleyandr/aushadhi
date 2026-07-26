@@ -2,7 +2,7 @@
 
 Machine evidence: **24** records across **19** rules.
 
-- JSONL SHA-256: `0daf3e31f9fbb296266f47662f0351e08c2b0aa74af86e46a1fec443e02c49b6`
+- JSONL SHA-256: `7848b2958c21052ba05fd7fd357bba512bb5251fa481b95853fe48f21db4854c`
 - Schema validation: `validateDraftRules` passes; evidence and member
   allowlists remain frozen and every rule remains `promotion_eligible:false`.
 
@@ -25,7 +25,7 @@ Excluded or rights-unclear sources are not linked, quoted, summarized, or repres
 
 - runtime_enabled: `false`
 - machine_evidence: `2`
-- evidence `dailymed-tegretol-8d409411-v37-contraception`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`8d409411-aa9f-4f3a-a52c-fbcb0c3ec053@37`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%228d409411-aa9f-4f3a-a52c-fbcb0c3ec053%22&limit=100
+- evidence `dailymed-tegretol-8d409411-v38-contraception`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`8d409411-aa9f-4f3a-a52c-fbcb0c3ec053@38`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%228d409411-aa9f-4f3a-a52c-fbcb0c3ec053%22&limit=100
 - evidence `openfda-nexplanon-487f8a62-v13-antiepileptics`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`487f8a62-e142-457c-97cc-2e398fde7594@13`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%22487f8a62-e142-457c-97cc-2e398fde7594%22&limit=100
 
 ## phenytoin__etonogestrel_implant
@@ -88,7 +88,7 @@ Excluded or rights-unclear sources are not linked, quoted, summarized, or repres
 - runtime_enabled: `false`
 - machine_evidence: `2`
 - evidence `dailymed-verapamil-e36e485f-v6-carbamazepine`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`e36e485f-fbed-4e30-9a63-984931f2e54e@6`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%22e36e485f-fbed-4e30-9a63-984931f2e54e%22&limit=100
-- evidence `dailymed-tegretol-8d409411-v37-verapamil`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`8d409411-aa9f-4f3a-a52c-fbcb0c3ec053@37`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%228d409411-aa9f-4f3a-a52c-fbcb0c3ec053%22&limit=100
+- evidence `dailymed-tegretol-8d409411-v38-verapamil`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`8d409411-aa9f-4f3a-a52c-fbcb0c3ec053@38`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%228d409411-aa9f-4f3a-a52c-fbcb0c3ec053%22&limit=100
 
 ## carbamazepine__systemic_corticosteroid
 
@@ -101,7 +101,7 @@ Excluded or rights-unclear sources are not linked, quoted, summarized, or repres
 
 - runtime_enabled: `false`
 - machine_evidence: `2`
-- evidence `dailymed-tegretol-8d409411-v37-negative-sulfonylurea-boundary`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`8d409411-aa9f-4f3a-a52c-fbcb0c3ec053@37`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%228d409411-aa9f-4f3a-a52c-fbcb0c3ec053%22&limit=100
+- evidence `dailymed-tegretol-8d409411-v38-negative-sulfonylurea-boundary`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`8d409411-aa9f-4f3a-a52c-fbcb0c3ec053@38`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%228d409411-aa9f-4f3a-a52c-fbcb0c3ec053%22&limit=100
 - evidence `dailymed-glimepiride-fc9d8495-v2-negative-carbamazepine-boundary`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`fc9d8495-184c-3af1-e053-6394a90a5e29@2`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%22fc9d8495-184c-3af1-e053-6394a90a5e29%22&limit=100
 
 ## carbamazepine__antiretroviral
@@ -115,7 +115,7 @@ Excluded or rights-unclear sources are not linked, quoted, summarized, or repres
 
 - runtime_enabled: `false`
 - machine_evidence: `1`
-- evidence `dailymed-tegretol-8d409411-v37-valproate`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`8d409411-aa9f-4f3a-a52c-fbcb0c3ec053@37`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%228d409411-aa9f-4f3a-a52c-fbcb0c3ec053%22&limit=100
+- evidence `dailymed-tegretol-8d409411-v38-valproate`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`8d409411-aa9f-4f3a-a52c-fbcb0c3ec053@38`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%228d409411-aa9f-4f3a-a52c-fbcb0c3ec053%22&limit=100
 
 ## carbamazepine__lamotrigine
 

@@ -5,7 +5,7 @@
 Machine-generated from enriched evidence. Citation status and clinician-review state are reported exactly as stored in the JSONL.
 
 - Section: `D`
-- JSONL SHA-256: `ef4b282bb497f2981c0f7f54f6e6a6f3884b6167a7da068aaffbcc6248c6d6e6`
+- JSONL SHA-256: `d4f40c39c950625db2a28f8985ec7138dee7a93542565b8bb86d5fa9de2d6b94`
 - Commit: `worktree-uncommitted`
 - citation_status: `{"machine_confirmed_govuk_ogl_bound_pending_clinician":3,"machine_confirmed_openfda_reconciled_pending_clinician":13}`
 
@@ -90,11 +90,11 @@ Machine-generated from enriched evidence. Citation status and clinician-review s
 - source: openFDA drug-label record (company-submitted SPL); DailyMed reference locator — citalopram hydrobromide | regulator="FDA (United States)" | product="citalopram hydrobromide" | section: "Warnings and Precautions"
 - url: https://api.fda.gov/drug/label.json?search=set_id%3A%22fd761647-e16b-45b3-a4bc-364de0ed7015%22&limit=100 (host api.fda.gov; setid fd761647-e16b-45b3-a4bc-364de0ed7015)
 - policy: `openfda-labels` / `interaction-evidence` | licence: `CC0-1.0`
-- document: `fd761647-e16b-45b3-a4bc-364de0ed7015` @ `9` | retrieved: 2026-07-23 | jurisdiction: `US`
-- date: 2023-09-07 (`openFDA SPL effective_time`) | accessed: 2026-07-23
+- document: `fd761647-e16b-45b3-a4bc-364de0ed7015` @ `9` | retrieved: 2026-07-26 | jurisdiction: `US`
+- date: 2023-09-07 (`openFDA SPL effective_time`) | accessed: 2026-07-26
 - reference_url: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=fd761647-e16b-45b3-a4bc-364de0ed7015
-- provenance: `{"set_id":"fd761647-e16b-45b3-a4bc-364de0ed7015","version":"9","effective_time":"20230907","payload_sha256":"c0b4d8007c86d870b128b056fc7b6596093f37c51808891db3b7a54e4ace32a0","payload_canonicalization":"sorted-json-keys-v1","normalization_version":"openfda-spl-text-v1","source_paths":["warnings[0]","warnings[0]","warnings[0]"]}`
-- currentness: `checked_current_openfda` @2026-07-23
+- provenance: `{"set_id":"fd761647-e16b-45b3-a4bc-364de0ed7015","version":"9","effective_time":"20230907","payload_sha256":"05e4f6cf45e451ae594a0ea7ab0ff4c714a3fcc7a484b17174027c2f46e6449b","payload_canonicalization":"sorted-json-keys-v1","normalization_version":"openfda-spl-text-v1","source_paths":["warnings[0]","warnings[0]","warnings[0]"]}`
+- currentness: `checked_current_openfda` @2026-07-26
 - quote_integrity: `multi_fragment_verbatim`
 - proposition: Citalopram causes dose-dependent QTc prolongation; the retained label limits dosing to 40 mg/day generally and 20 mg/day for CYP2C19 poor metabolizers or patients taking cimetidine or another CYP2C19 inhibitor.
 - interaction_exists: `true`

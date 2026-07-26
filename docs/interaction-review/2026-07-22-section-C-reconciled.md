@@ -5,12 +5,12 @@ Engineering-reconciled local worktree packet. Every rule remains
 
 - Source slice: `batch-01-v2/sections/C.verified.jsonl`
 - Worktree state: `worktree-uncommitted`
-- JSONL SHA-256: `9fa5a18bb0f303c0a2fa876daeade2904eb88929f9710d9457246944c64e72f6`
+- JSONL SHA-256: `d5ef02f6b4d2e3295bc138bedaede16d69b6cfb44e0f01d6eb09f7a2c609ffef`
 - Rules: 21
 - Runtime-enabled: 0
 - Diagnostic-only: 21
 - Evidence records: 24
-- Exact hashed fragments: 34
+- Exact hashed fragments: 35
 - Current official sources fetched: 18
 - Restricted machine-evidence records: 0
 
@@ -22,6 +22,10 @@ Engineering-reconciled local worktree packet. Every rule remains
   source path; DailyMed remains a reference locator only. The dextromethorphan
   fragment was corrected from the legacy collapsed `useif` text to the exact
   current openFDA wording.
+- The 2026-07-26 live recheck advanced the gabapentin source from SPL version
+  3 to 4. Its current label now directly supports the serious respiratory
+  depression, monitoring, and low-starting-dose statements retained in the
+  draft; the rule remains runtime-disabled and clinician-unapproved.
 - Every rule is now jurisdiction-bounded to `US`, the only jurisdiction
   supported by the retained machine evidence. No UK or India scope is inferred
   from a US label.

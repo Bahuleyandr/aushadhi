@@ -491,6 +491,105 @@ function findingSortKey(value) {
   return value.rule_id ?? value.candidate_id ?? value.pair_key ?? pairKey(value.pair);
 }
 
+function projectReviewCandidate(value) {
+  const pair = value.pair === undefined
+    ? undefined
+    : normalizePairArguments(value.pair);
+  const pair_key = value.pair_key ?? pairKey(pair);
+  return {
+    candidate_id: value.candidate_id ?? value.rule_id ?? `candidate:${pair_key}`,
+    ...(pair === undefined ? {} : { pair }),
+    pair_key,
+    ...(Array.isArray(value.product_pairs)
+      ? { product_pairs: structuredClone(value.product_pairs) }
+      : {}),
+    evidence: structuredClone(value.evidence),
+    review_status: 'review_candidate',
+    severity: 'unknown',
+    mechanism: null,
+    management: null,
+    inference_class: value.inference_class ?? 'source_grounded_review_candidate',
+  };
+}
+
+function outcomeFor({
+  reviewedFindings,
+  reviewCandidates,
+  unresolvedInputs,
+  duplicateIngredients: duplicates,
+  checkedPairs,
+}) {
+  if (reviewedFindings.length > 0) return 'reviewed_action_required';
+  if (reviewCandidates.length > 0) return 'manual_review_required';
+  if (unresolvedInputs.length > 0) return 'input_gaps';
+  if (duplicates.length > 0 && checkedPairs.length === 0) {
+    return 'therapeutic_duplication_only';
+  }
+  if (checkedPairs.length === 0) return 'no_cross_drug_pair';
+  return 'no_reviewed_finding';
+}
+
+function clinicalStatusFor({
+  reviewedFindings,
+  reviewCandidates,
+  checkedPairs,
+}) {
+  if (reviewedFindings.length > 0) return 'reviewed_interaction_found';
+  if (reviewCandidates.length > 0) return 'review_candidate_found';
+  if (checkedPairs.length === 0) return 'not_evaluated';
+  return 'no_reviewed_interaction_found';
+}
+
+function buildNotEvaluated({
+  unresolvedInputs,
+  checkedPairs,
+  rulePack,
+}) {
+  const entries = unresolvedInputs.map((input, index) => ({
+    code: 'INPUT_GAP',
+    input_gap_index: index,
+    status: input.status ?? 'unknown',
+    ...(input.input === undefined ? {} : { input: structuredClone(input.input) }),
+    ...(input.product_id === undefined ? {} : { product_id: input.product_id }),
+  }));
+  if (checkedPairs.length === 0) {
+    entries.push({
+      code: 'NO_CROSS_DRUG_PAIR_EVALUATED',
+      reason: unresolvedInputs.length > 0
+        ? 'Input or mapping gaps prevented generation of a complete cross-drug pair.'
+        : 'The supplied products did not produce a cross-drug ingredient pair.',
+    });
+  }
+  if (rulePack.declared_coverage !== 'complete') {
+    entries.push({
+      code: 'RULE_PACK_COVERAGE_INCOMPLETE',
+      declared_coverage: rulePack.declared_coverage,
+      reason: 'Pairs outside the reviewed rule pack are not evaluated as complete knowledge.',
+    });
+  }
+  return entries;
+}
+
+function buildCapabilityLimitations(rulePack) {
+  const limitations = [{
+    code: 'NO_LISTED_INTERACTION_IS_NOT_SAFETY',
+    message: DISCLAIMER,
+  }];
+  if (rulePack.rules.some((rule) => Array.isArray(rule.product_pairs))) {
+    limitations.push({
+      code: 'EXACT_REVIEWED_PRODUCT_SCOPE_ONLY',
+      message: 'Reviewed findings apply only to the exact approved product-presentation pairs.',
+    });
+  }
+  if (rulePack.declared_coverage !== 'complete') {
+    limitations.push({
+      code: 'RULE_PACK_NOT_UNIVERSALLY_COMPLETE',
+      message: `The loaded rule pack declares ${rulePack.declared_coverage} interaction coverage.`,
+    });
+  }
+  return limitations;
+}
+
 export function checkResolvedProducts({
   resolvedInputs,
   rulePack,
@@ -590,7 +689,9 @@ export function checkResolvedProducts({
     ...suppliedCandidates
       .filter(({ key }) => checkedKeys.has(key))
       .map(({ value }) => structuredClone(value)),
-  ].sort((left, right) => compareStrings(findingSortKey(left), findingSortKey(right)));
+  ]
+    .map(projectReviewCandidate)
+    .sort((left, right) => compareStrings(findingSortKey(left), findingSortKey(right)));
   reviewed_findings.sort((left, right) => compareStrings(findingSortKey(left), findingSortKey(right)));
 
   const product_resolution = coverageProductResolution(resolvedInputs, resolved.length);
@@ -617,13 +718,72 @@ export function checkResolvedProducts({
       interaction_knowledge,
     ]),
   };
+  const duplicate_ingredients = duplicateIngredients(mappedProducts);
+  const input_gaps = structuredClone(unresolved);
+  const checks_performed = {
+    profile: rulePack.profile,
+    rule_pack_id: rulePack.pack_id,
+    rule_pack_version: rulePack.pack_version,
+    product_resolution: {
+      status: product_resolution,
+      input_count: resolvedInputs.length,
+      resolved_count: resolved.length,
+    },
+    ingredient_identity_mapping: {
+      status: ingredient_mapping,
+      mapped_count: mappedIngredientCount,
+      unresolved_count: unresolvedIngredientCount,
+    },
+    product_presentation_mapping: {
+      status: presentation_mapping,
+      mapped_count: mappedPresentationCount,
+      unresolved_count: unresolvedPresentationCount,
+    },
+    therapeutic_duplication: {
+      status: 'performed',
+      finding_count: duplicate_ingredients.length,
+    },
+    cross_drug_pair_generation: {
+      status: 'performed',
+      checked_pair_count: checked_pairs.length,
+    },
+    reviewed_rule_matching: {
+      status: checked_pairs.length > 0 ? 'performed' : 'not_performed',
+      reviewed_finding_count: reviewed_findings.length,
+      review_candidate_count: review_candidates.length,
+    },
+    checked_pair_count: checked_pairs.length,
+  };
+  const not_evaluated = buildNotEvaluated({
+    unresolvedInputs: unresolved,
+    checkedPairs: checked_pairs,
+    rulePack,
+  });
+  const outcome_code = outcomeFor({
+    reviewedFindings: reviewed_findings,
+    reviewCandidates: review_candidates,
+    unresolvedInputs: unresolved,
+    duplicateIngredients: duplicate_ingredients,
+    checkedPairs: checked_pairs,
+  });
+  const clinical_interaction_status = clinicalStatusFor({
+    reviewedFindings: reviewed_findings,
+    reviewCandidates: review_candidates,
+    checkedPairs: checked_pairs,
+  });
 
   return {
+    clinical_interaction_status,
+    outcome_code,
+    checks_performed,
+    input_gaps,
+    not_evaluated,
+    capability_limitations: buildCapabilityLimitations(rulePack),
     resolved_inputs: resolved,
     reviewed_findings,
     review_candidates,
     unresolved_inputs: unresolved,
-    duplicate_ingredients: duplicateIngredients(mappedProducts),
+    duplicate_ingredients,
     checked_pairs,
     coverage,
     disclaimer: DISCLAIMER,

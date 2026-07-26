@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "profile": "internal-evaluation",
+  "output_pack": {
+    "schema_version": "1.0.0",
+    "pack_id": "aushadhi-internal-interactions",
+    "pack_version": "0.1.0",
+    "licence": "CC-BY-4.0",
+    "source_ids": [
+      "aushadhi-open-clinician-rules"
+    ],
+    "licence_notices": {
+      "aushadhi-open-clinician-rules": {
+        "attribution": "Aushadhi contributors",
+        "licence_notice": "Creative Commons Attribution 4.0 International",
+        "licence_id": "CC-BY-4.0",
+        "licence_url": "https://creativecommons.org/licenses/by/4.0/legalcode",
+        "source_url": "https://github.com/Bahuleyandr/aushadhi",
+        "changes": "Clinician-reviewed internal-evaluation interaction rule deterministically promoted from the attested v2 draft and reviewed mappings."
+      }
+    },
+    "declared_coverage": "partial"
+  },
+  "promotions": [
+    {
+      "rule_id": "warfarin__amiodarone",
+      "draft_rule_sha256": "da731112748d90f672439d290b079f7ee2a90bb00c8b05c67110ec12509f485d",
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-26",
+        "approval_text": "I approve the warfarin-amiodarone clinical rule for internal evaluation only, limited to the five reviewed PMBJP oral-tablet assertions (six cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service warfarin dose review and PT/INR monitoring; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling and persistence for weeks to months after amiodarone discontinuation; remove the unsupported Child-Pugh B modifier; treat the evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas",
+        "source_versions": [
+          "openfda-labels:f49d011f-5ca6-4f75-ba16-2099fe42f5aa:2",
+          "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      },
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "expected_product_pair_count": 6,
+        "sides": [
+          {
+            "draft_role": "object",
+            "ingredient_mapping_id": "ingredient:warfarin:rxnorm-11289",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:2141:oral-tablet",
+              "presentation:pmbjp:2142:oral-tablet",
+              "presentation:pmbjp:452:oral-tablet"
+            ]
+          },
+          {
+            "draft_role": "perpetrator",
+            "ingredient_mapping_id": "ingredient:amiodarone:rxnorm-703",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:1502:oral-tablet",
+              "presentation:pmbjp:430:oral-tablet"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

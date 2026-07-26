@@ -5,7 +5,7 @@ Engineering-reconciled from 15 conceptual source rows into 24 deterministic draf
 The packet contains 33 policy-bound evidence records with 67 exact source-path-bound fragments across 22 uniquely selected openFDA SPL records. 30 records are typed as `interaction-evidence`; three product/formulation-specific no-effect records are typed as `interaction-counterevidence` and cannot satisfy an interaction-action gate. All evidence remains pending clinician review. These rows are draft review material, not the shipped runtime pack.
 
 - Source JSONL: `docs/interaction-review/batch-01-v2/sections/I.verified.jsonl`
-- Source JSONL SHA-256: `56ac5366d655442643d7cf2b9c7ac34d19fc5dc9b7a96a3318093bf7fca7ca71`
+- Source JSONL SHA-256: `2d4bd7d469295c18abb8b812f463c1dcf0b644956bddcc32e278e24a26dbb408`
 - Input conceptual rows: 15
 - Reconciled rows: 24
 - Pair matcher executable: 21
@@ -25,6 +25,10 @@ The packet contains 33 policy-bound evidence records with 67 exact source-path-b
 3. **No-effect observations are counterevidence, not positive interactions.** TIROSINT-SOL with omeprazole and PHYRAGO with omeprazole/famotidine now use `source_policy_use:"interaction-counterevidence"`, `supports.interaction_exists:false`, the closed `no_clinically_meaningful_effect` effect type, and no label action.
 4. **TOLSURA has its own positive branch.** `itraconazole_tolsura__acid_reducer` preserves the exact current label statement that acid neutralizers, H2-receptor antagonists, and PPIs increase systemic itraconazole exposure from TOLSURA, with adverse-reaction monitoring and possible prescriber-directed dose reduction. It is diagnostic-only because product identity is not executable.
 5. **SPORANOX and TOLSURA are no longer mixed in one evidence array.** The conventional-SPORANOX row retains its reduced-absorption, full-meal, neutralizer-spacing, and acidic-beverage direction. The TOLSURA evidence moved to its separate increased-exposure row.
+   The 2026-07-26 live recheck confirmed all four conventional-SPORANOX
+   fragments at the same SPL version/effective time; only the canonical
+   openFDA payload bytes changed, so its provenance hash and retrieval date
+   were refreshed.
 6. **Ketoconazole instructions remain subclass-specific.** The exact acidic-beverage instruction remains attached to acid-reducer co-treatment, while the 1-hour-before/2-hours-after interval remains limited to acid-neutralizing medicines. No clock interval is inferred for H2 antagonists or PPIs.
 7. **Applicability indication shape is closed.** Every non-null `applicability.indication` is now a non-empty string array; no Section-I row retains the former scalar form.
 8. **Antibiotic dose forms are concrete.** The ciprofloxacin, levofloxacin, moxifloxacin, and doxycycline selectors now use `immediate_release_tablet` / `delayed_release_tablet` where applicable, rather than abstract release-profile values that remain unresolved at runtime.

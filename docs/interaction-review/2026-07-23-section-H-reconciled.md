@@ -6,7 +6,7 @@ carbamazepine, and St John's Wort rows. Every row remains
 `promotion_eligible:false`.
 
 - Source: `docs/interaction-review/batch-01-v2/sections/H.verified.jsonl`
-- JSONL SHA-256: `0daf3e31f9fbb296266f47662f0351e08c2b0aa74af86e46a1fec443e02c49b6`
+- JSONL SHA-256: `7848b2958c21052ba05fd7fd357bba512bb5251fa481b95853fe48f21db4854c`
 - Inventory: 19 rules, 24 evidence records, 54 exact hashed fragments.
 - Draft runtime status: 0 enabled rows and 19 diagnostic-only rows.
 - Pair matcher: 9 executable selectors and 10 deliberately non-executable
@@ -39,8 +39,12 @@ carbamazepine, and St John's Wort rows. Every row remains
 
 ## Frozen clinical and evidence boundaries
 
-- Evidence records, exact fragments, payload provenance, source jurisdictions,
-  member allowlists, severities, and management claims were not changed.
+- The 2026-07-26 live recheck advanced the retained TEGRETOL source from SPL
+  version 37 to 38/effective time 20260715. All 11 retained fragments across
+  four evidence records remain exact; their source IDs, version metadata,
+  canonical payload hash, and retrieval dates were refreshed.
+- Source jurisdictions, member allowlists, severities, and management claims
+  were not widened.
 - Rifampicin/sulfonylurea remains limited to its retained source-backed
   members.
 - Carbamazepine directions, products, and formulations remain source-bounded.

@@ -1,14 +1,14 @@
 # Section A — citation sign-off worksheet
 
-**34 retained evidence records** across **33 rules**, containing **53 hashed fragments**.
+**36 retained evidence records** across **33 rules**, containing **64 hashed fragments**.
 
 This worksheet is deterministically generated from the slice. It records evidence provenance and exact source fragments; it does not add or revise clinical claims.
 
 - Section: `A`
-- JSONL SHA-256: `10e80f84f91a718bd2921e94ac5d7c0f17966f15d931079027ce8271973b4f90`
-- openFDA-reconciled evidence: `32`
-- source_policy_use: `{"interaction-counterevidence":1,"interaction-evidence":33}`
-- citation_status: `{"machine_confirmed_govuk_ogl_bound_pending_clinician":2,"machine_confirmed_openfda_reconciled_pending_clinician":32}`
+- JSONL SHA-256: `614b34c8c47b0476338aa8f8d5851ec7530bf756bb3bb4fdda7b2ed32d2aa739`
+- openFDA-reconciled evidence: `34`
+- source_policy_use: `{"interaction-counterevidence":1,"interaction-evidence":35}`
+- citation_status: `{"machine_confirmed_govuk_ogl_bound_pending_clinician":2,"machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope":2,"machine_confirmed_openfda_reconciled_pending_clinician":32}`
 
 For `openfda-labels`, the machine origin is the exact openFDA `set_id` query and the DailyMed URL is reference-only. Payload hashes use recursively sorted object keys with array order preserved (`sorted-json-keys-v1`); fragment containment uses the repository `openfda-spl-text-v1` normalization at each declared `source_path`.
 
@@ -78,7 +78,7 @@ For `openfda-labels`, the machine origin is the exact openFDA `set_id` query and
 - runtime_enabled: `false`
 - pair_matcher_executable: `true`
 - applicability.jurisdiction: `["US"]`
-- machine_evidence: `1`
+- machine_evidence: `2`
 
 ### evidence[0] — `fda-label-fluconazole` — `machine_confirmed_openfda_reconciled_pending_clinician`
 
@@ -86,22 +86,54 @@ For `openfda-labels`, the machine origin is the exact openFDA `set_id` query and
 - policy contract: source_policy_id=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; jurisdiction=`US`; review_status=`review_candidate`
 - origin: https://api.fda.gov/drug/label.json?search=set_id%3A%22f694c617-3383-416c-91b6-b94fda371204%22&limit=100
 - DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=f694c617-3383-416c-91b6-b94fda371204
-- document: `f694c617-3383-416c-91b6-b94fda371204@57`; retrieved_at=`2026-07-24`
+- document: `f694c617-3383-416c-91b6-b94fda371204@57`; retrieved_at=`2026-07-26`
 - SPL: version=`57`; effective_time=`20260402`; source_date=`2026-04-02`
 - payload: sha256=`ff8cbc0726257ccfd11021bb489b0cf0bb417351b66ab35dcb6fb44a4290690c`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
-- source_paths: `["drug_interactions[0]","drug_interactions[0]"]`
-- currentness: `checked_current_openfda` @`2026-07-24`
-- proposition: Fluconazole inhibits CYP2C9 and increases warfarin effect/INR.
-- source_effect: `["altered_anticoagulant_effect","metabolic_enzyme_inhibition"]`
+- source_paths: `["drug_interactions[0]","drug_interactions[0]","drug_interactions[0]","drug_interactions[0]","drug_interactions[0]","drug_interactions[0]"]`
+- currentness: `checked_current_openfda` @`2026-07-26`
+- proposition: The current U.S. fluconazole label reports increased prothrombin time and bleeding events with warfarin, recommends careful prothrombin-time monitoring, states that warfarin dose adjustment may be necessary, and says fluconazole enzyme inhibition persists 4 to 5 days after discontinuation.
+- source_effect: `["increased_prothrombin_time","increased_bleeding_risk","metabolic_enzyme_inhibition","persistence_after_discontinuation"]`
 - label_action: `["monitor_pt","warfarin_dose_adjustment_may_be_needed"]`
 - scope: `{"scope_type":"exact_members","members":["warfarin","fluconazole"]}`
 - jurisdictions: `["US"]`
 - does NOT by itself support:
   - Local runtime severity, workflow action, and promotion without clinician approval.
-  - This source does not establish the rule in UK, IN.
+  - An Indian regulatory-label claim.
+  - An exact Child-Pugh B interaction modifier.
+  - Autonomous pharmacy dose adjustment.
+  - A universal PT/INR schedule or a single-dose fluconazole exception.
 - fragments:
   - [Drug Interactions] (sha256 6cc431edbbdc9af98661ed37eb4722c72ffb9b639b858b1f87f0d54c82b4b1c2; path drug_interactions[0]) "Prothrombin time may be increased in patients receiving concomitant DIFLUCAN and coumarin-type anticoagulants."
+  - [Drug Interactions] (sha256 dd9153523b8b9a61676a9accdb512f3e64a9e336cff5f03e816775f50cc77e96; path drug_interactions[0]) "In post-marketing experience, as with other azole antifungals, bleeding events (bruising, epistaxis, gastrointestinal bleeding, hematuria, and melena) have been reported in association with increases in prothrombin time in patients receiving fluconazole concurrently with warfarin."
+  - [Drug Interactions] (sha256 23fb9333179368b4cc9e2d7b6635f92456f215dddd0a1f34dbef75afbde4ab7d; path drug_interactions[0]) "Careful monitoring of prothrombin time in patients receiving DIFLUCAN and coumarin-type anticoagulants is recommended."
+  - [Drug Interactions] (sha256 ca0d712a3ca6977fea968162b70b6abe77bef9340604a5362b54b4dc4835c858; path drug_interactions[0]) "Dose adjustment of warfarin may be necessary."
   - [Drug Interactions] (sha256 707c94a9014f8ee2f86e602a8c8709048de9571b8c372c0bdb3e403e5ae1aa54; path drug_interactions[0]) "Fluconazole is a moderate CYP2C9 and CYP3A4 inhibitor."
+  - [Drug Interactions] (sha256 7cbff3b30b4d67a23fca16402337ccc0b95d72bb161e76da00bb9cd582bd992b; path drug_interactions[0]) "The enzyme inhibiting effect of fluconazole persists 4 to 5 days after discontinuation of fluconazole treatment due to the long half-life of fluconazole."
+
+### evidence[1] — `fda-label-warfarin-current` — `machine_confirmed_openfda_reconciled_pending_clinician`
+
+- source: openFDA drug-label record (company-submitted SPL); U.S. National Library of Medicine / FDA | regulator="FDA" | product="warfarin sodium tablets" | section="Drug Interactions; Boxed Warning; Patient Counseling Information"
+- policy contract: source_policy_id=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; jurisdiction=`US`; review_status=`review_candidate`
+- origin: https://api.fda.gov/drug/label.json?search=set_id%3A%2251e98fb6-ba76-497e-95d8-fe895ef0b7ed%22&limit=100
+- DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=51e98fb6-ba76-497e-95d8-fe895ef0b7ed
+- document: `51e98fb6-ba76-497e-95d8-fe895ef0b7ed@7`; retrieved_at=`2026-07-26`
+- SPL: version=`7`; effective_time=`20260629`; source_date=`2026-06-29`
+- payload: sha256=`bcb1e6db5ac6619c0c93ede9f0c689dfd8ffdff4f187067335c243046b5d3e04`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
+- source_paths: `["drug_interactions[0]","drug_interactions[0]"]`
+- currentness: `checked_current_openfda` @`2026-07-26`
+- proposition: The current U.S. warfarin label lists fluconazole as a CYP2C9 and CYP3A4 inhibitor, requires closer INR monitoring when interacting medicines and antifungals are started or stopped, warns of major or fatal bleeding, and identifies reportable bleeding symptoms.
+- source_effect: `["increased_inr","increased_bleeding_risk"]`
+- label_action: `["monitor"]`
+- scope: `{"scope_type":"exact_members","members":["warfarin","fluconazole"]}`
+- jurisdictions: `["US"]`
+- does NOT by itself support:
+  - Local severity, workflow action, or runtime promotion without clinician approval.
+  - An Indian regulatory-label claim.
+  - An exact Child-Pugh B interaction modifier.
+  - Autonomous pharmacy dose adjustment.
+- fragments:
+  - [Drug Interactions] (sha256 14a1ce05e42103a7f45533ca89dc0759c12616d5a28e3ef3db3a61b9356a758f; path drug_interactions[0]) "CYP2C9 amiodarone, capecitabine, cotrimoxazole, etravirine, fluconazole, fluvastatin, fluvoxamine, metronidazole, miconazole, oxandrolone, sulfinpyrazone, tigecycline, voriconazole, zafirlukast"
+  - [Drug Interactions] (sha256 ebd497231a12303e4d4ec4633a822878a063947bc7fdba8474431482441a0d7b; path drug_interactions[0]) "More frequent INR monitoring should be performed when starting or stopping other drugs, including botanicals, or when changing dosages of other drugs, including drugs intended for short-term use (e.g., antibiotics, antifungals, corticosteroids) [see Boxed Warning ] ."
 
 ## warfarin__miconazole_oromucosal_gel
 
@@ -292,29 +324,59 @@ For `openfda-labels`, the machine origin is the exact openFDA `set_id` query and
 - runtime_enabled: `false`
 - pair_matcher_executable: `true`
 - applicability.jurisdiction: `["US"]`
-- machine_evidence: `1`
+- machine_evidence: `2`
 
-### evidence[0] — `fda-label-amiodarone` — `machine_confirmed_openfda_reconciled_pending_clinician`
+### evidence[0] — `fda-label-amiodarone-current` — `machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope`
 
-- source: openFDA drug-label record (company-submitted SPL); U.S. National Library of Medicine / FDA | regulator="FDA" | product="amiodarone" | section="Drug Interactions"
+- source: openFDA drug-label record (company-submitted SPL); U.S. National Library of Medicine / FDA | regulator="FDA" | product="amiodarone hydrochloride tablets" | section="Drug Interactions"
 - policy contract: source_policy_id=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; jurisdiction=`US`; review_status=`review_candidate`
-- origin: https://api.fda.gov/drug/label.json?search=set_id%3A%22d911b4cf-eec4-43f8-aa64-cc60cfc901b9%22&limit=100
-- DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=d911b4cf-eec4-43f8-aa64-cc60cfc901b9
-- document: `d911b4cf-eec4-43f8-aa64-cc60cfc901b9@5`; retrieved_at=`2026-07-24`
-- SPL: version=`5`; effective_time=`20251209`; source_date=`2025-12-09`
-- payload: sha256=`245650ab25f1cbb86b00d6f59bd81b6b24b4ebd1c1d8f4e59c2511e3a1da650c`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
-- source_paths: `["drug_interactions[0]"]`
-- currentness: `checked_current_openfda` @`2026-07-24`
-- proposition: Amiodarone increases warfarin effect (increased PT/bleeding), warranting warfarin dose reduction and monitoring (US amiodarone label). Time-course/mechanism terms not asserted from this excerpt.
-- source_effect: `["increased_bleeding_risk","altered_anticoagulant_effect"]`
+- origin: https://api.fda.gov/drug/label.json?search=set_id%3A%22f49d011f-5ca6-4f75-ba16-2099fe42f5aa%22&limit=100
+- DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=f49d011f-5ca6-4f75-ba16-2099fe42f5aa
+- document: `f49d011f-5ca6-4f75-ba16-2099fe42f5aa@2`; retrieved_at=`2026-07-26`
+- SPL: version=`2`; effective_time=`20260615`; source_date=`2026-06-15`
+- payload: sha256=`efe97f1d109d8a6f98ed8d48f98aa024ea7b69057e50534128aa2d4870ee46be`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
+- source_paths: `["drug_interactions[0]","drug_interactions[0]"]`
+- currentness: `checked_current_openfda` @`2026-07-26`
+- proposition: The current U.S. label states that amiodarone potentiates warfarin's anticoagulant response, can cause serious or fatal bleeding, requires prothrombin-time monitoring, and can persist for weeks to months after amiodarone discontinuation.
+- source_effect: `["altered_anticoagulant_effect","increased_bleeding_risk","persistence_after_discontinuation"]`
+- label_action: `["dose_reduction","monitor"]`
+- scope: `{"scope_type":"exact_members","members":["warfarin","amiodarone"]}`
+- jurisdictions: `["US"]`
+- does NOT by itself support:
+  - Local severity, workflow action, or runtime promotion without clinician approval.
+  - An Indian regulatory-label claim.
+  - An exact Child-Pugh B interaction modifier.
+  - Autonomous pharmacy dose adjustment.
+- fragments:
+  - [Drug Interactions] (sha256 b3bb5ea6d6a9bb4e28684a7b826f07d5a75950b1a5be7c7f01f779491bc686c2; path drug_interactions[0]) "Potentiates anticoagulant response and can result in serious or fatal bleeding. Coadministration increases prothrombin time by 100% after 3 to 4 days. Reduce warfarin dose by one-third to one-half and monitor prothrombin times."
+  - [Drug Interactions] (sha256 d3644fa5d9f2325be0273520ec53bb86056779d7c3a22963f365c15e7ecaa383; path drug_interactions[0]) "Because of amiodarone's long half-life, expect drug interactions to persist for weeks to months after discontinuation of amiodarone."
+
+### evidence[1] — `fda-label-warfarin-current` — `machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope`
+
+- source: openFDA drug-label record (company-submitted SPL); U.S. National Library of Medicine / FDA | regulator="FDA" | product="warfarin sodium tablets" | section="Drug Interactions; Boxed Warning; Patient Counseling Information"
+- policy contract: source_policy_id=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; jurisdiction=`US`; review_status=`review_candidate`
+- origin: https://api.fda.gov/drug/label.json?search=set_id%3A%2251e98fb6-ba76-497e-95d8-fe895ef0b7ed%22&limit=100
+- DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=51e98fb6-ba76-497e-95d8-fe895ef0b7ed
+- document: `51e98fb6-ba76-497e-95d8-fe895ef0b7ed@7`; retrieved_at=`2026-07-26`
+- SPL: version=`7`; effective_time=`20260629`; source_date=`2026-06-29`
+- payload: sha256=`bcb1e6db5ac6619c0c93ede9f0c689dfd8ffdff4f187067335c243046b5d3e04`; canonicalization=`sorted-json-keys-v1`; normalization=`openfda-spl-text-v1`
+- source_paths: `["drug_interactions[0]","drug_interactions[0]","boxed_warning[0]","information_for_patients[0]"]`
+- currentness: `checked_current_openfda` @`2026-07-26`
+- proposition: The current U.S. warfarin label lists amiodarone among relevant CYP inhibitors, requires closer INR monitoring when interacting medicines are started, stopped, or changed, warns of major or fatal bleeding, and identifies reportable bleeding symptoms.
+- source_effect: `["increased_inr","increased_bleeding_risk"]`
 - label_action: `["monitor"]`
 - scope: `{"scope_type":"exact_members","members":["warfarin","amiodarone"]}`
 - jurisdictions: `["US"]`
 - does NOT by itself support:
-  - Local runtime severity, workflow action, and promotion without clinician approval.
-  - This source does not establish the rule in UK, IN.
+  - Local severity, workflow action, or runtime promotion without clinician approval.
+  - An Indian regulatory-label claim.
+  - An exact Child-Pugh B interaction modifier.
+  - Autonomous pharmacy dose adjustment.
 - fragments:
-  - [Drug Interactions] (sha256 b3bb5ea6d6a9bb4e28684a7b826f07d5a75950b1a5be7c7f01f779491bc686c2; path drug_interactions[0]) "Potentiates anticoagulant response and can result in serious or fatal bleeding. Coadministration increases prothrombin time by 100% after 3 to 4 days. Reduce warfarin dose by one-third to one-half and monitor prothrombin times."
+  - [Drug Interactions] (sha256 45a04f184beb02c9e1ccb20df1c8b6d526c75fa4ff34b7ef7997ff7271a7ae36; path drug_interactions[0]) "The CYP450 inhibition and induction potential should be considered when starting, stopping, or changing dose of concomitant medications. Closely monitor INR if a concomitant drug is a CYP2C9, 1A2, and/or 3A4 inhibitor or inducer."
+  - [Drug Interactions] (sha256 271674318fb812b8be8bf0bc94a40f081fab4a438c9354aa67a0542abefed40f; path drug_interactions[0]) "Table 2: Examples of CYP450 Interactions with Warfarin Enzyme Inhibitors Inducers CYP2C9 amiodarone"
+  - [Boxed Warning] (sha256 9f152e08ac14adaa7a45698016db9c3420063fa966c5ba59d52c131287dd35ae; path boxed_warning[0]) "Warfarin sodium can cause major or fatal bleeding. (5.1) Perform regular monitoring of INR in all treated patients. (2.1)"
+  - [Patient Counseling Information] (sha256 cf11d4a374c9494ceb41efbe153a6411268d00cd1de9c5cb8c2df36b1e988699; path information_for_patients[0]) "Notify their physician immediately if any unusual bleeding or symptoms occur. Signs and symptoms of bleeding include: pain, swelling or discomfort, prolonged bleeding from cuts, increased menstrual flow or vaginal bleeding, nosebleeds, bleeding of gums from brushing, unusual bleeding or bruising, red or dark brown urine, red or tar black stools, headache, dizziness, or weakness"
 
 ## warfarin__fluoroquinolone
 

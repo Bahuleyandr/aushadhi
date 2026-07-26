@@ -221,6 +221,16 @@ test('CLI resolves exact products, expands FDCs and reports unknown open-rule co
     assert.equal(output.coverage.ingredient_mapping, 'complete');
     assert.equal(output.coverage.presentation_mapping, 'complete');
     assert.equal(output.coverage.interaction_knowledge, 'unknown');
+    assert.equal(output.clinical_interaction_status, 'no_reviewed_interaction_found');
+    assert.equal(output.outcome_code, 'no_reviewed_finding');
+    assert.equal(output.checks_performed.checked_pair_count, 2);
+    assert.ok(output.not_evaluated.some(
+      (entry) => entry.code === 'RULE_PACK_COVERAGE_INCOMPLETE',
+    ));
+    assert.deepEqual(output.input_gaps, []);
+    assert.ok(output.capability_limitations.some(
+      (entry) => entry.code === 'NO_LISTED_INTERACTION_IS_NOT_SAFETY',
+    ));
     assert.deepEqual(output.mapping_summary, {
       resolved_products: 2,
       mapped_ingredients: 3,
@@ -251,6 +261,8 @@ test('CLI returns ambiguous products instead of auto-selecting one', () => {
     assert.equal(output.unresolved_inputs.length, 1);
     assert.equal(output.unresolved_inputs[0].status, 'ambiguous');
     assert.equal(output.coverage.product_resolution, 'partial');
+    assert.equal(output.outcome_code, 'input_gaps');
+    assert.deepEqual(output.input_gaps, output.unresolved_inputs);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

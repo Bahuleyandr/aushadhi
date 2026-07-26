@@ -2,7 +2,7 @@
 
 Machine evidence: **29** records across **28** rules.
 
-- JSONL SHA-256: `8398ebb73c022924c0d8bb91a77278c48e0327010241e82b09f671c55191d2eb`
+- JSONL SHA-256: `55748038490527f8f3c175e2d7a5230db8414dfc5241bc0336a8aa83ed548ac6`
 - Schema validation: `validateDraftRules` passes; every rule remains
   `promotion_eligible:false`.
 
@@ -45,12 +45,14 @@ Excluded or rights-unclear sources are not linked, quoted, summarized, or repres
 - runtime_enabled: `false`
 - machine_evidence: `1`
 - evidence `fda-label-pimozide`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`4e954fc2-fdff-486c-beb6-2b8ace717081@3`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%224e954fc2-fdff-486c-beb6-2b8ace717081%22&limit=100
+- 2026-07-26 current payload SHA-256: `7afb45e8366edf9f37348516ae870b0c7079d9852a7185ed54995f2483cf3507`; all four retained fragments remain exact.
 
 ## pimozide__label_avoid_inhibitor
 
 - runtime_enabled: `false`
 - machine_evidence: `1`
 - evidence `fda-label-pimozide`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`4e954fc2-fdff-486c-beb6-2b8ace717081@3`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%224e954fc2-fdff-486c-beb6-2b8ace717081%22&limit=100
+- 2026-07-26 current payload SHA-256: `7afb45e8366edf9f37348516ae870b0c7079d9852a7185ed54995f2483cf3507`; the retained avoid fragment remains exact.
 
 ## tacrolimus__cyp3a4_inhibitor
 

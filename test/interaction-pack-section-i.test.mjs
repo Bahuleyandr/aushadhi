@@ -1229,12 +1229,15 @@ test('all Section I evidence is exactly reconciled to current openFDA SPL record
       );
       assert.equal(evidence.source_date_type, 'openFDA SPL effective_time');
       assert.match(evidence.host_page_updated_at, /^\d{4}-\d{2}-\d{2}$/);
-      assert.equal(evidence.accessed_at, '2026-07-23');
-      assert.equal(evidence.retrieved_at, '2026-07-23');
+      const expectedReviewDate = evidence.source_id === 'fda-label-sporanox-capsules-2026'
+        ? '2026-07-26'
+        : '2026-07-23';
+      assert.equal(evidence.accessed_at, expectedReviewDate);
+      assert.equal(evidence.retrieved_at, expectedReviewDate);
       assert.equal(evidence.jurisdiction, 'US');
       assert.equal(evidence.review_status, 'review_candidate');
       assert.equal(evidence.currentness_status, 'checked_current_openfda');
-      assert.equal(evidence.currentness_checked_at, '2026-07-23');
+      assert.equal(evidence.currentness_checked_at, expectedReviewDate);
       assert.equal(
         evidence.citation_status,
         'machine_confirmed_openfda_reconciled_pending_clinician',

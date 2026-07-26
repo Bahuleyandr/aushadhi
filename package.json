@@ -26,6 +26,8 @@
     "interactions:mappings:pilot": "node src/cli/build-interaction-mapping-pilot.mjs",
     "interactions:mappings:propose": "node src/cli/propose-interaction-mappings.mjs",
     "interactions:draft:assemble": "node src/cli/assemble-interaction-draft-pack.mjs",
+    "interactions:promote": "node src/cli/build-interaction-runtime-pack.mjs",
+    "interactions:promote:check": "node src/cli/build-interaction-runtime-pack.mjs --check",
     "verify:interaction-evidence": "node src/cli/verify-interaction-evidence-provenance.mjs"
   },
   "dependencies": {

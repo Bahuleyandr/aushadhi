@@ -156,6 +156,27 @@ test('same ingredient across products is reported as therapeutic duplication, no
     product_ids: ['product:1', 'product:2'],
   }]);
   assert.ok(!result.checked_pairs.some((entry) => entry.pair_key === 'ingredient:a|ingredient:a'));
+  assert.equal(result.clinical_interaction_status, 'no_reviewed_interaction_found');
+  assert.equal(result.outcome_code, 'no_reviewed_finding');
+  assert.equal(result.checks_performed.therapeutic_duplication.finding_count, 1);
+});
+
+test('pure therapeutic duplication has a typed outcome without claiming interaction safety', () => {
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Brand B', product('product:2', ['ingredient:a'])),
+    ],
+    rulePack: pack(),
+  });
+
+  assert.deepEqual(result.checked_pairs, []);
+  assert.equal(result.clinical_interaction_status, 'not_evaluated');
+  assert.equal(result.outcome_code, 'therapeutic_duplication_only');
+  assert.equal(result.duplicate_ingredients.length, 1);
+  assert.ok(result.capability_limitations.some(
+    (entry) => entry.code === 'NO_LISTED_INTERACTION_IS_NOT_SAFETY',
+  ));
 });
 
 test('unreviewed rules and supplied evidence remain review candidates', () => {
@@ -187,7 +208,15 @@ test('unreviewed rules and supplied evidence remain review candidates', () => {
     'candidate:a-b',
     'candidate:label:a-b',
   ]);
-  assert.ok(result.review_candidates.every((entry) => entry.severity === undefined || entry.severity === 'unknown'));
+  assert.ok(result.review_candidates.every((entry) => (
+    entry.severity === 'unknown'
+    && entry.mechanism === null
+    && entry.management === null
+    && entry.review_status === 'review_candidate'
+    && entry.inference_class === 'source_grounded_review_candidate'
+  )));
+  assert.equal(result.clinical_interaction_status, 'review_candidate_found');
+  assert.equal(result.outcome_code, 'manual_review_required');
 });
 
 test('only fully clinician-reviewed rules expose severity, mechanism, and management', () => {
@@ -205,6 +234,8 @@ test('only fully clinician-reviewed rules expose severity, mechanism, and manage
   assert.equal(result.reviewed_findings[0].dispense_action, 'confirm_and_monitor');
   assert.equal(result.reviewed_findings[0].mechanism, 'Clinician-authored mechanism.');
   assert.equal(result.reviewed_findings[0].management, 'Clinician-authored management.');
+  assert.equal(result.clinical_interaction_status, 'reviewed_interaction_found');
+  assert.equal(result.outcome_code, 'reviewed_action_required');
 
   assert.throws(
     () => validateRulePack(pack({ rules: [rule({ status: 'review_candidate', severity: 'major' })] })),
@@ -246,6 +277,13 @@ test('ambiguous products and unmapped ingredients are explicit and coverage uses
     interaction_knowledge: 'partial',
     overall: 'partial',
   });
+  assert.equal(result.clinical_interaction_status, 'no_reviewed_interaction_found');
+  assert.equal(result.outcome_code, 'input_gaps');
+  assert.deepEqual(result.input_gaps, result.unresolved_inputs);
+  assert.ok(result.not_evaluated.some((entry) => entry.code === 'INPUT_GAP'));
+  assert.ok(result.not_evaluated.some(
+    (entry) => entry.code === 'RULE_PACK_COVERAGE_INCOMPLETE',
+  ));
 
   const operationalUnknown = checkResolvedProducts({
     resolvedInputs: [
@@ -276,6 +314,15 @@ test('a non-empty complete declared pack can report checked coverage but retains
   });
   assert.equal(result.disclaimer, DISCLAIMER);
   assert.match(result.disclaimer, /does not establish safety/i);
+  assert.equal(result.checks_performed.checked_pair_count, 1);
+  assert.equal(result.not_evaluated.length, 0);
+  assert.deepEqual(
+    result.capability_limitations.map((entry) => entry.code),
+    [
+      'NO_LISTED_INTERACTION_IS_NOT_SAFETY',
+      'EXACT_REVIEWED_PRODUCT_SCOPE_ONLY',
+    ],
+  );
 });
 
 test('empty and invalid rule packs fail closed and cannot claim complete coverage', () => {
@@ -345,6 +392,8 @@ test('a reviewed rule is restricted to its exact approved product pairs', () => 
   });
   assert.equal(unapproved.checked_pairs.length, 1);
   assert.deepEqual(unapproved.reviewed_findings, []);
+  assert.equal(unapproved.clinical_interaction_status, 'no_reviewed_interaction_found');
+  assert.equal(unapproved.outcome_code, 'no_reviewed_finding');
 });
 
 test('a mapped ingredient cannot enter clinical matching without its reviewed presentation subject', () => {
@@ -363,6 +412,8 @@ test('a mapped ingredient cannot enter clinical matching without its reviewed pr
   assert.deepEqual(result.checked_pairs, []);
   assert.equal(result.unresolved_inputs.length, 1);
   assert.equal(result.unresolved_inputs[0].status, 'unmapped_presentation');
+  assert.equal(result.clinical_interaction_status, 'not_evaluated');
+  assert.equal(result.outcome_code, 'input_gaps');
   assert.deepEqual(result.coverage, {
     product_resolution: 'complete',
     ingredient_mapping: 'complete',
