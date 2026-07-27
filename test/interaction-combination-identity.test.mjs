@@ -21,6 +21,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   COMBINATION_IDENTITY_SCHEMA_VERSION,
+  assertRuntimeCombinationResult,
   auditCombinationIdentityAcrossProfiles,
   compileCombinationIdentityManifest,
   resolveCombinationIdentity,
@@ -165,8 +166,7 @@ const cotrimoxazole = (overrides = {}) => ({
   ],
   component_match: 'exact_active_set',
   exposure_scope: 'systemic',
-  routes: ['oral'],
-  dose_forms: ['tablet'],
+  presentation_scopes: [{ route: 'oral', formulation: 'tablet' }],
   presentations: [
     presentationFor(PMBJP_89, 'oral', 'tablet', '89',
       scd('198335', 'sulfamethoxazole 800 MG / trimethoprim 160 MG Oral Tablet', '800', '160')),
@@ -238,33 +238,66 @@ test('BLOCKER 1: an internal-only combination never resolves for production-open
     'reviewed_override');
 });
 
-test('BLOCKER 1: profile-blind auditing is a separate, explicitly named function', () => {
+test('BLOCKER 1: an audit result is a DISTINCT type a runtime consumer cannot use', () => {
   const result = auditCombinationIdentityAcrossProfiles({ product: PMBJP_89, manifest: compiled() });
-  assert.equal(result.status, 'reviewed_override');
-  assert.deepEqual(result.allowed_profiles, ['internal-evaluation']);
+  // not merely a flag on an otherwise runtime-shaped result: a different status,
+  // no runtime_subject at all, and the match reported under a different key
+  assert.equal(result.status, 'audit_match');
   assert.equal(result.audit_only, true);
+  assert.equal(result.runtime_subject, null);
+  assert.deepEqual(result.candidate_subject,
+    { drug: 'co-trimoxazole', route: 'oral', formulation: 'tablet' });
+  assert.deepEqual(result.authored_profiles, ['internal-evaluation']);
+
+  // and a runtime consumer must reject it even if it is passed in by mistake
+  assert.throws(
+    () => assertRuntimeCombinationResult(result),
+    /audit result may not be used on a runtime path/u,
+  );
+  assert.equal(
+    assertRuntimeCombinationResult(resolve(PMBJP_89)).status,
+    'reviewed_override',
+  );
 });
 
 // ── 2. declared scope must EQUAL reviewed presentation scope ─────────────────
 
-test('BLOCKER 2: a declared route with no reviewed presentation is rejected', () => {
-  rejects({ routes: ['oral', 'intravenous'] },
-    /routes must exactly equal the reviewed presentation routes/u);
-  rejects({ dose_forms: ['tablet', 'injection'] },
-    /dose_forms must exactly equal the reviewed presentation formulations/u);
+const SCOPE_MISMATCH = /presentation_scopes must exactly equal the reviewed presentation route and formulation pairs/u;
+
+test('BLOCKER 2: a declared scope with no reviewed presentation is rejected', () => {
+  rejects({
+    presentation_scopes: [
+      { route: 'oral', formulation: 'tablet' },
+      { route: 'intravenous', formulation: 'injection' },
+    ],
+  }, SCOPE_MISMATCH);
 });
 
 test('BLOCKER 2: an out-of-scope presentation is still rejected', () => {
   rejects({
     presentations: [presentationFor(PMBJP_89, 'intravenous', 'injection', '89',
       scd('198335', 'x', '800', '160'))],
-  }, /routes must exactly equal the reviewed presentation routes/u);
+  }, SCOPE_MISMATCH);
 });
 
-test('BLOCKER 2: declared route and dose-form values must be canonical and unique', () => {
-  rejects({ routes: ['oral', 'oral'] }, /routes contains duplicate/u);
-  rejects({ routes: ['Oral'] }, /routes\[0\] must be a canonical route/u);
-  rejects({ dose_forms: ['Tablet'] }, /dose_forms\[0\] must be a canonical formulation/u);
+test('BLOCKER 2: scope is validated as route/formulation PAIRS, not independent sets', () => {
+  // independent set equality cannot tell {oral+tablet, iv+injection} from the invalid
+  // cross products {oral+injection, iv+tablet}
+  const combination = cotrimoxazole();
+  assert.deepEqual(combination.presentation_scopes, [{ route: 'oral', formulation: 'tablet' }]);
+  rejects({ presentation_scopes: [{ route: 'oral', formulation: 'injection' }] }, SCOPE_MISMATCH);
+});
+
+test('BLOCKER 2: declared scope values must be canonical and unique', () => {
+  rejects({
+    presentation_scopes: [
+      { route: 'oral', formulation: 'tablet' }, { route: 'oral', formulation: 'tablet' },
+    ],
+  }, /contains duplicate scope oral\/tablet/u);
+  rejects({ presentation_scopes: [{ route: 'Oral', formulation: 'tablet' }] },
+    /must be a canonical route/u);
+  rejects({ presentation_scopes: [{ route: 'oral', formulation: 'Tablet' }] },
+    /must be a canonical formulation/u);
 });
 
 // ── 3. RxNorm structure cross-validated ──────────────────────────────────────
@@ -425,27 +458,76 @@ test('HARDENING: overlapping combinations are rejected at authoring, not at runt
   const other = cotrimoxazole({ combination_id: 'combination:duplicate-active-set' });
   assert.throws(
     () => validateCombinationIdentityManifest(manifestOf(cotrimoxazole(), other)),
-    /overlapping component assertion identities/u,
+    /could both match the same product active set|overlapping/u,
   );
 });
 
-test('HARDENING: one reviewed product may not belong to two combinations', () => {
-  const other = cotrimoxazole({
-    combination_id: 'combination:other',
-    components: [
-      { name: 'sulfamethoxazole', rxcui: '10180', tty: 'IN', assertion_ingredient_ids: [SMX_PMBJP_ID] },
-      { name: 'trimethoprim', rxcui: '10829', tty: 'IN', assertion_ingredient_ids: [TMP_ID] },
-    ],
-    rxnorm: {
-      ...cotrimoxazole().rxnorm,
-      component_relation: {
-        relationship: 'has_part', component_rxcuis: ['10180', '10829'], response_sha256: SHA,
-      },
+// A generic two-component combination, so overlap can be reasoned about
+// independently of co-trimoxazole's specifics.
+const alias = (n) => `sha256:${String(n).repeat(64).slice(0, 64)}`;
+const pairCombination = (id, drug, [rxcuiA, aliasesA], [rxcuiB, aliasesB], row) => ({
+  ...cotrimoxazole(),
+  combination_id: id,
+  runtime_drug: drug,
+  rxnorm: {
+    ...cotrimoxazole().rxnorm,
+    component_relation: {
+      relationship: 'has_part', component_rxcuis: [rxcuiA, rxcuiB], response_sha256: SHA,
     },
-  });
+  },
+  components: [
+    { name: `${drug}-a`, rxcui: rxcuiA, tty: 'IN', assertion_ingredient_ids: aliasesA },
+    { name: `${drug}-b`, rxcui: rxcuiB, tty: 'IN', assertion_ingredient_ids: aliasesB },
+  ],
+  presentations: [{
+    source_identity: { namespace: 'presentation:pmbjp', code: `${id}-code` },
+    product_id: productIdForRow(row),
+    product_assertion_sha256: productAssertionHashForRow(row),
+    route: 'oral',
+    formulation: 'tablet',
+    rxnorm_scd: {
+      rxcui: '198335',
+      tty: 'SCD',
+      name: 'fixture',
+      ingredients_and_strengths: [
+        { ingredient_rxcui: rxcuiA, numerator_value: '1', numerator_unit: 'MG' },
+        { ingredient_rxcui: rxcuiB, numerator_value: '1', numerator_unit: 'MG' },
+      ],
+      dose_form: 'Oral Tablet',
+      version: '06-Jul-2026',
+      response_sha256: SHA,
+    },
+  }],
+});
+
+test('HARDENING: overlap is judged by alias intersection, not textual identity', () => {
+  // A accepts {x},{y}; B accepts {x},{y,z}. The product active set {x,y} would match
+  // BOTH, so this must fail at authoring rather than become a runtime ambiguity.
+  const a = pairCombination('combination:a', 'drug-a', ['5001', [alias(1)]], ['5002', [alias(2)]], PMBJP_89);
+  const b = pairCombination('combination:b', 'drug-b', ['5003', [alias(1)]], ['5004', [alias(2), alias(3)]], PMBJP_90);
   assert.throws(
-    () => validateCombinationIdentityManifest(manifestOf(cotrimoxazole(), other)),
-    /overlapping component assertion identities|reviewed product .* in more than one combination/u,
+    () => validateCombinationIdentityManifest(manifestOf(a, b)),
+    /could both match the same product active set/u,
+  );
+});
+
+test('HARDENING: combinations that merely SHARE a component are legitimate', () => {
+  // paracetamol+codeine and paracetamol+ibuprofen share paracetamol but no active
+  // set matches both. Rejecting these would make the model useless for real FDCs.
+  const a = pairCombination('combination:para-codeine', 'drug-a', ['161', [alias(1)]], ['2670', [alias(2)]], PMBJP_89);
+  const b = pairCombination('combination:para-ibuprofen', 'drug-b', ['161', [alias(1)]], ['5640', [alias(3)]], PMBJP_90);
+  assert.equal(validateCombinationIdentityManifest(manifestOf(a, b)), true);
+});
+
+test('HARDENING: one reviewed product may not belong to two combinations', () => {
+  // deliberately NON-overlapping component sets, so this isolates the reviewed-product
+  // clash rather than re-testing active-set overlap
+  const a = pairCombination('combination:x', 'drug-a', ['7001', [alias(4)]], ['7002', [alias(5)]], PMBJP_89);
+  const b = pairCombination('combination:y', 'drug-b', ['7003', [alias(6)]], ['7004', [alias(7)]], PMBJP_90);
+  b.presentations[0].source_identity = { ...a.presentations[0].source_identity };
+  assert.throws(
+    () => validateCombinationIdentityManifest(manifestOf(a, b)),
+    /appears in more than one combination/u,
   );
 });
 
@@ -457,6 +539,33 @@ test('HARDENING: component count is bounded', () => {
     assertion_ingredient_ids: [`sha256:${String(index).repeat(64).slice(0, 64)}`],
   }));
   rejects({ components: many }, /at most \d+ components/u);
+});
+
+test('HARDENING: the compiled form is DEEPLY immutable and detached from its source', () => {
+  const source = manifestOf(cotrimoxazole());
+  const compiledManifest = compileCombinationIdentityManifest(source);
+
+  // mutating the source after compilation must not reach the compiled form
+  source.combinations[0].components[0].assertion_ingredient_ids.push(alias(7));
+  source.combinations[0].presentations.pop();
+  assert.equal(
+    compiledManifest.combinations[0].components[0].assertion_ingredient_ids.length, 2,
+  );
+  assert.equal(compiledManifest.combinations[0].presentations.length, 2);
+
+  // nested compiled structures must themselves be frozen
+  assert.throws(() => {
+    compiledManifest.combinations[0].components[0].assertion_ingredient_ids.push(alias(8));
+  }, /read only|not extensible|object is not extensible/iu);
+  assert.throws(() => { compiledManifest.combinations.push({}); }, /read only|not extensible/iu);
+  assert.equal(Object.isFrozen(compiledManifest.combinations[0].presentations[0]), true);
+  assert.equal(Object.isFrozen(compiledManifest.combinations[0].rxnorm.component_relation), true);
+
+  // the reviewed-product index must not be a mutable Map handed to callers
+  assert.throws(
+    () => compiledManifest.reviewed_products.set('presentation:pmbjp:99', {}),
+    /not a function|read only|frozen/iu,
+  );
 });
 
 test('HARDENING: the manifest is compiled once, not revalidated per product', () => {

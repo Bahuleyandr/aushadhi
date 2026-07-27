@@ -1,0 +1,250 @@
+// Offline semantic verification of a combination's RxNorm evidence.
+//
+// A schema validator proves that a manifest's fields agree with ONE ANOTHER. It
+// cannot prove RxNorm returned them: a self-consistent entry could declare any
+// plausible-looking rxcui, tty and hash. This module closes that gap without
+// putting network calls in the ordinary test path, by splitting the work:
+//
+//   capture responses  ->  commit an immutable raw evidence bundle
+//                      ->  verify semantics + recompute hashes OFFLINE
+//                      ->  compile the internal-evaluation manifest
+//
+// Everything here operates on the committed bundle, so it is reproducible and can
+// run in CI without a network. Capture is a separate, explicit step.
+//
+// RxNorm relationship model relied upon:
+//   * a MIN has `has_part` relationships to its IN/PIN components;
+//   * an SCD's ingredient concepts are compared through an explicit field choice
+//     rather than a generic guess -- see INGREDIENT_RXCUI_FIELDS. PIN-based
+//     products expose several ingredient notions (base ingredient,
+//     basis-of-strength substance, active ingredient) and the field actually
+//     compared must be recorded, not inferred.
+import { createHash } from 'node:crypto';
+
+export const EVIDENCE_BUNDLE_SCHEMA_VERSION = 1;
+// which RxNorm ingredient notion a comparison used; recorded per presentation so a
+// PIN-based product cannot silently be compared on a different field
+export const INGREDIENT_RXCUI_FIELDS = new Set([
+  'ingredient_rxcui',
+  'base_ingredient_rxcui',
+  'basis_of_strength_rxcui',
+  'active_ingredient_rxcui',
+]);
+
+const SHA256 = /^[a-f0-9]{64}$/u;
+// fixture hashes exist so tests can exercise matching without network capture; a
+// production verification path must never accept one
+const FIXTURE_HASHES = new Set([
+  'a'.repeat(64), 'b'.repeat(64), 'c'.repeat(64), '0'.repeat(64), 'f'.repeat(64),
+]);
+
+const sha256 = (text) => createHash('sha256').update(text, 'utf8').digest('hex');
+const sameSet = (left, right) => left.size === right.size && [...left].every((v) => right.has(v));
+
+function fail(findings, code, detail) {
+  findings.push({ code, detail });
+  return findings;
+}
+
+function bundleEntry(bundle, key) {
+  const raw = bundle.responses?.[key];
+  return typeof raw === 'string' ? raw : null;
+}
+
+// A hash is only meaningful if it is recomputed from the committed raw response.
+function verifyHash(findings, bundle, key, declaredHash, label) {
+  if (!SHA256.test(String(declaredHash ?? ''))) {
+    return fail(findings, 'invalid_hash', `${label} is not a lowercase SHA-256`);
+  }
+  if (FIXTURE_HASHES.has(declaredHash)) {
+    return fail(findings, 'fixture_hash_in_production_path',
+      `${label} is a fixture placeholder and may not be used as evidence`);
+  }
+  const raw = bundleEntry(bundle, key);
+  if (raw === null) {
+    return fail(findings, 'missing_raw_evidence',
+      `${label} has no committed raw response under bundle key ${key}`);
+  }
+  const recomputed = sha256(raw);
+  if (recomputed !== declaredHash) {
+    return fail(findings, 'hash_mismatch',
+      `${label} declares ${declaredHash} but the committed response hashes to ${recomputed}`);
+  }
+  return findings;
+}
+
+function parseBundle(bundle, key) {
+  try {
+    return JSON.parse(bundleEntry(bundle, key) ?? '');
+  } catch {
+    return null;
+  }
+}
+
+function verifyCombinationConcept(findings, combination, bundle) {
+  const { rxnorm } = combination;
+  const propertiesKey = `rxcui/${rxnorm.rxcui}/properties`;
+  verifyHash(findings, bundle, propertiesKey, rxnorm.properties_response_sha256,
+    `${combination.combination_id} rxnorm.properties_response_sha256`);
+
+  const properties = parseBundle(bundle, propertiesKey)?.properties;
+  if (!properties) {
+    fail(findings, 'unreadable_properties_response',
+      `${combination.combination_id} properties response is missing or unparseable`);
+  } else {
+    if (String(properties.rxcui) !== rxnorm.rxcui) {
+      fail(findings, 'rxcui_mismatch',
+        `${combination.combination_id} declares rxcui ${rxnorm.rxcui} but RxNorm returned ${properties.rxcui}`);
+    }
+    if (properties.tty !== 'MIN') {
+      fail(findings, 'tty_mismatch',
+        `${combination.combination_id} rxcui ${rxnorm.rxcui} is ${properties.tty}, not MIN`);
+    }
+    if (properties.name !== rxnorm.name) {
+      fail(findings, 'name_mismatch',
+        `${combination.combination_id} declares name "${rxnorm.name}" but RxNorm returned "${properties.name}"`);
+    }
+  }
+
+  const relationKey = `rxcui/${rxnorm.rxcui}/related?rela=has_part`;
+  verifyHash(findings, bundle, relationKey, rxnorm.component_relation.response_sha256,
+    `${combination.combination_id} component_relation.response_sha256`);
+
+  const related = parseBundle(bundle, relationKey);
+  if (!related) {
+    fail(findings, 'unreadable_relation_response',
+      `${combination.combination_id} has_part response is missing or unparseable`);
+    return findings;
+  }
+  const observed = new Set();
+  const observedTty = new Map();
+  for (const group of related.relatedGroup?.conceptGroup ?? []) {
+    for (const concept of group.conceptProperties ?? []) {
+      observed.add(String(concept.rxcui));
+      observedTty.set(String(concept.rxcui), concept.tty);
+    }
+  }
+  const declared = new Set(rxnorm.component_relation.component_rxcuis);
+  if (!sameSet(observed, declared)) {
+    fail(findings, 'component_relation_mismatch',
+      `${combination.combination_id} declares has_part ${[...declared].sort().join(', ')} `
+      + `but RxNorm returned ${[...observed].sort().join(', ') || '(none)'}`);
+  }
+  for (const component of combination.components) {
+    const tty = observedTty.get(component.rxcui);
+    if (tty !== undefined && tty !== component.tty) {
+      fail(findings, 'component_tty_mismatch',
+        `${combination.combination_id} component ${component.rxcui} declares ${component.tty} `
+        + `but RxNorm returned ${tty}`);
+    }
+  }
+  return findings;
+}
+
+function verifyPresentation(findings, combination, presentation, bundle) {
+  const scd = presentation.rxnorm_scd;
+  const label = `${combination.combination_id} presentation `
+    + `${presentation.source_identity.namespace}:${presentation.source_identity.code}`;
+  const key = `rxcui/${scd.rxcui}/allhistoricalndcs-or-properties`;
+  verifyHash(findings, bundle, key, scd.response_sha256, `${label} rxnorm_scd.response_sha256`);
+
+  const observed = parseBundle(bundle, key);
+  if (!observed) {
+    fail(findings, 'unreadable_scd_response', `${label} SCD response is missing or unparseable`);
+    return findings;
+  }
+  if (String(observed.rxcui ?? '') !== scd.rxcui) {
+    fail(findings, 'scd_rxcui_mismatch',
+      `${label} declares SCD ${scd.rxcui} but the response is for ${observed.rxcui}`);
+  }
+  if (observed.tty !== 'SCD') {
+    fail(findings, 'scd_tty_mismatch', `${label} rxcui ${scd.rxcui} is ${observed.tty}, not SCD`);
+  }
+  if (observed.dose_form !== scd.dose_form) {
+    fail(findings, 'scd_dose_form_mismatch',
+      `${label} declares dose form "${scd.dose_form}" but RxNorm returned "${observed.dose_form}"`);
+  }
+
+  const field = presentation.ingredient_rxcui_field ?? 'ingredient_rxcui';
+  if (!INGREDIENT_RXCUI_FIELDS.has(field)) {
+    fail(findings, 'unsupported_ingredient_field', `${label} compares an unsupported field ${field}`);
+    return findings;
+  }
+  const declaredIngredients = new Map(
+    scd.ingredients_and_strengths.map((entry) => [
+      entry.ingredient_rxcui, `${entry.numerator_value}${entry.numerator_unit}`,
+    ]),
+  );
+  const observedIngredients = new Map(
+    (observed.ingredients ?? []).map((entry) => [
+      String(entry[field] ?? ''), `${entry.numerator_value}${entry.numerator_unit}`,
+    ]),
+  );
+  if (!sameSet(new Set(declaredIngredients.keys()), new Set(observedIngredients.keys()))) {
+    fail(findings, 'scd_ingredient_mismatch',
+      `${label} declares ingredients ${[...declaredIngredients.keys()].sort().join(', ')} `
+      + `but RxNorm returned ${[...observedIngredients.keys()].sort().join(', ') || '(none)'}`);
+  }
+  for (const [rxcui, strength] of declaredIngredients) {
+    const observedStrength = observedIngredients.get(rxcui);
+    if (observedStrength !== undefined && observedStrength !== strength) {
+      fail(findings, 'scd_strength_mismatch',
+        `${label} declares ${rxcui} at ${strength} but RxNorm returned ${observedStrength}`);
+    }
+  }
+  const componentRxcuis = new Set(combination.components.map((component) => component.rxcui));
+  if (!sameSet(new Set(declaredIngredients.keys()), componentRxcuis)) {
+    fail(findings, 'scd_component_mismatch',
+      `${label} SCD ingredients do not equal the combination's declared components`);
+  }
+  return findings;
+}
+
+function verifyRelease(findings, combination, bundle) {
+  if (bundle.rxnorm_release !== combination.rxnorm.version) {
+    fail(findings, 'release_disagreement',
+      `${combination.combination_id} pins RxNorm release ${combination.rxnorm.version} `
+      + `but the evidence bundle was captured against ${bundle.rxnorm_release}`);
+  }
+  if (bundle.api_version !== combination.rxnorm.api_version) {
+    fail(findings, 'api_version_disagreement',
+      `${combination.combination_id} pins API version ${combination.rxnorm.api_version} `
+      + `but the evidence bundle was captured against ${bundle.api_version}`);
+  }
+  return findings;
+}
+
+// Verifies one combination against the committed raw evidence bundle. Returns a
+// report; the CLI turns a non-empty findings list into a non-zero exit.
+export function verifyCombinationRxNormEvidence(combination, bundle) {
+  const findings = [];
+  if (!bundle || typeof bundle !== 'object') {
+    fail(findings, 'missing_evidence_bundle',
+      `${combination?.combination_id ?? 'combination'} has no evidence bundle`);
+    return { combination_id: combination?.combination_id ?? null, verified: false, findings };
+  }
+  if (bundle.schema_version !== EVIDENCE_BUNDLE_SCHEMA_VERSION) {
+    fail(findings, 'unsupported_bundle_schema', 'evidence bundle schema_version is unsupported');
+  }
+  verifyRelease(findings, combination, bundle);
+  verifyCombinationConcept(findings, combination, bundle);
+  for (const presentation of combination.presentations) {
+    verifyPresentation(findings, combination, presentation, bundle);
+  }
+  return {
+    combination_id: combination.combination_id,
+    verified: findings.length === 0,
+    findings,
+  };
+}
+
+export function verifyCombinationManifestEvidence(manifest, bundles) {
+  const reports = manifest.combinations.map((combination) => (
+    verifyCombinationRxNormEvidence(combination, bundles?.[combination.combination_id])
+  ));
+  return {
+    verified: reports.every((report) => report.verified),
+    combinations_checked: reports.length,
+    reports,
+  };
+}
