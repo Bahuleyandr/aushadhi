@@ -142,6 +142,63 @@ function requireNonEmptyArray(value, label) {
 
 const sameSet = (left, right) => left.size === right.size && [...left].every((v) => right.has(v));
 
+// Does a system of distinct representatives exist -- can we pick one distinct
+// element from each set? Standard augmenting-path bipartite matching.
+function existsDistinctRepresentatives(sets) {
+  const owner = new Map();
+  const assign = (index, seen) => {
+    for (const element of sets[index]) {
+      if (seen.has(element)) continue;
+      seen.add(element);
+      if (!owner.has(element) || assign(owner.get(element), seen)) {
+        owner.set(element, index);
+        return true;
+      }
+    }
+    return false;
+  };
+  for (let index = 0; index < sets.length; index += 1) {
+    if (!assign(index, new Set())) return false;
+  }
+  return true;
+}
+
+function* permutationsOf(length) {
+  const indices = Array.from({ length }, (_, index) => index);
+  const generate = function* generate(prefix, remaining) {
+    if (remaining.length === 0) {
+      yield prefix;
+      return;
+    }
+    for (let index = 0; index < remaining.length; index += 1) {
+      yield* generate(
+        [...prefix, remaining[index]],
+        [...remaining.slice(0, index), ...remaining.slice(index + 1)],
+      );
+    }
+  };
+  yield* generate([], indices);
+}
+
+// Two combinations overlap when SOME product active set could match both. Textual
+// identity is not the test: alias sets that merely intersect can still admit a
+// common active set. Conversely, combinations that share one component (say
+// paracetamol+codeine and paracetamol+ibuprofen) do NOT overlap, and rejecting
+// those would make the model useless for real fixed-dose combinations.
+function combinationsCanOverlap(left, right) {
+  if (left.components.length !== right.components.length) return false;
+  const leftSets = left.components.map((c) => new Set(c.assertion_ingredient_ids));
+  const rightSets = right.components.map((c) => new Set(c.assertion_ingredient_ids));
+  for (const permutation of permutationsOf(rightSets.length)) {
+    const intersections = leftSets.map((set, index) => (
+      new Set([...set].filter((value) => rightSets[permutation[index]].has(value)))
+    ));
+    if (intersections.some((set) => set.size === 0)) continue;
+    if (existsDistinctRepresentatives(intersections)) return true;
+  }
+  return false;
+}
+
 function validateReview(value, label) {
   requireObject(value, label);
   requireExactKeys(value, new Set(['status', 'reviewer_id', 'reviewed_at', 'evidence']), label);
@@ -311,8 +368,7 @@ function validatePresentations(combination, label, componentRxcuis) {
   requireNonEmptyArray(combination.presentations, `${label}.presentations`);
   const seenProducts = new Set();
   const seenSourceIdentities = new Set();
-  const presentedRoutes = new Set();
-  const presentedDoseForms = new Set();
+  const presentedScopes = new Set();
   for (let index = 0; index < combination.presentations.length; index += 1) {
     const presentation = combination.presentations[index];
     const presentationLabel = `${label}.presentations[${index}]`;
@@ -345,30 +401,37 @@ function validatePresentations(combination, label, componentRxcuis) {
     const route = requireString(presentation.route, `${presentationLabel}.route`);
     const formulation = requireString(presentation.formulation, `${presentationLabel}.formulation`);
     canonicalPresentationValues(route, formulation, presentationLabel);
-    presentedRoutes.add(route);
-    presentedDoseForms.add(formulation);
+    presentedScopes.add(`${route} ${formulation}`);
     validateScd(presentation.rxnorm_scd, `${presentationLabel}.rxnorm_scd`, componentRxcuis);
   }
-  return { presentedRoutes, presentedDoseForms, seenSourceIdentities };
+  return { presentedScopes, seenSourceIdentities };
 }
 
-function validateScopeArray(values, label, kind) {
+// Scope is declared as route/formulation PAIRS. Independent route and dose-form
+// sets cannot distinguish {oral+tablet, intravenous+injection} from the invalid
+// cross products {oral+injection, intravenous+tablet}.
+function validatePresentationScopes(values, label) {
   requireNonEmptyArray(values, label);
   const seen = new Set();
   for (let index = 0; index < values.length; index += 1) {
-    const value = requireString(values[index], `${label}[${index}]`);
-    if (seen.has(value)) throw new TypeError(`${label} contains duplicate ${value}`);
-    seen.add(value);
-    const probe = kind === 'route'
-      ? { drug: 'x', route: value, formulation: 'tablet' }
-      : { drug: 'x', route: 'oral', formulation: value };
-    const normalized = normalizeRuntimeInteractionSubject(probe);
-    const normalizedValue = kind === 'route' ? normalized.route : normalized.formulation;
-    if (normalizedValue !== value) {
-      throw new TypeError(
-        `${label}[${index}] must be a canonical ${kind === 'route' ? 'route' : 'formulation'}`,
-      );
+    const scope = values[index];
+    const scopeLabel = `${label}[${index}]`;
+    requireObject(scope, scopeLabel);
+    requireExactKeys(scope, new Set(['route', 'formulation']), scopeLabel);
+    const route = requireString(scope.route, `${scopeLabel}.route`);
+    const formulation = requireString(scope.formulation, `${scopeLabel}.formulation`);
+    const normalized = normalizeRuntimeInteractionSubject({ drug: 'x', route, formulation });
+    if (normalized.route !== route) {
+      throw new TypeError(`${scopeLabel}.route must be a canonical route`);
     }
+    if (normalized.formulation !== formulation) {
+      throw new TypeError(`${scopeLabel}.formulation must be a canonical formulation`);
+    }
+    const key = `${route} ${formulation}`;
+    if (seen.has(key)) {
+      throw new TypeError(`${label} contains duplicate scope ${route}/${formulation}`);
+    }
+    seen.add(key);
   }
   return seen;
 }
@@ -425,7 +488,7 @@ function validateCombination(value, index) {
   requireObject(value, label);
   requireExactKeys(value, new Set([
     'combination_id', 'identity_kind', 'runtime_drug', 'rxnorm', 'components',
-    'component_match', 'exposure_scope', 'routes', 'dose_forms', 'presentations',
+    'component_match', 'exposure_scope', 'presentation_scopes', 'presentations',
     'provenance', 'allowed_profiles', 'review',
   ]), label);
   requireString(value.combination_id, `${label}.combination_id`);
@@ -444,20 +507,16 @@ function validateCombination(value, index) {
   if (!EXPOSURE_SCOPES.has(value.exposure_scope)) {
     throw new TypeError(`${label}.exposure_scope is invalid`);
   }
-  const declaredRoutes = validateScopeArray(value.routes, `${label}.routes`, 'route');
-  const declaredDoseForms = validateScopeArray(value.dose_forms, `${label}.dose_forms`, 'formulation');
-  const { presentedRoutes, presentedDoseForms, seenSourceIdentities } = validatePresentations(
-    value,
-    label,
-    rxcuis,
+  const declaredScopes = validatePresentationScopes(
+    value.presentation_scopes,
+    `${label}.presentation_scopes`,
   );
+  const { presentedScopes, seenSourceIdentities } = validatePresentations(value, label, rxcuis);
   // equality, not containment: a declaration may never be broader than what was reviewed
-  if (!sameSet(declaredRoutes, presentedRoutes)) {
-    throw new TypeError(`${label}.routes must exactly equal the reviewed presentation routes`);
-  }
-  if (!sameSet(declaredDoseForms, presentedDoseForms)) {
+  if (!sameSet(declaredScopes, presentedScopes)) {
     throw new TypeError(
-      `${label}.dose_forms must exactly equal the reviewed presentation formulations`,
+      `${label}.presentation_scopes must exactly equal the reviewed presentation route and `
+      + 'formulation pairs',
     );
   }
 
@@ -505,26 +564,26 @@ export function validateCombinationIdentityManifest(manifest) {
     throw new TypeError('combination identity manifest combinations must be an array');
   }
   const combinationIds = new Set();
-  const globallyClaimed = new Map();
+  const validated = [];
   const globalSourceIdentities = new Map();
   for (let index = 0; index < manifest.combinations.length; index += 1) {
     const combination = manifest.combinations[index];
-    const { claimed, seenSourceIdentities } = validateCombination(combination, index);
+    const { seenSourceIdentities } = validateCombination(combination, index);
     if (combinationIds.has(combination.combination_id)) {
       throw new TypeError(`duplicate combination_id ${combination.combination_id}`);
     }
     combinationIds.add(combination.combination_id);
     // ambiguity is a review defect: reject it at authoring rather than discovering
     // it at resolution time
-    for (const assertionId of claimed) {
-      if (globallyClaimed.has(assertionId)) {
+    for (const earlier of validated) {
+      if (combinationsCanOverlap(earlier, combination)) {
         throw new TypeError(
-          `combinations ${globallyClaimed.get(assertionId)} and ${combination.combination_id} `
-          + 'declare overlapping component assertion identities',
+          `combinations ${earlier.combination_id} and ${combination.combination_id} `
+          + 'could both match the same product active set',
         );
       }
-      globallyClaimed.set(assertionId, combination.combination_id);
     }
+    validated.push(combination);
     for (const identityKey of seenSourceIdentities) {
       if (globalSourceIdentities.has(identityKey)) {
         throw new TypeError(
@@ -537,20 +596,38 @@ export function validateCombinationIdentityManifest(manifest) {
   return true;
 }
 
+function deepFreeze(value) {
+  if (Array.isArray(value)) {
+    for (const entry of value) deepFreeze(entry);
+    return Object.freeze(value);
+  }
+  if (isObject(value)) {
+    for (const entry of Object.values(value)) deepFreeze(entry);
+    return Object.freeze(value);
+  }
+  return value;
+}
+
 // Validate once, then resolve many products against the compiled representation.
+// The compiled form is DETACHED (deep clone) and DEEPLY frozen: Object.freeze is
+// shallow, so a shallow freeze would still let a caller mutate nested component
+// alias arrays or reviewed presentations. The reviewed-product index is exposed
+// through a lookup function rather than a live Map, which would otherwise be
+// mutable regardless of the wrapper's frozen state.
 export function compileCombinationIdentityManifest(manifest) {
   validateCombinationIdentityManifest(manifest);
+  const combinations = deepFreeze(structuredClone(manifest.combinations));
   const reviewedProducts = new Map();
-  for (const combination of manifest.combinations) {
+  for (const combination of combinations) {
     for (const presentation of combination.presentations) {
       const key = `${presentation.source_identity.namespace}:${presentation.source_identity.code}`;
-      reviewedProducts.set(key, { combination, presentation });
+      reviewedProducts.set(key, Object.freeze({ combination, presentation }));
     }
   }
   return Object.freeze({
     compiled: true,
-    combinations: manifest.combinations,
-    reviewed_products: reviewedProducts,
+    combinations,
+    reviewed_products: Object.freeze({ get: (key) => reviewedProducts.get(key) ?? null }),
   });
 }
 
@@ -673,7 +750,7 @@ function resolveInternal(product, compiledManifest, profile, { auditOnly = false
         error: 'reviewed_product_no_longer_matches_component_set',
       };
     }
-    return {
+    const match = {
       status: 'reviewed_override',
       combination_id: combination.combination_id,
       source_identity: presentation.source_identity,
@@ -683,15 +760,25 @@ function resolveInternal(product, compiledManifest, profile, { auditOnly = false
         name: component.name, rxcui: component.rxcui, tty: component.tty,
       })),
       rxnorm_scd: presentation.rxnorm_scd,
-      ...(auditOnly
-        ? { allowed_profiles: [...combination.allowed_profiles], audit_only: true }
-        : {}),
-      runtime_subject: normalizeRuntimeInteractionSubject({
-        drug: combination.runtime_drug,
-        route: presentation.route,
-        formulation: presentation.formulation,
-      }),
     };
+    const subject = normalizeRuntimeInteractionSubject({
+      drug: combination.runtime_drug,
+      route: presentation.route,
+      formulation: presentation.formulation,
+    });
+    // An audit result is a DIFFERENT TYPE, not a runtime result carrying a flag: a
+    // careless consumer can ignore a flag, but there is no runtime_subject here to
+    // consume, and assertRuntimeCombinationResult refuses it outright.
+    return auditOnly
+      ? {
+        ...match,
+        status: 'audit_match',
+        audit_only: true,
+        authored_profiles: [...combination.allowed_profiles],
+        candidate_subject: subject,
+        runtime_subject: null,
+      }
+      : { ...match, runtime_subject: subject };
   }
 
   const matching = compiledManifest.combinations.filter((combination) => (
@@ -708,6 +795,15 @@ export function resolveCombinationIdentity({ product, manifest, profile }) {
   const compiledManifest = requireCompiled(manifest);
   const releaseProfile = requireReleaseProfile(profile);
   return resolveInternal(product, compiledManifest, releaseProfile);
+}
+
+// A runtime consumer must refuse an audit result even if one is handed to it by
+// mistake, so the separation cannot be defeated by ignoring a flag.
+export function assertRuntimeCombinationResult(result) {
+  if (isObject(result) && (result.audit_only === true || result.status === 'audit_match')) {
+    throw new TypeError('an audit result may not be used on a runtime path');
+  }
+  return result;
 }
 
 // Offline inspection only. Deliberately named so it can never be mistaken for the

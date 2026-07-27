@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "identity_namespace": "aushadhi:ingredient-identity:v1",
+  "notices": [
+    "AUDIT FIXTURE ONLY. Synthetic RxNorm hashes. Carries no promotion authority."
+  ],
+  "combinations": [
+    {
+      "combination_id": "combination:co-trimoxazole:rxnorm-10831",
+      "identity_kind": "fixed_dose_combination",
+      "runtime_drug": "co-trimoxazole",
+      "rxnorm": {
+        "rxcui": "10831",
+        "name": "sulfamethoxazole / trimethoprim",
+        "tty": "MIN",
+        "version": "06-Jul-2026",
+        "api_version": "3.1.354",
+        "properties_response_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "component_relation": {
+          "relationship": "has_part",
+          "component_rxcuis": [
+            "10180",
+            "10829"
+          ],
+          "response_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "components": [
+        {
+          "name": "sulfamethoxazole",
+          "rxcui": "10180",
+          "tty": "IN",
+          "assertion_ingredient_ids": [
+            "sha256:5b15ba7515bffc9682ddd1092973725241a66fd6bba12fda69d7fd8c8712a2bf",
+            "sha256:f68344038f9f9bb5eb6194c285d27716c812b8f670ba1a156b89051f68eeaeaa"
+          ]
+        },
+        {
+          "name": "trimethoprim",
+          "rxcui": "10829",
+          "tty": "IN",
+          "assertion_ingredient_ids": [
+            "sha256:ec4b38e63e65a622534beabc5d428b52dacbc2f805a000615cc4c90b27d41fa9"
+          ]
+        }
+      ],
+      "component_match": "exact_active_set",
+      "exposure_scope": "systemic",
+      "presentation_scopes": [
+        {
+          "route": "oral",
+          "formulation": "tablet"
+        }
+      ],
+      "presentations": [
+        {
+          "source_identity": {
+            "namespace": "presentation:pmbjp",
+            "code": "89"
+          },
+          "product_id": "sha256:f3835b624129e57ede72edc56a6106782aa9df2e6f5491ebd09bd0ac9656e03a",
+          "product_assertion_sha256": "91dea78c9c4194164d7dcd131472f801478c0a2268557aae03662fcbb64b7446",
+          "route": "oral",
+          "formulation": "tablet",
+          "rxnorm_scd": {
+            "rxcui": "198335",
+            "tty": "SCD",
+            "name": "fixture",
+            "ingredients_and_strengths": [
+              {
+                "ingredient_rxcui": "10180",
+                "numerator_value": "800",
+                "numerator_unit": "MG"
+              },
+              {
+                "ingredient_rxcui": "10829",
+                "numerator_value": "160",
+                "numerator_unit": "MG"
+              }
+            ],
+            "dose_form": "Oral Tablet",
+            "version": "06-Jul-2026",
+            "response_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "source_identity": {
+            "namespace": "presentation:pmbjp",
+            "code": "90"
+          },
+          "product_id": "sha256:1b8857c5423094122e608d865db146fa2ffc7e434df540a2b0cf8bd821d33521",
+          "product_assertion_sha256": "9f5eb20bf581a8e78decb7adcaa66e532e2098748ba8bc27a63a3483f90b0547",
+          "route": "oral",
+          "formulation": "tablet",
+          "rxnorm_scd": {
+            "rxcui": "142118",
+            "tty": "SCD",
+            "name": "fixture",
+            "ingredients_and_strengths": [
+              {
+                "ingredient_rxcui": "10180",
+                "numerator_value": "100",
+                "numerator_unit": "MG"
+              },
+              {
+                "ingredient_rxcui": "10829",
+                "numerator_value": "20",
+                "numerator_unit": "MG"
+              }
+            ],
+            "dose_form": "Oral Tablet",
+            "version": "06-Jul-2026",
+            "response_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ],
+      "provenance": {
+        "identity_sources": [
+          {
+            "kind": "official_product_list",
+            "evidence_ref": "l"
+          }
+        ],
+        "tender_check": {
+          "status": "not_present",
+          "document_id": "RC-222/2025",
+          "evidence_ref": "t"
+        }
+      },
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "evidence": [
+          {
+            "evidence_ref": "l",
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-product-list:l",
+            "source_url": "https://static.pib.gov.in/x.pdf",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          {
+            "evidence_ref": "t",
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-product-list:t",
+            "source_url": "https://static.pib.gov.in/x.pdf",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ]
+      }
+    }
+  ]
+}

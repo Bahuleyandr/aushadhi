@@ -1,7 +1,7 @@
 {
   "name": "aushadhi",
   "version": "0.1.0",
-  "description": "India drug reference builder — brand → composition dataset pipeline (open data + official sources + polite 1mg gap-filler)",
+  "description": "India drug reference builder \u2014 brand \u2192 composition dataset pipeline (open data + official sources + polite 1mg gap-filler)",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -29,7 +29,8 @@
     "interactions:promote": "node src/cli/build-interaction-runtime-pack.mjs",
     "interactions:promote:check": "node src/cli/build-interaction-runtime-pack.mjs --check",
     "verify:interaction-evidence": "node src/cli/verify-interaction-evidence-provenance.mjs",
-    "verify:pmbjp-mapping-codes": "node src/cli/verify-pmbjp-mapping-codes.mjs"
+    "verify:pmbjp-mapping-codes": "node src/cli/verify-pmbjp-mapping-codes.mjs",
+    "verify:combination-rxnorm-evidence": "node src/cli/verify-combination-rxnorm-evidence.mjs"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
