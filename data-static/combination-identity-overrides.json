@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "identity_namespace": "aushadhi:ingredient-identity:v1",
+  "notices": [
+    "Fixed-dose combination identities. Deliberately EMPTY.",
+    "Clinician decision C1 (2026-07-27) approved combination support with an architectural condition: combinations use this separate path, and the single-ingredient IN/PIN model in ingredient-mapping-overrides.json is unchanged. A MIN term type is admissible only here, only on identity_kind fixed_dose_combination, and only alongside a verified component list.",
+    "No combination may be recorded until the schema, validator, positive and negative tests and provenance requirements are independently approved. warfarin__cotrimoxazole is clinically approved in principle but remains blocked from promotion pending that approval.",
+    "Matching either component of a combination on its own is prohibited. A combination is matched at product level against the whole active-ingredient set."
+  ],
+  "combinations": []
+}

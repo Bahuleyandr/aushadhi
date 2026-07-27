@@ -37,6 +37,24 @@ const RELATIONSHIPS = new Set([
 ]);
 const RXNORM_INGREDIENT_TYPES = new Set(['IN', 'PIN']);
 
+// Clinician decision C4 (2026-07-27): a PMBJP presentation mapping must rest on an
+// authoritative PMBJP product-identity source -- one that confirms the drug code,
+// product name, active components, strength and dosage form. A procurement tender
+// qualifies, but is no longer REQUIRED: it is not the canonical inventory of every
+// valid PMBJP product, so a drug absent from a tender may be identified from the
+// official product list alone. This is enforced here, for every mapping, rather
+// than as a per-rule exception.
+//
+// Scope: this governs mappings that declare PMBJP provenance through the
+// presentation:pmbjp: mapping_id namespace. Presentation mappings for non-PMBJP
+// products are a different provenance question and are deliberately untouched.
+export const PMBJP_PRODUCT_IDENTITY_PREFIXES = new Set([
+  'pmbjp-product-list:',
+  'pmbjp-live-product:',
+  'pmbjp-tender:',
+]);
+const PMBJP_MAPPING_NAMESPACE = 'presentation:pmbjp:';
+
 function isObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -330,6 +348,16 @@ function validatePresentationMapping(value, index) {
     }
   }
   validateReview(value.review, `${label}.review`);
+  if (value.mapping_id.startsWith(PMBJP_MAPPING_NAMESPACE)) {
+    const hasProductIdentitySource = value.review.evidence.some((evidence) => (
+      [...PMBJP_PRODUCT_IDENTITY_PREFIXES].some((prefix) => evidence.identifier.startsWith(prefix))
+    ));
+    if (!hasProductIdentitySource) {
+      throw new TypeError(
+        `${label}.review requires an authoritative PMBJP product-identity source`,
+      );
+    }
+  }
 }
 
 export function validateProductPresentationManifest(manifest) {
