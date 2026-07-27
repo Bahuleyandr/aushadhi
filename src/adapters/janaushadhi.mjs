@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { normMolecule } from '../lib/normalize.mjs';
 import { downloadToFile } from '../lib/download.mjs';
 import { pdfToText } from '../lib/pdftotext.mjs';
@@ -81,13 +82,64 @@ export function parseJanAushadhiText(text, date) {
   });
 }
 
+export const PMBJP_PROVENANCE_FILENAME = 'pmbjp.provenance.json';
+export const PMBJP_PROVENANCE_SCHEMA_VERSION = 1;
+
+// PMBJP drug codes are NOT stable across product-list editions: the same product
+// carries different codes in different documents. A catalogue row is therefore only
+// interpretable alongside the exact source document it was parsed from, so record
+// that document's identity. Without it, a `pmbjp:<code>` citation cannot be verified
+// and must fail closed rather than be assumed correct.
+export function writeJanAushadhiProvenance(dir, { origin, sourceUrl, pdfPath }) {
+  const hasPdf = pdfPath !== null && fs.existsSync(pdfPath);
+  const bytes = hasPdf ? fs.readFileSync(pdfPath) : null;
+  const provenance = {
+    schema_version: PMBJP_PROVENANCE_SCHEMA_VERSION,
+    source: 'janaushadhi',
+    document: 'pmbjp-product-list',
+    origin,
+    source_url: sourceUrl,
+    retrieved_at: new Date().toISOString().slice(0, 10),
+    pdf_sha256: hasPdf ? createHash('sha256').update(bytes).digest('hex') : null,
+    pdf_byte_count: hasPdf ? bytes.length : null,
+    code_space_verifiable: hasPdf,
+  };
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, PMBJP_PROVENANCE_FILENAME),
+    `${JSON.stringify(provenance, null, 2)}\n`,
+  );
+  return provenance;
+}
+
+export function readJanAushadhiProvenance(dir) {
+  const file = path.join(dir, PMBJP_PROVENANCE_FILENAME);
+  if (!fs.existsSync(file)) return null;
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
 export async function fetchJanAushadhi({ rawRoot, date }) {
   const dir = path.join(rawRoot, 'janaushadhi', date);
   const pdf = path.join(dir, 'pmbjp.pdf');
   const txt = path.join(dir, 'pmbjp.txt');
-  if (fs.existsSync(txt)) return { file: txt, cached: true };
-  if (!fs.existsSync(pdf)) await downloadToFile(PDF_URL, pdf); // operator-dropped pdf wins
+  if (fs.existsSync(txt)) {
+    // A pre-existing text extract may have no recoverable source document. Record
+    // that honestly instead of leaving the code space silently unattributed.
+    const provenance = readJanAushadhiProvenance(dir) ?? writeJanAushadhiProvenance(dir, {
+      origin: fs.existsSync(pdf) ? 'cached-pdf' : 'cached-text-only',
+      sourceUrl: fs.existsSync(pdf) ? null : null,
+      pdfPath: fs.existsSync(pdf) ? pdf : null,
+    });
+    return { file: txt, cached: true, provenance };
+  }
+  const operatorDrop = fs.existsSync(pdf);
+  if (!operatorDrop) await downloadToFile(PDF_URL, pdf); // operator-dropped pdf wins
+  const provenance = writeJanAushadhiProvenance(dir, {
+    origin: operatorDrop ? 'operator-drop' : 'download',
+    sourceUrl: operatorDrop ? null : PDF_URL,
+    pdfPath: pdf,
+  });
   const r = await pdfToText(pdf, txt);
-  if (r.skipped) return r;
-  return { file: txt, cached: false };
+  if (r.skipped) return { ...r, provenance };
+  return { file: txt, cached: false, provenance };
 }

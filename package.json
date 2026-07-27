@@ -28,7 +28,8 @@
     "interactions:draft:assemble": "node src/cli/assemble-interaction-draft-pack.mjs",
     "interactions:promote": "node src/cli/build-interaction-runtime-pack.mjs",
     "interactions:promote:check": "node src/cli/build-interaction-runtime-pack.mjs --check",
-    "verify:interaction-evidence": "node src/cli/verify-interaction-evidence-provenance.mjs"
+    "verify:interaction-evidence": "node src/cli/verify-interaction-evidence-provenance.mjs",
+    "verify:pmbjp-mapping-codes": "node src/cli/verify-pmbjp-mapping-codes.mjs"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
