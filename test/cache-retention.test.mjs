@@ -8,6 +8,16 @@ import { spawnSync } from 'node:child_process';
 const TMP = 'test/.tmp-cache-retention';
 let bashWorkingDirectory;
 
+// scripts/compress-page-cache.sh requires pigz. It is an optional external
+// dependency, absent on some development machines, so these tests skip
+// explicitly rather than failing: an unexpected failure must never be waived
+// inside an approval packet, and a silent absence must never look like a pass.
+const pigzProbe = spawnSync('bash', ['-c', 'command -v pigz'], { encoding: 'utf8' });
+const pigzAvailable = pigzProbe.status === 0 && Boolean(pigzProbe.stdout.trim());
+const requiresPigz = pigzAvailable
+  ? {}
+  : { skip: 'pigz is not installed; page-cache compression cannot be exercised here' };
+
 function bashPath(value) {
   if (bashWorkingDirectory === undefined) {
     const bashCwd = spawnSync('bash', ['-c', 'pwd -P'], {
@@ -23,7 +33,7 @@ function bashPath(value) {
   return `${bashWorkingDirectory}/${relative}`;
 }
 
-test('cache retention compresses only old HTML page-cache entries', () => {
+test('cache retention compresses only old HTML page-cache entries', requiresPigz, () => {
   fs.rmSync(TMP, { recursive: true, force: true });
   const pages = `${TMP}/raw/netmeds/pages`;
   fs.mkdirSync(pages, { recursive: true });
@@ -71,7 +81,7 @@ test('cache retention compresses only old HTML page-cache entries', () => {
   }
 });
 
-test('cache retention refuses a broad filesystem root', () => {
+test('cache retention refuses a broad filesystem root', requiresPigz, () => {
   const result = spawnSync('bash', ['scripts/compress-page-cache.sh'], {
     cwd: '.',
     encoding: 'utf8',
