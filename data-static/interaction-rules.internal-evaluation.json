@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "pack_id": "aushadhi-internal-interactions",
-  "pack_version": "0.3.0",
+  "pack_version": "0.4.0",
   "licence": "CC-BY-4.0",
   "source_ids": [
     "aushadhi-open-clinician-rules"
@@ -93,6 +93,71 @@
         "source_versions": [
           "openfda-labels:f49d011f-5ca6-4f75-ba16-2099fe42f5aa:2",
           "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__azithromycin_oral",
+      "pair": [
+        "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06",
+        "sha256:a11cef0dcf59d647cc50aa3f94174e67599b079a0abc989a22ae61649ca2b783"
+      ],
+      "product_pairs": [
+        [
+          "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+          "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25"
+        ],
+        [
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+          "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25"
+        ],
+        [
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca",
+          "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25"
+        ]
+      ],
+      "applicability": {
+        "routes": [
+          "oral tablet for both exact reviewed product assertions"
+        ],
+        "dose_conditions": [],
+        "population_conditions": []
+      },
+      "severity": "moderate",
+      "dispense_action": "confirm_and_monitor",
+      "mechanism": "Postmarketing reports suggest azithromycin may potentiate oral anticoagulants, although a dedicated azithromycin-warfarin study did not change prothrombin time.",
+      "management": "Confirm that the prescriber or anticoagulation service has arranged a PT/INR monitoring plan during concomitant oral azithromycin use and will decide whether follow-up is needed when the course ends. Do not independently change a dose or stop either medicine. Use prescriber-directed PT/INR monitoring during concomitant use; no universal schedule or fixed post-discontinuation interval is asserted. Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools. This review scope is limited to exact reviewed PMBJP oral-tablet assertions. Oral suspensions, the stale code 48 dispersible-tablet assertion, and every other unreviewed or non-tablet presentation are excluded. The U.S. label describes postmarketing potentiation reports but also states that a dedicated azithromycin-warfarin study did not affect prothrombin time.",
+      "evidence": [
+        {
+          "source": "openFDA drug label: azithromycin",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%22db52b91e-79f7-4cc1-9564-f2eee8e31c45%22&limit=100",
+          "document_id": "db52b91e-79f7-4cc1-9564-f2eee8e31c45",
+          "document_version": "48",
+          "retrieved_at": "2026-07-24",
+          "jurisdiction": "US",
+          "excerpt": "Monitor prothrombin time/INR when azithromycin is co-administered with warfarin.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        }
+      ],
+      "review": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "source_versions": [
+          "openfda-labels:db52b91e-79f7-4cc1-9564-f2eee8e31c45:48"
         ]
       }
     },
@@ -336,6 +401,71 @@
         "source_versions": [
           "openfda-labels:a2883ca1-5a9a-4259-9d80-46ab67274384:25",
           "openfda-labels:51e98fb6-ba76-497e-95d8-fe895ef0b7ed:7"
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__tramadol",
+      "pair": [
+        "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06",
+        "sha256:7d4536b14c06903f91096e57cf43df6161f83c9bd2ac24738ca1da7d2d4dafc7"
+      ],
+      "product_pairs": [
+        [
+          "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+          "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4"
+        ],
+        [
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+          "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4"
+        ],
+        [
+          "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ]
+      ],
+      "applicability": {
+        "routes": [
+          "oral tablet for both exact reviewed product assertions"
+        ],
+        "dose_conditions": [],
+        "population_conditions": []
+      },
+      "severity": "major",
+      "dispense_action": "confirm_and_monitor",
+      "mechanism": "Observed clinical, multifactorial: concurrent tramadol is associated with increased INR and serious bleeding on warfarin; tramadol has no intrinsic anticoagulant/antiplatelet pharmacodynamic action, so the mechanism is not a clean single-enzyme PK-perpetrator effect.",
+      "management": "Confirm that the prescriber or anticoagulation service has reviewed whether the warfarin dose needs adjustment and arranged additional PT/INR monitoring when oral tramadol is started. Use prescriber-directed review when tramadol is stopped. Do not independently change a dose or stop either medicine. Use prescriber-directed PT/INR monitoring when tramadol is started and a prescriber-directed decision about follow-up when it is stopped; no universal schedule or fixed post-discontinuation interval is asserted. Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools, and not to stop warfarin without discussing it with a healthcare professional. This review scope is limited to exact reviewed PMBJP oral-tablet assertions. Tramadol injections, combination products, and every other unreviewed or non-tablet presentation are excluded. Major severity is a clinician-approved local mapping for internal evaluation; the retained source is a UK MHRA safety update and does not establish U.S. or Indian regulatory applicability.",
+      "evidence": [
+        {
+          "source": "MHRA Drug Safety Update: tramadol",
+          "source_url": "https://www.gov.uk/drug-safety-update/warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol",
+          "document_id": "warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol",
+          "document_version": "2024-06-20T11:11:09+01:00",
+          "retrieved_at": "2026-07-24",
+          "jurisdiction": "UK",
+          "excerpt": "MHRA warns of increased INR and major bruising or life-threatening bleeding when warfarin and tramadol are used together.",
+          "licence": "OGL-3.0",
+          "review_status": "clinician_reviewed"
+        }
+      ],
+      "review": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "source_versions": [
+          "mhra-govuk-drug-safety-updates:warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol:2024-06-20T11:11:09+01:00"
         ]
       }
     },

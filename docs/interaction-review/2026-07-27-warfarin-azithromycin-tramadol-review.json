@@ -2,7 +2,7 @@
   "schema_version": 1,
   "packet_id": "warfarin-azithromycin-tramadol-pmbjp-oral-tablets-2026-07-27",
   "generated_at": "2026-07-27",
-  "review_status": "review_candidate",
+  "review_status": "clinician_reviewed",
   "release_profile": "internal-evaluation",
   "production_open_enabled": false,
   "catalogue_snapshot": {
@@ -55,7 +55,12 @@
           "retrieved_at": "2026-07-26"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve both ingredient identity mappings as exact: observed azithromycin to RxNorm ingredient RxCUI 18631, UNII F94OW58Y8V; and observed tramadol to RxNorm ingredient RxCUI 10689, UNII 39J1LGJ30J. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "ingredient:tramadol:rxnorm-10689",
@@ -101,7 +106,12 @@
           "retrieved_at": "2026-07-26"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve both ingredient identity mappings as exact: observed azithromycin to RxNorm ingredient RxCUI 18631, UNII F94OW58Y8V; and observed tramadol to RxNorm ingredient RxCUI 10689, UNII 39J1LGJ30J. Reviewer ID: clinician:subas"
+      }
     }
   ],
   "product_presentation_candidates": [
@@ -139,7 +149,12 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-27 warfarin-azithromycin-tramadol review packet: codes 18, 72, 28, and 521. This approval excludes stale azithromycin dispersible-tablet assertion code 48, azithromycin suspensions codes 47 and 1521, tramadol injections codes 26 and 27, tramadol combination products codes 510, 1747, and 2649, and every other unreviewed presentation. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "presentation:pmbjp:28:oral-tablet",
@@ -175,7 +190,12 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-27 warfarin-azithromycin-tramadol review packet: codes 18, 72, 28, and 521. This approval excludes stale azithromycin dispersible-tablet assertion code 48, azithromycin suspensions codes 47 and 1521, tramadol injections codes 26 and 27, tramadol combination products codes 510, 1747, and 2649, and every other unreviewed presentation. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "presentation:pmbjp:521:oral-tablet",
@@ -211,7 +231,12 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-27 warfarin-azithromycin-tramadol review packet: codes 18, 72, 28, and 521. This approval excludes stale azithromycin dispersible-tablet assertion code 48, azithromycin suspensions codes 47 and 1521, tramadol injections codes 26 and 27, tramadol combination products codes 510, 1747, and 2649, and every other unreviewed presentation. Reviewer ID: clinician:subas"
+      }
     },
     {
       "mapping_id": "presentation:pmbjp:72:oral-tablet",
@@ -247,14 +272,19 @@
           "tty": "SCD"
         }
       ],
-      "approval": null
+      "approval": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve all four product-presentation mappings as oral tablet for the exact PMBJP assertions in the 2026-07-27 warfarin-azithromycin-tramadol review packet: codes 18, 72, 28, and 521. This approval excludes stale azithromycin dispersible-tablet assertion code 48, azithromycin suspensions codes 47 and 1521, tramadol injections codes 26 and 27, tramadol combination products codes 510, 1747, and 2649, and every other unreviewed presentation. Reviewer ID: clinician:subas"
+      }
     }
   ],
   "proposed_rules": [
     {
       "rule_id": "warfarin__azithromycin_oral",
       "draft_rule_sha256": "f3cd2ac4598e2d602d9f48b452d354564aac185db473baf0e23f66c987b66ced",
-      "review_status": "review_candidate",
+      "review_status": "clinician_reviewed",
       "proposed_severity": "moderate",
       "proposed_dispense_action": "confirm_and_monitor",
       "scope": {
@@ -316,12 +346,17 @@
         "azithromycin oral suspensions",
         "dispersible tablets and every other unreviewed azithromycin presentation"
       ],
-      "approval": null
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve the warfarin-azithromycin clinical rule for internal evaluation only, limited to the five reviewed PMBJP oral-tablet assertions (six cross-product combinations), as moderate severity with confirm-and-monitor management. The alert must require a prescriber/anticoagulation-service PT/INR monitoring plan during concomitant oral azithromycin use and a clinician-directed decision about follow-up when the course ends; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling; disclose that the U.S. label's signal is based on spontaneous postmarketing reports and that its dedicated azithromycin-warfarin study did not affect prothrombin time; exclude stale code 48, suspensions, dispersible tablets, and every other unreviewed or non-tablet presentation; do not invent a universal PT/INR schedule or fixed post-discontinuation interval; treat the evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas"
+      }
     },
     {
       "rule_id": "warfarin__tramadol",
       "draft_rule_sha256": "6fc7fe11082347ebc877d5a64469a67fe28f5a18c3942da10a1d45078212156b",
-      "review_status": "review_candidate",
+      "review_status": "clinician_reviewed",
       "proposed_severity": "major",
       "proposed_dispense_action": "confirm_and_monitor",
       "scope": {
@@ -382,7 +417,12 @@
         "tramadol combination products",
         "every other unreviewed or non-tablet tramadol presentation"
       ],
-      "approval": null
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve the warfarin-tramadol clinical rule for internal evaluation only, limited to the five reviewed PMBJP oral-tablet assertions (six cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service review of whether warfarin dose adjustment is needed and additional PT/INR monitoring when oral tramadol is started, with a clinician-directed follow-up decision when tramadol is stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling and advice not to stop warfarin without consulting a healthcare professional; exclude injections, combination products, and every other unreviewed or non-tablet presentation; do not invent a universal PT/INR schedule or fixed post-discontinuation interval; treat the evidence as a UK MHRA safety update rather than a U.S. or Indian regulatory claim; and keep production-open disabled. Reviewer ID: clinician:subas"
+      }
     }
   ],
   "excluded_catalogue_assertions": [
@@ -456,9 +496,9 @@
     "pmbjp_documents": "downloaded_from_official_host_and_sha256_bound"
   },
   "approval_required": {
-    "ingredient_identity_approvals": 2,
-    "product_presentation_approvals": 4,
-    "clinical_rule_approvals": 2,
-    "promotion_remains_blocked_until_explicit_clinician_review": true
+    "ingredient_identity_approvals": 0,
+    "product_presentation_approvals": 0,
+    "clinical_rule_approvals": 0,
+    "promotion_remains_blocked_until_explicit_clinician_review": false
   }
 }

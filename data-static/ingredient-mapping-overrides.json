@@ -371,6 +371,128 @@
           }
         ]
       }
+    },
+    {
+      "mapping_id": "ingredient:azithromycin:rxnorm-18631",
+      "assertion": {
+        "ingredient_id": "sha256:a11cef0dcf59d647cc50aa3f94174e67599b079a0abc989a22ae61649ca2b783",
+        "canonical_name": "azithromycin"
+      },
+      "identity": {
+        "clinical_ingredient_id": "sha256:a11cef0dcf59d647cc50aa3f94174e67599b079a0abc989a22ae61649ca2b783",
+        "canonical_name": "azithromycin",
+        "runtime_drug": "azithromycin",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "18631",
+          "name": "azithromycin",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "response_sha256": "42d957f36937eab5f7d89ba38e8a4bbf70299193e8d409c36d75191a503fd0c1"
+        },
+        "unii": {
+          "code": "F94OW58Y8V",
+          "preferred_name": "azithromycin",
+          "response_sha256": "293b8ebdb43c86d1345f43b8534c48e9fb105458b7a59a497edf3a5c8d740b71"
+        }
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "evidence": [
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-version:06-Jul-2026",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/version.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:azithromycin",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=azithromycin&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "ef8711e62781db914dc748e061ba9059bf5317abe4a27b2b4c0f58f41f7f4600"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:18631",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/18631/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "42d957f36937eab5f7d89ba38e8a4bbf70299193e8d409c36d75191a503fd0c1"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "unii:F94OW58Y8V",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/18631/property.json?propName=UNII_CODE",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "293b8ebdb43c86d1345f43b8534c48e9fb105458b7a59a497edf3a5c8d740b71"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "ingredient:tramadol:rxnorm-10689",
+      "assertion": {
+        "ingredient_id": "sha256:7d4536b14c06903f91096e57cf43df6161f83c9bd2ac24738ca1da7d2d4dafc7",
+        "canonical_name": "tramadol"
+      },
+      "identity": {
+        "clinical_ingredient_id": "sha256:7d4536b14c06903f91096e57cf43df6161f83c9bd2ac24738ca1da7d2d4dafc7",
+        "canonical_name": "tramadol",
+        "runtime_drug": "tramadol",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "10689",
+          "name": "tramadol",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "response_sha256": "4b4e02db0e2103f038a66dbbfc9d14cb029e03337c9ec9311129af64d608371f"
+        },
+        "unii": {
+          "code": "39J1LGJ30J",
+          "preferred_name": "tramadol",
+          "response_sha256": "a58a094019cb1784d3e8eeeb3eb4bcc6a7a41ec7a944c48d19a750de8696fb4c"
+        }
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "evidence": [
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-version:06-Jul-2026",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/version.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:tramadol",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=tramadol&allsrc=0&search=0",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "d7583de12086d6e9d979d6c9a3809cc6395edb0c9dac9d645c2e8ed37ea194b3"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:10689",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/10689/properties.json",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "4b4e02db0e2103f038a66dbbfc9d14cb029e03337c9ec9311129af64d608371f"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "unii:39J1LGJ30J",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/10689/property.json?propName=UNII_CODE",
+            "retrieved_at": "2026-07-26",
+            "evidence_sha256": "a58a094019cb1784d3e8eeeb3eb4bcc6a7a41ec7a944c48d19a750de8696fb4c"
+          }
+        ]
+      }
     }
   ]
 }

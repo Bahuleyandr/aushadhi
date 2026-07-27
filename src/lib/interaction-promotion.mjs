@@ -18,9 +18,14 @@ import { validateDraftRules } from './interaction-draft-validation.mjs';
 const SHA256 = /^[0-9a-f]{64}$/u;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const ROLES = ['object', 'perpetrator'];
-const PROMOTABLE_OPENFDA_CITATION_STATUSES = new Set([
-  'machine_confirmed_openfda_reconciled_pending_clinician',
-  'machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope',
+const PROMOTABLE_EVIDENCE = new Map([
+  ['openfda-labels', new Set([
+    'machine_confirmed_openfda_reconciled_pending_clinician',
+    'machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope',
+  ])],
+  ['mhra-govuk-drug-safety-updates', new Set([
+    'machine_confirmed_govuk_ogl_bound_pending_clinician',
+  ])],
 ]);
 
 function isObject(value) {
@@ -259,9 +264,22 @@ function requireDraftBoundary(rule) {
 }
 
 function expectedSourceVersions(rule) {
-  return rule.evidence.map((evidence) => (
-    `${evidence.source_policy_id}:${evidence.provenance.set_id}:${evidence.provenance.version}`
-  ));
+  return rule.evidence.map((evidence) => {
+    const setId = evidence.provenance?.set_id;
+    const version = evidence.provenance?.version;
+    if (typeof setId === 'string' && typeof version === 'string') {
+      return `${evidence.source_policy_id}:${setId}:${version}`;
+    }
+    if (typeof evidence.document_id === 'string'
+        && typeof evidence.document_version === 'string') {
+      return (
+        `${evidence.source_policy_id}:${evidence.document_id}:${evidence.document_version}`
+      );
+    }
+    throw new TypeError(
+      `${rule.rule_id} evidence ${evidence.source_id} lacks a promotable source version`,
+    );
+  });
 }
 
 function assertExactArray(actual, expected, label) {
@@ -368,8 +386,8 @@ function bindScope({
   };
 }
 
-function runtimeManagement(management) {
-  return [
+function runtimeManagement(management, approval) {
+  const text = [
     management.prescriber_action,
     management.monitoring,
     management.duration,
@@ -377,11 +395,24 @@ function runtimeManagement(management) {
     management.timing,
     management.exceptions,
   ].filter((value) => typeof value === 'string' && value.trim() !== '').join(' ');
+  if (approval.status !== 'clinician_reviewed') return text;
+  return text.replace(
+    /\blocal mapping pending clinician approval\b/giu,
+    'clinician-approved local mapping for internal evaluation',
+  );
 }
 
 function runtimeEvidence(evidence) {
+  let source;
+  if (evidence.source_policy_id === 'openfda-labels') {
+    source = `openFDA drug label: ${evidence.product}`;
+  } else if (evidence.source_policy_id === 'mhra-govuk-drug-safety-updates') {
+    source = `MHRA Drug Safety Update: ${evidence.product}`;
+  } else {
+    throw new TypeError(`unsupported promoted evidence source ${evidence.source_policy_id}`);
+  }
   return {
-    source: `openFDA drug label: ${evidence.product}`,
+    source,
     source_url: evidence.source_url,
     document_id: evidence.document_id,
     document_version: evidence.document_version,
@@ -438,10 +469,13 @@ export function compileInteractionRuntimePack({
       sourceVersions,
       `${promotion.rule_id} approval.source_versions`,
     );
-    if (draft.rule.evidence.some((evidence) => (
-      evidence.review_status !== 'review_candidate'
-      || !PROMOTABLE_OPENFDA_CITATION_STATUSES.has(evidence.citation_status)
-    ))) {
+    if (draft.rule.evidence.some((evidence) => {
+      const statuses = PROMOTABLE_EVIDENCE.get(evidence.source_policy_id);
+      return (
+        evidence.review_status !== 'review_candidate'
+        || !statuses?.has(evidence.citation_status)
+      );
+    })) {
       throw new TypeError(
         `${promotion.rule_id} evidence is not eligible for clinician-gated internal promotion`,
       );
@@ -469,7 +503,7 @@ export function compileInteractionRuntimePack({
       severity: draft.rule.severity,
       dispense_action: draft.rule.management.dispense_action,
       mechanism: draft.rule.mechanism,
-      management: runtimeManagement(draft.rule.management),
+      management: runtimeManagement(draft.rule.management, promotion.approval),
       evidence: draft.rule.evidence.map(runtimeEvidence),
       review: {
         status: promotion.approval.status,

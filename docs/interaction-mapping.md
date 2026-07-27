@@ -184,8 +184,9 @@ warfarin-amiodarone rule for six exact PMBJP oral-tablet product pairs and the
 clinician-approved warfarin-fluconazole rule for 12 exact PMBJP oral-tablet
 product pairs. It also contains separately clinician-approved warfarin rules
 for metronidazole (six pairs), oral ketoconazole (three pairs), and
-voriconazole (three pairs). A reviewed ingredient identity without its exact
-reviewed presentation is excluded from clinical pair generation, and a
+voriconazole (three pairs), plus warfarin-azithromycin (six pairs) and
+warfarin-tramadol (six pairs). A reviewed ingredient identity without its
+exact reviewed presentation is excluded from clinical pair generation, and a
 different product carrying the same ingredient does not inherit the approval.
 Reviewed mapping completeness does not otherwise promote a clinical rule.
 

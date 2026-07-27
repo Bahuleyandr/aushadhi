@@ -75,7 +75,7 @@ test('the promotion manifest deterministically compiles the checked-in internal 
     'utf8',
   );
   assert.equal(serializeInteractionRuntimePack(compiled), checkedIn);
-  assert.equal(compiled.rules.length, 5);
+  assert.equal(compiled.rules.length, 7);
   const amiodarone = compiled.rules.find(
     (rule) => rule.rule_id === 'warfarin__amiodarone',
   );
@@ -90,6 +90,12 @@ test('the promotion manifest deterministically compiles the checked-in internal 
   );
   const voriconazole = compiled.rules.find(
     (rule) => rule.rule_id === 'warfarin__voriconazole',
+  );
+  const azithromycin = compiled.rules.find(
+    (rule) => rule.rule_id === 'warfarin__azithromycin_oral',
+  );
+  const tramadol = compiled.rules.find(
+    (rule) => rule.rule_id === 'warfarin__tramadol',
   );
   assert.equal(amiodarone.product_pairs.length, 6);
   assert.equal(amiodarone.review.reviewer_id, 'clinician:subas');
@@ -117,6 +123,34 @@ test('the promotion manifest deterministically compiles the checked-in internal 
       /Child-Pugh|Indian regulatory-label claim/iu,
     );
   }
+  assert.equal(azithromycin.severity, 'moderate');
+  assert.equal(azithromycin.product_pairs.length, 6);
+  assert.equal(tramadol.severity, 'major');
+  assert.equal(tramadol.product_pairs.length, 6);
+  for (const rule of [azithromycin, tramadol]) {
+    assert.equal(rule.review.reviewer_id, 'clinician:subas');
+    assert.match(rule.management, /prescriber or anticoagulation service/iu);
+    assert.match(rule.management, /PT\/INR monitoring/iu);
+    assert.match(rule.management, /bleeding or bruising/iu);
+    assert.doesNotMatch(
+      JSON.stringify(rule),
+      /Child-Pugh|Indian regulatory-label claim/iu,
+    );
+  }
+  assert.doesNotMatch(tramadol.management, /pending clinician approval/iu);
+  assert.match(
+    tramadol.management,
+    /clinician-approved local mapping for internal evaluation/iu,
+  );
+  assert.deepEqual(tramadol.evidence.map((evidence) => ({
+    source: evidence.source,
+    jurisdiction: evidence.jurisdiction,
+    licence: evidence.licence,
+  })), [{
+    source: 'MHRA Drug Safety Update: tramadol',
+    jurisdiction: 'UK',
+    licence: 'OGL-3.0',
+  }]);
   assert.match(fluconazole.management, /bleeding or bruising/iu);
   assert.match(fluconazole.management, /do not independently stop/iu);
   assert.match(fluconazole.management, /autonomously change/iu);

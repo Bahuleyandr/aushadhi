@@ -2,19 +2,20 @@
 
 Date: 2026-07-27
 
-Status: awaiting clinician review
+Status: clinician reviewed
 
-Release profile: proposed for `internal-evaluation` only
+Release profile: approved for `internal-evaluation` only
 
 Production-open status: disabled
 
-This packet proposes two exact ingredient identities, four exact PMBJP
-oral-tablet presentations, and two bounded clinical rules. Nothing in this
-packet is a committed mapping or runtime promotion. The machine-readable
-bindings are in
+This packet records approval of two exact ingredient identities, four exact
+PMBJP oral-tablet presentations, and two bounded clinical rules. The
+machine-readable bindings are in
 `docs/interaction-review/2026-07-27-warfarin-azithromycin-tramadol-review.json`.
+The verbatim approval record is in
+`docs/interaction-review/2026-07-27-warfarin-azithromycin-tramadol-clinician-approval.md`.
 
-## Ingredient identity candidates
+## Approved ingredient identities
 
 | Observed ingredient | RxCUI | Term type | UNII | Local ingredient ID |
 |---|---:|---|---|---|
@@ -22,11 +23,12 @@ bindings are in
 | tramadol | `10689` | `IN` | `39J1LGJ30J` | `sha256:7d4536b14c06903f91096e57cf43df6161f83c9bd2ac24738ca1da7d2d4dafc7` |
 
 Both live exact searches returned one active RxNorm ingredient concept in
-release `06-Jul-2026`, API `3.1.354`. These are review candidates only.
+release `06-Jul-2026`, API `3.1.354`. The clinician approved both relationships
+as exact.
 
-## Product-presentation candidates
+## Approved product presentations
 
-| PMBJP code | Exact local product assertion | Pack | Product assertion SHA-256 | Proposed presentation |
+| PMBJP code | Exact local product assertion | Pack | Product assertion SHA-256 | Approved presentation |
 |---|---|---:|---|---|
 | `18` | Azithromycin Tablets IP 250 mg | 6's | `8857d75b73ec7f1e2600928d0d601e8c283dbd177ea8081ec83f7d93f996286d` | oral tablet |
 | `72` | Azithromycin Tablets IP 500 mg | 3's | `486892da381243eee3d79a37e4708e2b74e38d9c35ed0fe0fb409f5455fe5db3` | oral tablet |
@@ -42,7 +44,7 @@ sizes. Live exact RxNorm searches returned active SCD concepts `308460`,
 ## Adversarial exclusions
 
 The preserved catalogue contains twelve PMBJP assertions mentioning
-azithromycin or tramadol. Only the four above are proposed.
+azithromycin or tramadol. Only the four above are approved.
 
 - Code `48` is specifically excluded. The local assertion says a 10-tablet
   pack, but PMBI Amendment 2 to `RC-221/2025` changed the unit to 3 tablets
@@ -52,26 +54,25 @@ azithromycin or tramadol. Only the four above are proposed.
 - Combination products `510`, `1747`, and `2649` are excluded.
 - No unreviewed product inherits an ingredient-level approval.
 
-## Proposed clinical rules
+## Approved clinical rules
 
-| Rule | Interacting tablets | Warfarin tablets | Exact pairs | Proposed severity/action |
+| Rule | Interacting tablets | Warfarin tablets | Exact pairs | Approved severity/action |
 |---|---:|---:|---:|---|
 | `warfarin__azithromycin_oral` | 2 | 3 | 6 | moderate / confirm-and-monitor |
 | `warfarin__tramadol` | 2 | 3 | 6 | major / confirm-and-monitor |
 
-Both draft rows are narrowed to oral tablets and remain runtime-disabled,
-clinical-context-incomplete, and promotion-ineligible. Exact product pairs
-would live only in a separate clinician-approved internal-evaluation
-promotion.
+Both source draft rows remain runtime-disabled, clinical-context-incomplete,
+and promotion-ineligible. Their exact product pairs are authorized only by the
+separate clinician-approved internal-evaluation promotion manifest.
 
-The azithromycin proposal preserves the U.S. label's uncertainty: spontaneous
+The azithromycin approval preserves the U.S. label's uncertainty: spontaneous
 postmarketing reports suggest potentiation, while a dedicated
 azithromycin-warfarin study did not change prothrombin time. It asks for a
 prescriber/anticoagulation-service PT/INR plan during concomitant use and a
 clinician-directed decision about follow-up when the course ends. It does not
 invent a schedule or fixed post-discontinuation interval.
 
-The tramadol proposal treats the MHRA Drug Safety Update as UK evidence. It
+The tramadol approval treats the MHRA Drug Safety Update as UK evidence. It
 asks the prescriber/anticoagulation service to review whether warfarin dose
 adjustment is needed and arrange additional PT/INR monitoring when tramadol is
 started, with clinician-directed review when it is stopped. The pharmacy is
@@ -93,10 +94,11 @@ not directed to change a dose or stop either medicine independently.
   U.S. azithromycin label or UK tramadol safety update into an Indian
   regulatory-label claim.
 
-## Approval statements
+## Recorded approval statements
 
-Each statement is deliberately separate. Promotion remains blocked until all
-four decisions are explicitly recorded with a reviewer ID.
+Each statement was explicitly recorded with reviewer ID `clinician:subas` on
+2026-07-27. These approvals apply only to the exact internal-evaluation
+bindings described above; `production-open` remains disabled.
 
 ### Ingredient identities
 
