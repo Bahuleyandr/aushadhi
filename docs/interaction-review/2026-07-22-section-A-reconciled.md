@@ -3,7 +3,7 @@
 Section A is reconciled to the v2 runtime-status and strict citation model. Rules remain draft-only and require clinician approval before promotion.
 
 - Source: `docs/interaction-review/batch-01-v2/sections/A.verified.jsonl`
-- JSONL SHA-256: `65a2c3b616046be9997c8117cf8a629e4e3368c4c44cd62af11fdfd0a318ceb7`
+- JSONL SHA-256: `777035fe716c9fbeabf51846ad2193645caefaed2fafc926aadd1eda7aa2d858`
 - Generated: `2026-07-27`
 - Inventory: 33 rules; 39 retained evidence records; 75 machine-text-verified exact hashed fragments; 2 fail-closed rules with no retained evidence.
 - Runtime: 0 enabled; 27 pair-executable diagnostics; 6 matcher-inert review

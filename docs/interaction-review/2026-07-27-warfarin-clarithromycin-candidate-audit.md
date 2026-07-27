@@ -3,11 +3,58 @@
 **Date:** 2026-07-27
 **Packet:** `warfarin-clarithromycin-pmbjp-oral-tablets-candidate-audit-2026-07-27`
 **Machine-readable companion:** `2026-07-27-warfarin-clarithromycin-candidate-audit.json`
-**Status:** candidate audit — **pending `clinician:subas`**
+**Status:** A1–A6 approved by `clinician:subas` on 2026-07-27 · **A3/A4/A6 executed · A1/A2/A5 HALTED**
 
-> **Nothing in this packet authorizes anything.** No ingredient mapping, no product-presentation
-> mapping, no promotion entry, and no attested draft byte has been created or changed. Production-open
-> remains empty. This is the read-only audit that must precede any approval.
+> ## ⚠ Execution halted partway — read this first
+>
+> A1–A6 were all approved. While executing **A2** (recording the product-presentation mapping) I found
+> that **PMBJP drug codes in the catalogue do not reliably match the official PMBJP product list**
+> (finding **F5**, below). The official list assigns **code 739** to clarithromycin 250 mg and
+> **code 740 to Cefpodoxime Proxetil Dispersible Tablets 50 mg** — a different drug.
+>
+> **This also retracts a claim in the original version of this packet.** It asserted the tender bound
+> code 740 to clarithromycin. That claim rested on a positional column alignment in a multi-column PDF
+> and is not reliable. It is now marked retracted.
+>
+> Because the A1/A2/A5 approval was given on the strength of that now-retracted claim, those three
+> items are **halted for re-decision** rather than executed. **A3, A4 and A6 are unaffected** — they
+> rest on the openFDA evidence and rule structure, not on PMBJP product codes — and have been executed.
+>
+> **No mapping and no promotion has been recorded. Production-open is still empty (0 rules).**
+
+### What was executed
+
+| Item | Status | Result |
+|---|---|---|
+| **A3** | ✅ done | `warfarin__clarithromycin_oral` added; clarithromycin removed from the class row; pack reassembled with live verification of all **245** evidence records; attestation + review index refreshed. New pack SHA `02f1a115…0009d`, **200 rules**, all still draft-gated. |
+| **A4** | ✅ done — **decision revised to _retire_** | I first rescoped the row to erythromycin-only with an `evidence_gap` marker. That state failed a repo invariant: it duplicated the clarithromycin fragment across two rules (the pack forbids duplicate evidence fragments), and it left an *erythromycin* rule citing a *clarithromycin* label. Both point the same way, and it matches F1's own required action, so the row was **retired**. See the note below. |
+| **A6** | ✅ done | Code 380 excluded — now on **three** grounds (F2, F3 and F5). |
+| **A1** | ⛔ halted | Independently verified (RxNorm 21212 / UNII H1250JIK0A are correct regardless of codes) but held with A2 rather than landing a dangling half-state. |
+| **A2** | ⛔ halted | Cannot be written honestly — see F5. |
+| **A5** | ⛔ halted | Depends on A2. |
+
+The split works as designed — the duplicate alert is gone:
+
+```
+warfarin + clarithromycin  ->  warfarin__clarithromycin_oral / major   (single finding)
+warfarin + erythromycin    ->  (no finding)                            (uncovered — see below)
+warfarin + azithromycin    ->  warfarin__azithromycin_oral / moderate  (unchanged)
+```
+
+> ### ⚠ A4 was decided as *retire*, and you should confirm you're happy with that
+>
+> I told you I was reading A4 as "keep the row, marked as an evidence gap". Implementing it proved
+> that reading unworkable: retaining the row required keeping a **clarithromycin** label attached to
+> an **erythromycin**-only rule, which duplicated the evidence fragment across two rules and tripped
+> the pack's no-duplicate-fragment invariant. Rather than weaken a safety invariant to preserve a rule
+> that had no evidence of its own, I retired it — which is what F1's own `required_action` said.
+>
+> **The consequence is real and worth stating plainly: `warfarin + erythromycin` now matches nothing.**
+> It never fired at runtime (the row was always draft-gated), so nothing changes operationally, but the
+> draft no longer carries the pair. The gap is recorded in F1 as outstanding work. **Reversible** — the
+> row is in git history; restoring it should be paired with genuine erythromycin evidence.
+>
+> Final pack: **199 rules / 244 evidence records**, SHA `3a9d0531…d691f`, all draft-gated.
 
 ---
 
@@ -91,6 +138,50 @@ extended-release. There is precedent for treating an ER concept as a separate re
 Tender **RC-222/2025** was downloaded from the official host
 (`sha256 47670d2b…f53ff`, 2,321,513 bytes) and text-extracted. It contains **no 500 mg clarithromycin
 line and no drug code 380 anywhere**. Only the 250 mg product is tendered there.
+
+### F5 — PMBJP codes in the catalogue do not match the official product list *(blocking for all PMBJP mappings)*
+
+Discovered on 2026-07-27 while executing A2.
+
+Comparing every drug code shared between the catalogue snapshot (`dist/latest/drugs.jsonl`,
+janaushadhi rows) and the official PMBJP product list PDF:
+
+| | count |
+|---|---|
+| codes that agree | 568 |
+| codes that **disagree** | 898 |
+| **agreement rate** | **38.7%** |
+
+The mismatch has a shifting-offset signature — catalogue code 51 carries the product the official
+list assigns to 48, catalogue 53 carries official 51, catalogue 55 carries official 52 — consistent
+with either a row-alignment defect in the janaushadhi PDF parser or a different list edition with
+reassigned codes. The catalogue build provenance does not record which edition or URL it came from,
+so the two cannot be reconciled from the repository alone.
+
+**For the codes under audit:** official list says **739** = clarithromycin 250 mg and **740** =
+Cefpodoxime Proxetil Dispersible Tablets 50 mg; catalogue says 740 = clarithromycin 250 mg. Official
+says **383** = clarithromycin 500 mg; catalogue says 380, and code 380 is absent from the official
+list entirely.
+
+**For the 17 already-approved mapping codes:** 4 agree (1502 amiodarone 100 mg, 202 metronidazole
+400 mg, 18 azithromycin 250 mg, 28 tramadol 50 mg), **7 disagree** — 430 → official *Nebivolol 5 mg*,
+2142 → *Verapamil 40 mg*, 400 → *Cefixime + Clavulanate*, 2034 → *Potassium/Magnesium Citrate*,
+521 → *Alfacalcidol*, 2772 → *Vincristine Injection*, 1246 unresolved — and 6 codes are absent from
+the official list (2141, 452, 2771, 2773, 201, 72).
+
+**Runtime risk: LOW. Evidence-chain risk: HIGH.** This distinction matters and I want to be precise
+about it. Mapping resolution keys on `product_id` — a content hash of the catalogue product row — and
+revalidates `product_assertion_sha256`, returning `status: 'stale'` on drift
+(`src/lib/interaction-mapping.mjs`). The PMBJP code is *descriptive metadata* in `mapping_id` and in
+the tender evidence identifier, **not** the resolution key. So a wrong code does **not** cause a
+runtime mis-resolution onto a different drug — the fail-closed content binding holds. What *is*
+compromised is the **evidence chain**: the review evidence cites
+`pmbjp-tender:RC-<n>/<year>:<code>:page-<n>`, so a wrong code means a clinician approved against a
+citation pointing at the wrong tender row.
+
+**Required action:** record no further PMBJP product-presentation mapping until the code-identity
+question is resolved — establish which official list edition the catalogue snapshot was built from,
+record that provenance, and re-verify the already-approved codes' tender citations against it.
 
 ### F4 — an unlisted third clarithromycin row exists *(mandatory exclusion)*
 PMBJP code **2097**: *"Combipack of Clarithromycin 500mg Tablets IP, Esomeprazole 40mg Tablets IP
