@@ -1,13 +1,17 @@
 // Verify that every committed PMBJP product-presentation mapping's drug code
 // actually denotes the product that mapping is bound to.
 //
-// Why this exists: PMBJP drug codes are NOT stable across product-list editions.
-// The same product carries different codes in different documents, so a
-// `presentation:pmbjp:<code>:...` mapping id — and the `pmbjp-tender:...:<code>:page-N`
-// evidence citation beside it — is only meaningful against a named source document.
-// Mapping resolution itself keys on product_id (a content hash) and revalidates
+// Why this exists: a `presentation:pmbjp:<code>:...` mapping id — and the
+// `pmbjp-tender:...:<code>:page-N` evidence citation beside it — is only meaningful
+// against a named source document, and PMBJP reissues its product list. Mapping
+// resolution itself keys on product_id (a content hash) and revalidates
 // product_assertion_sha256, so a wrong code cannot mis-resolve at runtime; what a
-// wrong code corrupts is the human evidence chain. This check fails closed.
+// wrong code would corrupt is the human evidence chain. This check fails closed.
+//
+// The source list MUST be extracted in table mode. Reading this ruled table with
+// -layout orphans 632 of 2111 name cells and makes every code look wrong — that
+// mistake is what raised the F5 false alarm, so loadOfficialList pins the mode and
+// asserts row completeness before comparing anything.
 //
 // usage:
 //   node src/cli/verify-pmbjp-mapping-codes.mjs --list=<pmbjp-list.txt|pdf> [--sha256=<expected>]
@@ -19,7 +23,7 @@ import { createHash } from 'node:crypto';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { parseJanAushadhiText } from '../adapters/janaushadhi.mjs';
+import { assertJanAushadhiParseComplete, parseJanAushadhiText } from '../adapters/janaushadhi.mjs';
 import { pdfToText } from '../lib/pdftotext.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -70,10 +74,14 @@ async function loadOfficialList(listPath) {
   let textPath = listPath;
   if (listPath.toLowerCase().endsWith('.pdf')) {
     textPath = `${listPath}.txt`;
-    const result = await pdfToText(listPath, textPath);
+    // MUST be table mode. -layout orphans 632 of 2111 name cells on this document,
+    // which is precisely what produced the F5 false alarm: every mapping code then
+    // appears to denote a different drug.
+    const result = await pdfToText(listPath, textPath, { mode: 'table' });
     if (result.skipped) throw new Error(result.skipped);
   }
   const rows = parseJanAushadhiText(fs.readFileSync(textPath, 'utf8'), 'verification');
+  assertJanAushadhiParseComplete(fs.readFileSync(textPath, 'utf8'), rows);
   const byCode = new Map();
   for (const row of rows) {
     if (!byCode.has(String(row.source_id))) byCode.set(String(row.source_id), row.brand_name);

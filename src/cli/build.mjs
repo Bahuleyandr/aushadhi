@@ -118,7 +118,21 @@ if (netmedsRows.length) {
   meta.sources.netmeds = netmedsRows.length;
 }
 
-const nppaRows = await loadNppaRows(c.rawRoot);
+const nppaRows = await loadNppaRows(c.rawRoot, undefined, {
+  // report, do not throw: the NPPA export is operator-dropped and not reproducible
+  // here, so surface a lossy extraction loudly rather than failing a whole build on
+  // a document this repo cannot test against.
+  onIntegrity: (report) => {
+    if (report.complete) return;
+    errors.push({
+      source: 'nppa',
+      reason: 'extraction may be lossy',
+      detail: `${path.basename(report.file)}: found ${report.sl_lines_found} SL rows but the `
+        + `document numbers up to ${report.max_sl_number} (${report.missing_sl_count} missing); `
+        + 'if this document is a ruled table, retry pdfToText with mode "table"',
+    });
+  },
+});
 if (nppaRows.length) {
   for (const row of nppaRows) all.push(row);
   meta.sources.nppa = nppaRows.length;
@@ -126,6 +140,12 @@ if (nppaRows.length) {
 
 const fdc = await loadCdscoFdcCombos(c.rawRoot);
 if (fdc.files) meta.cdsco_fdc_files = fdc.files;
+for (const failed of fdc.failedFiles ?? []) {
+  errors.push({ source: 'cdsco-fdc', reason: 'file failed to parse', detail: `${path.basename(failed.file)}: ${failed.error}` });
+}
+for (const empty of fdc.emptyFiles ?? []) {
+  errors.push({ source: 'cdsco-fdc', reason: 'file yielded no approved combos', detail: path.basename(empty) });
+}
 
 // Re-run every molecule through the CURRENT normalizer before merge. Rows in the
 // per-source snapshots were normalized whenever they were crawled, so alias-map

@@ -44,15 +44,31 @@ export async function loadCdscoFdcCombos(rawRoot) {
   };
   walk(root);
   const keys = new Set();
+  // This source has no per-row identifier to count against, so there is no honest
+  // equivalent of the PMBJP row-completeness assertion. What it did have was a
+  // silent failure path: a PDF that failed to convert, or that yielded no combos at
+  // all, was indistinguishable from one that legitimately contributed nothing. Both
+  // are now reported so a broken extraction is visible instead of merely quiet.
+  const perFile = [];
   for (const pdf of pdfs) {
     const txt = pdf.replace(/\.pdf$/i, '.txt');
     try {
       if (!fs.existsSync(txt)) {
-        const r = await pdfToText(pdf, txt);
-        if (r.skipped) return { keys, files: pdfs.length, skipped: r.skipped };
+        const r = await pdfToText(pdf, txt, { mode: 'layout' });
+        if (r.skipped) return { keys, files: pdfs.length, perFile, skipped: r.skipped };
       }
-      for (const combo of extractFdcCombos(fs.readFileSync(txt, 'utf8'))) keys.add(comboNameKey(combo));
-    } catch { /* per-file failure: continue with others */ }
+      const combos = extractFdcCombos(fs.readFileSync(txt, 'utf8'));
+      for (const combo of combos) keys.add(comboNameKey(combo));
+      perFile.push({ file: pdf, combos: combos.length, error: null });
+    } catch (error) {
+      perFile.push({ file: pdf, combos: 0, error: error.message });
+    }
   }
-  return { keys, files: pdfs.length };
+  return {
+    keys,
+    files: pdfs.length,
+    perFile,
+    emptyFiles: perFile.filter((entry) => entry.combos === 0).map((entry) => entry.file),
+    failedFiles: perFile.filter((entry) => entry.error !== null),
+  };
 }

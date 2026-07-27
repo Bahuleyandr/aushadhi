@@ -69,6 +69,29 @@ function nppaRow(entry, date) {
   };
 }
 
+// Extraction-integrity ground truth for the NPPA list.
+//
+// Every priced row opens with "<SL No> <NLEM year>". The SL column is a 1..N
+// sequence, so N (the highest SL seen) is the document's own claim about how many
+// rows it contains — a fact independent of whether our field parsing succeeded.
+// Rows we deliberately drop (devices, continuations, repeated headers) still MATCH
+// this pattern, so they do not depress the count; only rows lost in PDF text
+// extraction do. That makes this a clean detector for the failure mode that bit the
+// PMBJP list, where pdftotext -layout silently orphaned table cells.
+const SL_LINE_RE = /^[^\S\n]*(\d+)[^\S\n]+20\d{2}\b/gmu;
+
+export function nppaExtractionIntegrity(text) {
+  const seen = [...String(text ?? '').matchAll(SL_LINE_RE)].map((match) => Number(match[1]));
+  const distinct = new Set(seen);
+  const maxSl = seen.length ? Math.max(...seen) : 0;
+  return {
+    sl_lines_found: distinct.size,
+    max_sl_number: maxSl,
+    missing_sl_count: Math.max(0, maxSl - distinct.size),
+    complete: maxSl > 0 && distinct.size === maxSl,
+  };
+}
+
 export async function parseNppaText(text, date) {
   const rows = [];
   for (const line of String(text ?? '').split(/\r?\n/)) {
@@ -79,7 +102,16 @@ export async function parseNppaText(text, date) {
 }
 
 // Scan operator-dropped NPPA files (data/raw/nppa/**.pdf|.txt) -> rows.
-export async function loadNppaRows(rawRoot, date = new Date().toISOString().slice(0, 10)) {
+// onIntegrity, when supplied, is called once per source file with that file's
+// extraction integrity. This reports rather than throws: unlike the PMBJP list the
+// real NPPA export is operator-dropped and not reproducible here, so a hard failure
+// on an untested document would be a worse trade than a loud, visible warning. The
+// build surfaces these through its errors channel.
+export async function loadNppaRows(
+  rawRoot,
+  date = new Date().toISOString().slice(0, 10),
+  { onIntegrity } = {},
+) {
   const root = path.join(rawRoot, 'nppa');
   if (!fs.existsSync(root)) return [];
   const out = [];
@@ -89,9 +121,15 @@ export async function loadNppaRows(rawRoot, date = new Date().toISOString().slic
     if (/\.txt$/i.test(f)) text = fs.readFileSync(f, 'utf8');
     else if (/\.pdf$/i.test(f)) {
       const txt = f.replace(/\.pdf$/i, '.txt');
-      try { if (!fs.existsSync(txt)) { const r = await pdfToText(f, txt); if (r.skipped) continue; } text = fs.readFileSync(txt, 'utf8'); } catch { continue; }
+      // mode is explicit: NPPA is a ruled table, so if this document ever shows the
+      // orphaned-cell signature the integrity report below is what reveals it, and
+      // 'table' is the mode to switch to.
+      try { if (!fs.existsSync(txt)) { const r = await pdfToText(f, txt, { mode: 'layout' }); if (r.skipped) continue; } text = fs.readFileSync(txt, 'utf8'); } catch { continue; }
     }
-    if (text) for (const row of await parseNppaText(text, date)) out.push(row);
+    if (!text) continue;
+    const rows = await parseNppaText(text, date);
+    if (onIntegrity) onIntegrity({ file: f, ...nppaExtractionIntegrity(text), parsed_rows: rows.length });
+    for (const row of rows) out.push(row);
   }
   return out;
 }
