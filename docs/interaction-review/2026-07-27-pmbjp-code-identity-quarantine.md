@@ -66,6 +66,55 @@ while the `product_id` those mappings bind was derived from a catalogue built of
    every committed mapping code against a named, hashed source list and **exits non-zero** when any
    code cannot be confirmed. Optional `--sha256=` pins the source document.
 
+## Rebuild assessment (2026-07-27) — **do not rebuild yet**
+
+The obvious next step is "rebuild the catalogue so codes become verifiable". I ran the pre-flight
+first, and it says **don't**.
+
+`product_id` hashes brand name, manufacturer, pack, form and ingredients — it is *independent of the
+drug code*. So I could compute, read-only, exactly which mappings a rebuild would preserve:
+
+| | |
+|---|---|
+| committed mappings | 17 |
+| `product_id` **preserved** by a rebuild today | **7** |
+| `product_id` **lost** | **10** |
+| catalogue rows now | 2111 |
+| rows available from the reachable source today | 1466 |
+| products that would be **dropped** | **645** |
+
+Rebuilding from the currently reachable source would therefore destroy 10 of 17 clinician-approved
+product bindings and shrink the catalogue by 645 products. That is worse than the problem it solves.
+
+**It also proved the diagnosis outright.** For the 7 that survive, the code *moves*:
+
+| product | catalogue edition | current list |
+|---|---|---|
+| Warfarin Tablets IP 1mg | 2141 | **2144** |
+| Fluconazole Tablets IP 150 mg | 1246 | **1252** |
+| Voriconazole Tablets IP 200mg | 2034 | **2033** |
+| Tramadol PR Tablets IP 100 mg | 521 | **519** |
+
+Same product, identical content hash, different drug code — direct proof that a PMBJP code is only
+meaningful against a named source document.
+
+**Why the right source isn't available:** the adapter default (PIB attachment) serves 1466 rows
+against the catalogue's 2111, so the catalogue came from a larger document. The source the mapping
+evidence actually cites — the janaushadhi.gov.in product MRP list — is a React SPA whose public
+endpoint (`janaushadhi.gov.in:8443/api/v1/website/getAllProductForWeb`) returned HTTP 500 for GET and
+for POST with the usual pagination shapes. I stopped after five requests rather than keep hammering a
+government endpoint.
+
+**What would make a rebuild safe:** obtain a citable official list at least as complete as the
+snapshot (≥ 2111 rows), record its URL and sha256 through the new provenance capture, re-run this
+pre-flight to confirm all 17 `product_id`s are preserved, *then* rebuild and re-run the code verifier
+against that pinned document.
+
+**Interim position:** no rebuild. Catalogue, 17 mappings and 7 promoted rules are left exactly as they
+are — internal-evaluation only, content-hash bound, fail-closed on drift, production-open empty. This
+is a stable resting state, and the unverifiable citations are recorded here rather than silently
+accepted.
+
 ## What remains
 
 - Rebuild or re-fetch the PMBJP catalogue **with provenance recorded**, then re-run the verifier

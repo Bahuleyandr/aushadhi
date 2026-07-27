@@ -159,8 +159,41 @@
     "Added src/cli/verify-pmbjp-mapping-codes.mjs (npm run verify:pmbjp-mapping-codes), which checks every committed mapping code against a named, hashed source list and exits non-zero when any code cannot be confirmed."
   ],
   "remediation_outstanding": [
-    "Rebuild or re-fetch the PMBJP catalogue with provenance recorded, then re-run the verifier against that exact edition.",
-    "Re-verify the pmbjp-tender page citations for every mapping listed as unconfirmed below, against the edition the catalogue was actually built from.",
+    "Obtain a citable PMBJP product list at least as complete as the catalogue snapshot (see rebuild_assessment.what_would_make_a_rebuild_safe). Until then, do NOT rebuild: the currently reachable source would drop 645 products and 10 of the 17 committed mapping bindings.",
+    "Re-verify the pmbjp-tender page citations for the mappings listed as unconfirmed, against the edition the catalogue was actually built from.",
     "Do not record any new PMBJP product-presentation mapping until its code can be confirmed against a named source document."
-  ]
+  ],
+  "rebuild_assessment": {
+    "assessed_at": "2026-07-27",
+    "question": "Should the PMBJP catalogue be rebuilt now, so drug codes become verifiable against a recorded source?",
+    "verdict": "do_not_rebuild_from_the_current_default_source",
+    "verdict_reason": "Rebuilding from the adapter default source today would destroy more than it repairs.",
+    "preflight_method": "product_id is a content hash of (brand_name, manufacturer, pack_label, form_raw, ingredient signature) and is independent of the drug code. Parsing the current official list, deriving product_id for every row, and intersecting with the 17 committed mapping product_ids shows exactly which mappings a rebuild would preserve.",
+    "preflight_result": {
+      "committed_mappings": 17,
+      "product_ids_preserved": 7,
+      "product_ids_lost": 10,
+      "catalogue_rows_now": 2111,
+      "source_rows_available_today": 1466,
+      "products_that_would_be_dropped": 645
+    },
+    "proof_that_codes_are_edition_scoped": [
+      "Warfarin Tablets IP 1mg: code 2141 in the catalogue edition, code 2144 in the current official list.",
+      "Fluconazole Tablets IP 150 mg: code 1246 in the catalogue edition, code 1252 in the current list.",
+      "Voriconazole Tablets IP 200mg: code 2034 in the catalogue edition, code 2033 in the current list.",
+      "Tramadol Prolonged Release Tablets IP 100 mg: code 521 in the catalogue edition, code 519 in the current list.",
+      "The same product, identical content hash, different drug code. This is direct proof that a PMBJP code is only meaningful against a named source document."
+    ],
+    "why_the_right_source_is_not_available": [
+      "The adapter default (PIB attachment) currently serves 1466 rows; the 2026-07-07 catalogue holds 2111 janaushadhi rows, so the catalogue was built from a larger, different document.",
+      "The source the mapping evidence actually cites (janaushadhi.gov.in product MRP list) is a React single-page app. Its public product endpoint, janaushadhi.gov.in:8443/api/v1/website/getAllProductForWeb, returned HTTP 500 for GET and for POST with the usual pagination shapes. No list could be retrieved. Probing was stopped after five requests rather than continuing to hammer a government endpoint.",
+      "data/raw/janaushadhi is empty and dist/latest records no PMBJP source URL or hash, so the original edition cannot be reconstructed locally."
+    ],
+    "what_would_make_a_rebuild_safe": [
+      "Obtain a PMBJP product list that is at least as complete as the catalogue snapshot (>= 2111 rows) from a citable official source, and record its URL and sha256 via the new provenance capture.",
+      "Re-run the rebuild-impact preflight against that document and confirm all 17 committed mapping product_ids are preserved before rebuilding.",
+      "Then run npm run verify:pmbjp-mapping-codes against that same pinned document and re-verify the tender page citations for any mapping whose code moved."
+    ],
+    "interim_position": "No rebuild. The catalogue, the 17 mappings and the 7 promoted rules are left exactly as they are: internal-evaluation only, content-hash bound, fail-closed on drift, with production-open empty. New PMBJP product mappings remain blocked. This is a stable and safe resting state; the unverifiable code citations are recorded here rather than silently accepted."
+  }
 }
