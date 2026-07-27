@@ -247,13 +247,24 @@ test('Section A fails closed while preserving source-bounded diagnostic matchers
   );
 });
 
-test('the corrected macrolide strength selector fires diagnostically for both curated members', () => {
-  const ruleId = 'warfarin__macrolide_cyp_inhibitor';
-  for (const macrolide of ['clarithromycin', 'erythromycin']) {
-    const match = finding(['warfarin', macrolide], ruleId);
-    assert.ok(match, macrolide);
-    assert.equal(match.runtime_enabled, false, macrolide);
-  }
+test('clarithromycin fires only its exact child and the unevidenced macrolide class row is retired', () => {
+  // Approved 2026-07-27 (A3/A4). The class row previously carried
+  // [clarithromycin, erythromycin] on a single clarithromycin-only evidence
+  // record. Clarithromycin moved to an exact child; the residual erythromycin
+  // member had zero supporting evidence, so the class row was retired rather
+  // than left asserting an interaction backed by another drug's label.
+  assert.equal(
+    rules.some((rule) => rule.rule_id === 'warfarin__macrolide_cyp_inhibitor'),
+    false,
+    'the unevidenced macrolide class row must not be present',
+  );
+
+  const child = finding(['warfarin', 'clarithromycin'], 'warfarin__clarithromycin_oral');
+  assert.ok(child, 'clarithromycin must fire its exact child');
+  assert.equal(child.runtime_enabled, false, 'the child stays draft-gated');
+
+  // erythromycin is deliberately uncovered until independent evidence is sourced
+  assert.equal(finding(['warfarin', 'erythromycin'], 'warfarin__clarithromycin_oral'), undefined);
 });
 
 test('evidence-declared Section A class rosters are pinned and do not drift through shared member sets', () => {

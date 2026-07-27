@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "finding_id": "F5",
+  "title": "PMBJP drug-code identity is unverifiable for committed product-presentation mappings",
+  "status": "open",
+  "opened_at": "2026-07-27",
+  "blocks_new_pmbjp_mappings": true,
+  "runtime_risk": "low_content_hash_bound",
+  "runtime_risk_rationale": "Mapping resolution keys on product_id (a content hash of the catalogue product row) and revalidates product_assertion_sha256, returning status \"stale\" on drift. The PMBJP code is descriptive metadata in mapping_id and in the pmbjp-tender evidence identifier, not the resolution key, so a wrong code cannot mis-resolve onto a different drug at runtime.",
+  "evidence_chain_risk": "high",
+  "evidence_chain_risk_rationale": "Each mapping's review evidence cites pmbjp-tender:RC-<n>/<year>:<code>:page-<n>. If the code denotes a different product in the source document, the clinician approved against a citation pointing at the wrong tender row.",
+  "root_cause": {
+    "parser_is_correct": true,
+    "parser_evidence": "Re-running the committed janaushadhi adapter parser over the current official PIB product list yields 739 = Clarithromycin Tablets IP 250 mg and 740 = Cefpodoxime Proxetil Dispersible Tablets 50 mg, matching the document. The parser binds names to the drug-code column, not the serial.",
+    "actual_cause": "PMBJP drug codes are not stable across product-list editions, and the catalogue snapshot records no source-document identity. Matching 874 products by name across the catalogue snapshot and the current official list, only 286 carry the same code (32.7 percent), with small offsets in both directions - the signature of different editions rather than a parsing fault.",
+    "compounding_factor": "The mapping evidence cites codes from janaushadhi.gov.in and pmbi.co.in, while the product_id those mappings bind was derived from a catalogue built off static.pib.gov.in. Those are different documents with different code assignments.",
+    "source_snapshot_recoverable": false,
+    "source_snapshot_note": "data/raw/janaushadhi is empty and dist/latest records no PMBJP source URL or hash, so the 2026-07-07 catalogue edition cannot be reconstructed from this repository."
+  },
+  "verification_run": {
+    "tool": "npm run verify:pmbjp-mapping-codes -- --list=<official-list>",
+    "checked_against": "official PMBJP product list (PIB attachment, adapter default URL), retrieved 2026-07-27",
+    "source_list_text_sha256": "23c1443515e3bc196425338b7cf01c2b5dfeea4c443470ddd7222a4d453fb321",
+    "source_pdf_sha256": "f54a140d9dc82880dcbb7672c18942417e8c9fe904376c742b6319665cdf9a08",
+    "mappings_checked": 17,
+    "counts": {
+      "confirmed": 4,
+      "code_denotes_a_different_product": 7,
+      "code_absent_from_source_list": 6
+    }
+  },
+  "mappings_checked": 17,
+  "confirmed_count": 4,
+  "unconfirmed_count": 13,
+  "results": [
+    {
+      "mapping_id": "presentation:pmbjp:1502:oral-tablet",
+      "pmbjp_code": "1502",
+      "mapped_product": "Amiodarone Tablets IP 100 mg",
+      "source_list_product": "Amiodarone Tablets IP 100 mg Amlodipine Besilate 5mg and Bisoprolol Fumarate 5mg     10's",
+      "status": "confirmed"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:430:oral-tablet",
+      "pmbjp_code": "430",
+      "mapped_product": "Amiodarone Tablets IP 200 mg",
+      "source_list_product": "Nebivolol Tablets IP 5 mg",
+      "status": "code_denotes_a_different_product"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2141:oral-tablet",
+      "pmbjp_code": "2141",
+      "mapped_product": "Warfarin Tablets IP 1mg",
+      "source_list_product": null,
+      "status": "code_absent_from_source_list"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2142:oral-tablet",
+      "pmbjp_code": "2142",
+      "mapped_product": "Warfarin Tablets IP 2mg",
+      "source_list_product": "Verapamil Tablets IP 40mg",
+      "status": "code_denotes_a_different_product"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:452:oral-tablet",
+      "pmbjp_code": "452",
+      "mapped_product": "Warfarin Tablets IP 5 mg",
+      "source_list_product": null,
+      "status": "code_absent_from_source_list"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:1246:oral-tablet",
+      "pmbjp_code": "1246",
+      "mapped_product": "Fluconazole Tablets IP 150 mg",
+      "source_list_product": "Tablets Cefaclor Dispersible Tablets 250 mg                      10's",
+      "status": "code_denotes_a_different_product"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2771:oral-tablet",
+      "pmbjp_code": "2771",
+      "mapped_product": "Fluconazole Tablets IP 50 mg",
+      "source_list_product": null,
+      "status": "code_absent_from_source_list"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2772:oral-tablet",
+      "pmbjp_code": "2772",
+      "mapped_product": "Fluconazole Tablets IP 200 mg",
+      "source_list_product": "Vincristine Injection 1mg",
+      "status": "code_denotes_a_different_product"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2773:oral-tablet",
+      "pmbjp_code": "2773",
+      "mapped_product": "Fluconazole Tablets IP 400 mg",
+      "source_list_product": null,
+      "status": "code_absent_from_source_list"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:201:oral-tablet",
+      "pmbjp_code": "201",
+      "mapped_product": "Metronidazole Tablets IP 200mg",
+      "source_list_product": null,
+      "status": "code_absent_from_source_list"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:202:oral-tablet",
+      "pmbjp_code": "202",
+      "mapped_product": "Metronidazole Tablets IP 400mg",
+      "source_list_product": "Metronidazole Tablets IP 400mg",
+      "status": "confirmed"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:400:oral-tablet",
+      "pmbjp_code": "400",
+      "mapped_product": "Ketoconazole Tablets IP 200 mg",
+      "source_list_product": "Cefixime 200mg and Potassium Clavulanate 125mg Tablets 10's Diethylcarbamazine Tablets IP 50 mg                30's Terbinafine Tablets IP 250mg                       7's",
+      "status": "code_denotes_a_different_product"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:2034:oral-tablet",
+      "pmbjp_code": "2034",
+      "mapped_product": "Voriconazole Tablets IP 200mg",
+      "source_list_product": "Potassium Citrate 1100 mg and Magnesium Citrate 375 mg",
+      "status": "code_denotes_a_different_product"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:18:oral-tablet",
+      "pmbjp_code": "18",
+      "mapped_product": "Azithromycin Tablets IP 250 mg",
+      "source_list_product": "Azithromycin Tablets IP 250 mg",
+      "status": "confirmed"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:72:oral-tablet",
+      "pmbjp_code": "72",
+      "mapped_product": "Azithromycin Tablets IP 500 mg",
+      "source_list_product": null,
+      "status": "code_absent_from_source_list"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:28:oral-tablet",
+      "pmbjp_code": "28",
+      "mapped_product": "Tramadol Tablets 50mg",
+      "source_list_product": "Tramadol Tablets 50mg",
+      "status": "confirmed"
+    },
+    {
+      "mapping_id": "presentation:pmbjp:521:oral-tablet",
+      "pmbjp_code": "521",
+      "mapped_product": "Tramadol Prolonged Release Tablets IP 100 mg",
+      "source_list_product": "Alfacalcidol Soft Gelatin Capsules 0.25 mcg",
+      "status": "code_denotes_a_different_product"
+    }
+  ],
+  "remediation_completed": [
+    "The janaushadhi adapter now writes pmbjp.provenance.json recording origin, source_url, pdf_sha256, pdf_byte_count and an explicit code_space_verifiable flag, so a future catalogue snapshot is attributable to an exact source document.",
+    "A text-only cache with no recoverable PDF is recorded as code_space_verifiable:false rather than silently assumed correct - precisely the state the current snapshot is in.",
+    "Added src/cli/verify-pmbjp-mapping-codes.mjs (npm run verify:pmbjp-mapping-codes), which checks every committed mapping code against a named, hashed source list and exits non-zero when any code cannot be confirmed."
+  ],
+  "remediation_outstanding": [
+    "Obtain a citable PMBJP product list at least as complete as the catalogue snapshot (see rebuild_assessment.what_would_make_a_rebuild_safe). Until then, do NOT rebuild: the currently reachable source would drop 645 products and 10 of the 17 committed mapping bindings.",
+    "Re-verify the pmbjp-tender page citations for the mappings listed as unconfirmed, against the edition the catalogue was actually built from.",
+    "Do not record any new PMBJP product-presentation mapping until its code can be confirmed against a named source document."
+  ],
+  "rebuild_assessment": {
+    "assessed_at": "2026-07-27",
+    "question": "Should the PMBJP catalogue be rebuilt now, so drug codes become verifiable against a recorded source?",
+    "verdict": "do_not_rebuild_from_the_current_default_source",
+    "verdict_reason": "Rebuilding from the adapter default source today would destroy more than it repairs.",
+    "preflight_method": "product_id is a content hash of (brand_name, manufacturer, pack_label, form_raw, ingredient signature) and is independent of the drug code. Parsing the current official list, deriving product_id for every row, and intersecting with the 17 committed mapping product_ids shows exactly which mappings a rebuild would preserve.",
+    "preflight_result": {
+      "committed_mappings": 17,
+      "product_ids_preserved": 7,
+      "product_ids_lost": 10,
+      "catalogue_rows_now": 2111,
+      "source_rows_available_today": 1466,
+      "products_that_would_be_dropped": 645
+    },
+    "proof_that_codes_are_edition_scoped": [
+      "Warfarin Tablets IP 1mg: code 2141 in the catalogue edition, code 2144 in the current official list.",
+      "Fluconazole Tablets IP 150 mg: code 1246 in the catalogue edition, code 1252 in the current list.",
+      "Voriconazole Tablets IP 200mg: code 2034 in the catalogue edition, code 2033 in the current list.",
+      "Tramadol Prolonged Release Tablets IP 100 mg: code 521 in the catalogue edition, code 519 in the current list.",
+      "The same product, identical content hash, different drug code. This is direct proof that a PMBJP code is only meaningful against a named source document."
+    ],
+    "why_the_right_source_is_not_available": [
+      "The adapter default (PIB attachment) currently serves 1466 rows; the 2026-07-07 catalogue holds 2111 janaushadhi rows, so the catalogue was built from a larger, different document.",
+      "The source the mapping evidence actually cites (janaushadhi.gov.in product MRP list) is a React single-page app. Its public product endpoint, janaushadhi.gov.in:8443/api/v1/website/getAllProductForWeb, returned HTTP 500 for GET and for POST with the usual pagination shapes. No list could be retrieved. Probing was stopped after five requests rather than continuing to hammer a government endpoint.",
+      "data/raw/janaushadhi is empty and dist/latest records no PMBJP source URL or hash, so the original edition cannot be reconstructed locally."
+    ],
+    "what_would_make_a_rebuild_safe": [
+      "Obtain a PMBJP product list that is at least as complete as the catalogue snapshot (>= 2111 rows) from a citable official source, and record its URL and sha256 via the new provenance capture.",
+      "Re-run the rebuild-impact preflight against that document and confirm all 17 committed mapping product_ids are preserved before rebuilding.",
+      "Then run npm run verify:pmbjp-mapping-codes against that same pinned document and re-verify the tender page citations for any mapping whose code moved."
+    ],
+    "interim_position": "No rebuild. The catalogue, the 17 mappings and the 7 promoted rules are left exactly as they are: internal-evaluation only, content-hash bound, fail-closed on drift, with production-open empty. New PMBJP product mappings remain blocked. This is a stable and safe resting state; the unverifiable code citations are recorded here rather than silently accepted."
+  }
+}

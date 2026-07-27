@@ -5,7 +5,7 @@
 This worksheet is deterministically generated from the slice. It records evidence provenance and exact source fragments; it does not add or revise clinical claims.
 
 - Section: `A`
-- JSONL SHA-256: `65a2c3b616046be9997c8117cf8a629e4e3368c4c44cd62af11fdfd0a318ceb7`
+- JSONL SHA-256: `777035fe716c9fbeabf51846ad2193645caefaed2fafc926aadd1eda7aa2d858`
 - openFDA-reconciled evidence: `37`
 - source_policy_use: `{"interaction-counterevidence":1,"interaction-evidence":38}`
 - citation_status: `{"machine_confirmed_govuk_ogl_bound_pending_clinician":2,"machine_confirmed_openfda_reconciled_clinician_approved_for_internal_product_scope":2,"machine_confirmed_openfda_reconciled_pending_clinician":35}`

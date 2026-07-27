@@ -1,0 +1,396 @@
+{
+  "schema_version": 1,
+  "packet_id": "warfarin-clarithromycin-pmbjp-oral-tablets-candidate-audit-2026-07-27",
+  "generated_at": "2026-07-27",
+  "review_status": "candidate_audit_pending_clinician",
+  "release_profile": "internal-evaluation",
+  "production_open_enabled": false,
+  "authorization_state": {
+    "mappings_recorded": false,
+    "promotions_recorded": false,
+    "draft_pack_modified": true,
+    "statement": "Items A3 and A4 were approved by clinician:subas on 2026-07-27 and have been executed. Items A1, A2 and A5 are HALTED by finding F5, which was discovered while executing them. No ingredient mapping, no product-presentation mapping and no promotion entry has been created. Production-open remains empty."
+  },
+  "execution_status": {
+    "approved_at": "2026-07-27",
+    "approved_by": "clinician:subas",
+    "approval_scope": "A1-A6 all approved",
+    "executed": [
+      {
+        "item": "A3",
+        "status": "done",
+        "detail": "Added exact draft row warfarin__clarithromycin_oral (major / confirm_and_monitor / pk_perpetrator, clarithromycin oral tablet only, evidence scope narrowed from extrapolated_class to exact_members) and removed clarithromycin from warfarin__macrolide_cyp_inhibitor. Pack reassembled from the section slices with live verification of all 245 evidence records; review index and attestation refreshed."
+      },
+      {
+        "item": "A4",
+        "status": "done",
+        "detail": "REVISED DECISION (retire, not retain). The row was first rescoped to erythromycin-only with an evidence_gap block, but that state duplicated the clarithromycin fragment across two rules (violating the pack no-duplicate-fragment invariant enforced by test/interaction-pack-section-a.test.mjs) and left an erythromycin rule citing a clarithromycin label. Consistent with finding F1 required_action (\"reduce/retire the class row rather than leaving an unevidenced single-member class\"), warfarin__macrolide_cyp_inhibitor was RETIRED from the draft. The clarithromycin evidence now exists in exactly one place: the exact child. Warfarin + erythromycin is consequently uncovered; that gap is recorded in F1 as outstanding work.",
+        "decision": "retire",
+        "reversal_note": "If retention was intended rather than retirement, restore the row from git history and pair it with independently sourced erythromycin evidence so it does not depend on another drug's label. The retirement is fully reversible."
+      },
+      {
+        "item": "A6",
+        "status": "done",
+        "detail": "PMBJP code 380 remains excluded, now on three grounds: F2 (IR/ER ambiguity), F3 (no tender line) and F5 (the official list assigns clarithromycin 500 mg to code 383 and has no code 380 at all)."
+      }
+    ],
+    "halted": [
+      {
+        "items": [
+          "A1",
+          "A2",
+          "A5"
+        ],
+        "status": "halted_pending_reapproval",
+        "blocked_by": "F5",
+        "detail": "A2 cannot be written honestly: the mapping_id would be presentation:pmbjp:740:oral-tablet and its tender evidence identifier would cite code 740, but the official PMBJP product list assigns code 740 to Cefpodoxime Proxetil Dispersible Tablets 50 mg and assigns clarithromycin 250 mg to code 739. A5 depends on A2. A1 is independently verified (RxNorm 21212 / UNII H1250JIK0A are correct regardless of PMBJP codes) but is held with A2 rather than landing a dangling half-state.",
+        "reapproval_note": "The A1/A2/A5 approval was given on the basis of this packet's original code_740_binding claim, which has since been retracted. Those three items should be re-decided against the corrected evidence rather than executed under the original approval."
+      }
+    ],
+    "post_change_pack": {
+      "pack_sha256": "3a9d053111389f9fba232add71548c15d80a3c3370fea0f634aa594e5ffd691f",
+      "rule_count": 199,
+      "evidence_record_count": 244,
+      "section_a_rule_count": 33,
+      "all_rules_draft_gated": true,
+      "engine_behaviour": {
+        "warfarin+clarithromycin": "warfarin__clarithromycin_oral/major (single finding; duplicate alert eliminated)",
+        "warfarin+erythromycin": "no finding - uncovered pending independent erythromycin evidence, see F1",
+        "warfarin+azithromycin": "warfarin__azithromycin_oral/moderate (unchanged)"
+      }
+    }
+  },
+  "audited_draft_state": {
+    "pack_path": "docs/interaction-review/batch-01-v2/batch-01-v2.jsonl",
+    "pack_sha256": "42b50292f7bfc03398f4ac8c2916c77816cfe458e7a0c12c4ff8a89140df974a",
+    "rule_count": 199,
+    "evidence_record_count": 244,
+    "audited_rule_id": "warfarin__macrolide_cyp_inhibitor",
+    "audited_draft_row_sha256": "0738d28943296c870140e6e51a3761370e1f3e494d42e5a3cf56a87ead42f311",
+    "audited_rule_runtime_enabled": false,
+    "audited_rule_promotion_eligible": false
+  },
+  "architecture_finding": {
+    "question": "Should warfarin-clarithromycin be an exact named child (warfarin__clarithromycin_oral) while the broader macrolide row stays diagnostic?",
+    "recommendation": "exact_named_child_with_class_member_removal",
+    "class_row_promotable": false,
+    "class_row_promotion_blocked_because": "warfarin__macrolide_cyp_inhibitor declares runtime members [clarithromycin, erythromycin] but carries exactly one evidence record, an openFDA clarithromycin label whose own normalized_proposition states it 'Supports CLARITHROMYCIN only'. Promoting the two-member class from clarithromycin-only evidence would be mechanical class expansion.",
+    "engine_simulations": [
+      {
+        "id": "SIM_A",
+        "design": "Add exact child; leave class row members unchanged.",
+        "observed": "warfarin+clarithromycin raises BOTH warfarin__macrolide_cyp_inhibitor/major AND warfarin__clarithromycin_oral/major.",
+        "verdict": "rejected_duplicate_alert"
+      },
+      {
+        "id": "SIM_B",
+        "design": "Add exact child AND remove clarithromycin from the class row members.",
+        "observed": "warfarin+clarithromycin raises only warfarin__clarithromycin_oral; warfarin+erythromycin still raises warfarin__macrolide_cyp_inhibitor.",
+        "verdict": "recommended"
+      },
+      {
+        "id": "SIM_C",
+        "design": "Add exact child carrying suppresses:[warfarin__macrolide_cyp_inhibitor]; class row members unchanged.",
+        "observed": "Suppression did NOT apply; both findings still raised.",
+        "root_cause": "The class-row finding resolves to clinical_action_status 'unresolved_pending_applicability', and canExplicitlySuppress() in src/lib/interaction-engine.mjs refuses to suppress an unresolved finding (isUnresolvedFinding guard).",
+        "verdict": "architecturally_unavailable_and_correctly_so"
+      }
+    ],
+    "consequence_for_attestation": "SIM_B changes the attested draft (adds one row, edits one row). Per the handover conditional this requires deterministic JSONL ordering, full reassembly, live re-verification, refreshed attestation and derived indexes, and a newly bound exact draft-row SHA-256. The existing class-row review status must NOT be treated as authorization for the new child. This audit deliberately stops before making that change."
+  },
+  "new_findings_not_in_handover": [
+    {
+      "id": "F1",
+      "severity": "blocking_for_erythromycin",
+      "finding": "The macrolide class row has zero erythromycin evidence. Its only evidence record is the clarithromycin label. If clarithromycin is moved to an exact child (SIM_B), the class row is left asserting a major warfarin interaction for erythromycin with no supporting evidence record at all.",
+      "required_action": "Either source and review independent erythromycin evidence, or reduce/retire the class row rather than leaving an unevidenced single-member class."
+    },
+    {
+      "id": "F2",
+      "severity": "blocking_for_code_380",
+      "finding": "RxNorm exposes TWO distinct 500 mg oral-tablet concepts for clarithromycin: 'clarithromycin 500 MG Oral Tablet' and '24 HR clarithromycin 500 MG Extended Release Oral Tablet'. The PMBJP catalogue row for code 380 carries form_raw:null and only the brand string 'Clarithromycin Tablets IP 500 mg', which does not distinguish immediate-release from extended-release.",
+      "required_action": "Code 380 cannot be bound to an exact presentation concept without disambiguating evidence. Excluded from this round. Precedent for handling an explicit ER concept separately exists (tramadol 24 HR ER, rxcui 833709)."
+    },
+    {
+      "id": "F3",
+      "severity": "blocking_for_code_380",
+      "finding": "PMBJP drug code 380 (500 mg) does not appear anywhere in tender RC-222/2025, and no 500 mg clarithromycin line exists in that document. Only the 250 mg product is tendered there.",
+      "required_action": "Code 380 has no official PMBI tender binding from the document set examined. A different official tender/amendment must be located and reviewed before code 380 may be proposed."
+    },
+    {
+      "id": "F5",
+      "severity": "blocking_for_all_pmbjp_product_mappings",
+      "discovered_at": "2026-07-27",
+      "discovered_during": "execution of approved items A1/A2 (attempting to record the product-presentation mapping)",
+      "finding": "PMBJP drug codes carried in the catalogue snapshot do not reliably agree with the official PMBJP product list. Across every code shared between the catalogue (dist/latest/drugs.jsonl, janaushadhi rows) and the official product list PDF, only 568 of 1466 agree — a 38.7% agreement rate. The mismatch has a shifting-offset signature (catalogue code 51 carries the product the official list assigns to 48; catalogue 53 carries official 51; catalogue 55 carries official 52), consistent with either a row-alignment defect in the janaushadhi PDF parser or a different list edition with reassigned codes. The catalogue build provenance does not record which list edition or URL it was built from, so the two cannot be reconciled from the repository alone.",
+      "affects_codes_under_audit": "Catalogue says 740 = clarithromycin 250 mg; the official list says 739 = clarithromycin 250 mg and 740 = Cefpodoxime Proxetil Dispersible Tablets 50 mg. Catalogue says 380 = clarithromycin 500 mg; the official list says 383, and code 380 is absent from the official list entirely.",
+      "affects_already_approved_mappings": "Of the 17 already-approved product-presentation codes, 4 agree with the official list (1502 amiodarone 100 mg, 202 metronidazole 400 mg, 18 azithromycin 250 mg, 28 tramadol 50 mg), 7 disagree (430 -> official Nebivolol 5 mg; 2142 -> official Verapamil 40 mg; 400 -> official Cefixime+Clavulanate; 2034 -> official Potassium/Magnesium Citrate; 521 -> official Alfacalcidol; 2772 -> official Vincristine Injection; 1246 -> unresolved official row), and 6 codes are absent from the official list (2141, 452, 2771, 2773, 201, 72).",
+      "runtime_risk_assessment": "LOW at runtime, HIGH for the evidence chain. Mapping resolution keys on product_id (a content hash of the catalogue product row) and revalidates product_assertion_sha256, returning status 'stale' on drift (src/lib/interaction-mapping.mjs). The PMBJP code is descriptive metadata in mapping_id and in the tender evidence identifier, NOT the resolution key, so a wrong code does not cause a runtime mis-resolution onto a different drug. However the human review evidence cites 'pmbjp-tender:RC-<n>/<year>:<code>:page-<n>', so a wrong code means the clinician approved against a citation pointing at the wrong tender row. The evidence chain, not the runtime binding, is what is compromised.",
+      "required_action": "Do not record any further PMBJP product-presentation mapping until the code-identity question is resolved: establish which official list edition the catalogue snapshot was built from, record that provenance, and re-verify the already-approved codes' tender citations against it. Execution of approved items A1, A2 and A5 is halted pending this."
+    },
+    {
+      "id": "F4",
+      "severity": "mandatory_exclusion",
+      "finding": "A third clarithromycin-bearing PMBJP row exists that the handover did not list: code 2097, 'Combipack of Clarithromycin 500mg Tablets IP, Esomeprazole 40mg Tablets IP (Gastro resistant) and Tablets in Mono Amoxycillin 750mg Tablets IP Carton' (H. pylori eradication combipack). Its ingredient identity resolves to the separate canonical ingredient 'combipack of clarithromycin', not 'clarithromycin'.",
+      "required_action": "Must be explicitly excluded. A combipack is not a single-ingredient oral tablet assertion and must never inherit a clarithromycin mapping."
+    }
+  ],
+  "evidence_reverification": {
+    "checked_at": "2026-07-27",
+    "section_a_live_verifier": {
+      "command": "node src/cli/verify-interaction-evidence-provenance.mjs --sections=A",
+      "profile": "production-open",
+      "records_verified": 39,
+      "openfda_records_verified": 37,
+      "govuk_records_verified": 2,
+      "unique_openfda_set_ids": 23,
+      "result": "pass"
+    },
+    "openfda_clarithromycin_label": {
+      "set_id": "b98b02bb-2609-49a0-b29f-e5911aa0cbc1",
+      "http_status": 200,
+      "live_spl_version": "23",
+      "draft_recorded_version": "23",
+      "version_matches": true,
+      "live_effective_time": "20230530",
+      "draft_effective_time": "20230530",
+      "effective_time_matches": true,
+      "fragment_text": "Spontaneous reports in the postmarketing period suggest that concomitant administration of clarithromycin and oral anticoagulants may potentiate the effects of the oral anticoagulants.",
+      "stored_fragment_sha256": "81311cfe10ec4333bcc636eedccba36e6a060d84a9b726864bfe463da1338ed2",
+      "recomputed_fragment_sha256": "81311cfe10ec4333bcc636eedccba36e6a060d84a9b726864bfe463da1338ed2",
+      "fragment_hash_stable": true,
+      "fragment_found_verbatim_in_live_label": true,
+      "envelope_payload_sha256_drift": {
+        "draft_payload_sha256": "5268af02e66c314a67f9f9037d996024e4dbddedbdf1e378b964f834eef5dfea",
+        "live_payload_sha256": "8d044da51023eb1009598154d959f7e7f70c645a6212cc95b124b11cc011c14f",
+        "interpretation": "The whole-response envelope hash differs because the openFDA API response envelope carries mutable meta (including last_updated). The content-bearing identifiers all match: set_id, spl_version 23, effective_time 20230530, and the verbatim fragment. This is envelope drift, not label content drift."
+      },
+      "jurisdiction": "US",
+      "supports_members": [
+        "clarithromycin"
+      ],
+      "does_not_support_members": [
+        "erythromycin",
+        "azithromycin"
+      ]
+    },
+    "rxnorm_identity": {
+      "api_version": "06-Jul-2026",
+      "version_response_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd",
+      "search_response_sha256": "aa4632527875ae409cad18761a1264df098814182d030fe973c261cf064334b1",
+      "candidate_rxcuis": [
+        "21212"
+      ],
+      "exact_single_candidate": true,
+      "rxcui": "21212",
+      "name": "clarithromycin",
+      "tty": "IN",
+      "properties_response_sha256": "3ee1e690c54c4cff82ea0dd30e1e64bfb1fd32dbd4015dd78bf7c5983ec49c15",
+      "unii": {
+        "code": "H1250JIK0A",
+        "response_sha256": "1fc8fd12f8411273dd04f48c3b638042239b3b67ce29948c5ba252a1aa643d18"
+      }
+    },
+    "rxnorm_presentation_concepts": {
+      "response_sha256": "ef955c325781ec134c83c518bafe1fb2dfbac1427a84ad8edf6144a06f032dcb",
+      "total_scd_concepts": 6,
+      "oral_tablet_concepts": 4,
+      "concepts_250mg": [
+        "clarithromycin 250 MG Oral Tablet"
+      ],
+      "concepts_500mg": [
+        "clarithromycin 500 MG Oral Tablet",
+        "24 HR clarithromycin 500 MG Extended Release Oral Tablet"
+      ],
+      "non_tablet_forms_present": 2,
+      "note": "250 mg resolves to exactly one oral-tablet concept. 500 mg is ambiguous (see finding F2)."
+    },
+    "pmbjp_tender": {
+      "document": "RC-222/2025",
+      "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-222_30042025.pdf",
+      "retrieved_at": "2026-07-27",
+      "document_sha256": "47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff",
+      "bytes": 2321513,
+      "content_type": "application/pdf",
+      "code_740_binding": {
+        "bound": false,
+        "superseded_claim": {
+          "retracted": true,
+          "retracted_at": "2026-07-27",
+          "original_claim": "bound=true, page 64, serial 122, drug_code 740 = 'Clarithromycin Tablets IP 250 mg'",
+          "why_retracted": "The claim rested on a positional 1:1 alignment between the serial/drug-code column and the item-name column in a multi-column PDF table extraction. Cross-checking against the official PMBJP product list shows that alignment is unreliable: the official list assigns code 739 to 'Clarithromycin Tablets IP 250 mg' and code 740 to 'Cefpodoxime Proxetil Dispersible Tablets 50 mg'. The tender page-64 alignment reproduces the same off-by-one signature (it also yields 739 for Cefuroxime Axetil Tablets IP 125mg, which the official list assigns to 736, and 747 for Glimepiride 3mg, which the official list assigns to 746)."
+        },
+        "tender_item_text_present_on_page_64": "Clarithromycin Tablets IP 250 mg",
+        "code_cannot_be_bound_from_this_extraction": true,
+        "secondary_annexure_page": 98
+      },
+      "code_380_binding": {
+        "bound": false,
+        "reason": "No 500 mg clarithromycin line and no drug code 380 present anywhere in RC-222/2025."
+      }
+    },
+    "catalogue_snapshot": {
+      "source": "preserved-crawler-data-drop",
+      "artifact": "dist/latest/drugs.jsonl",
+      "janaushadhi_first_seen": "2026-07-07",
+      "janaushadhi_last_seen": "2026-07-07",
+      "clarithromycin_bearing_janaushadhi_rows": 3,
+      "provenance_restriction": "janaushadhi/onemg-live provenance is restricted; internal evaluation and candidate discovery only, never redistributable production-open output."
+    }
+  },
+  "ingredient_identity_candidate": {
+    "mapping_id": "ingredient:clarithromycin:rxnorm-21212",
+    "currently_recorded": false,
+    "assertion": {
+      "ingredient_id": "sha256:5bf88d10c60cafcc4e9cf86ed79f6de8044b22687c78ac2fb0ac5c6799170710",
+      "canonical_name": "clarithromycin",
+      "observed_name": "clarithromycin"
+    },
+    "proposed_identity": {
+      "canonical_name": "clarithromycin",
+      "runtime_drug": "clarithromycin",
+      "relationship": "exact",
+      "rxnorm": {
+        "rxcui": "21212",
+        "name": "clarithromycin",
+        "tty": "IN",
+        "version": "06-Jul-2026"
+      },
+      "unii": {
+        "code": "H1250JIK0A"
+      }
+    },
+    "must_not_absorb": [
+      {
+        "ingredient_id": "sha256:0250a0d0e1d82095304d136f538d26d3ba07c95435c0a01841777b2e3d74765b",
+        "canonical_name": "combipack of clarithromycin",
+        "reason": "Distinct catalogue ingredient identity for the H. pylori combipack (code 2097). Must never resolve to the clarithromycin single-ingredient identity."
+      }
+    ]
+  },
+  "product_presentation_candidates": [
+    {
+      "mapping_id": "presentation:pmbjp:740:oral-tablet",
+      "currently_recorded": false,
+      "eligibility": "eligible_to_propose",
+      "pmbjp_code": "740",
+      "brand_name": "Clarithromycin Tablets IP 250 mg",
+      "pack_label": "10's",
+      "catalogue_form_raw": null,
+      "product_id": "sha256:7a9b5161bf110a9fc1618c1f284d73e29f56b8e80b2dc3c5ba7467bd5edf29f4",
+      "product_assertion_sha256": "153530a93aec622ade8df6ab27d8202414c703f0fe076c8d25a99382391afa52",
+      "proposed_presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "presentation_evidence": "Official PMBI tender RC-222/2025 page 64 item 122 / drug code 740 states 'Clarithromycin Tablets IP 250 mg'. Presentation is taken from the tender document, NOT inferred from the catalogue brand string.",
+      "rxnorm_presentation_concept": "clarithromycin 250 MG Oral Tablet",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ]
+    },
+    {
+      "mapping_id": "presentation:pmbjp:380:oral-tablet",
+      "currently_recorded": false,
+      "eligibility": "blocked",
+      "pmbjp_code": "380",
+      "brand_name": "Clarithromycin Tablets IP 500 mg",
+      "pack_label": "4's",
+      "catalogue_form_raw": null,
+      "product_id": "sha256:5ad7afbd0653518727d91e761e0fae7ba49da4ae9705c2a5957e042ec6e776b2",
+      "product_assertion_sha256": "c54da4b050cfa4f6ad1a587974455b518437fe1d3ee16f468caf713a1c1f2933",
+      "blocking_findings": [
+        "F2",
+        "F3"
+      ],
+      "blocked_reason": "No official tender binding located (F3) and the 500 mg strength is ambiguous between immediate-release and 24 HR extended-release oral tablet concepts (F2)."
+    }
+  ],
+  "proposed_rule_if_approved": {
+    "rule_id": "warfarin__clarithromycin_oral",
+    "exists_in_draft": false,
+    "requires_new_draft_row": true,
+    "severity": "major",
+    "dispense_action": "confirm_and_monitor",
+    "risk_basis": "pk_perpetrator",
+    "jurisdiction_of_evidence": "US",
+    "expected_product_pair_count": 3,
+    "pairs": [
+      {
+        "clarithromycin_code": "740",
+        "warfarin_code": "2141"
+      },
+      {
+        "clarithromycin_code": "740",
+        "warfarin_code": "2142"
+      },
+      {
+        "clarithromycin_code": "740",
+        "warfarin_code": "452"
+      }
+    ],
+    "pair_count_rationale": "Only PMBJP code 740 clears every evidence chain, crossed with the three already-reviewed warfarin oral-tablet assertions (2141, 2142, 452). This is 3 pairs, not the 6 that two clarithromycin products would have produced.",
+    "clinical_workflow_constraints": [
+      "The prescriber or anticoagulation service directs warfarin review and PT/INR monitoring.",
+      "The pharmacy must not change a dose or stop either medicine independently.",
+      "Bleeding-symptom counselling is included.",
+      "No universal PT/INR schedule is invented.",
+      "No fixed post-discontinuation interval is invented.",
+      "US label evidence is preserved as US evidence and is not presented as an Indian regulatory-label claim.",
+      "Scope is limited to the exact reviewed product assertions above."
+    ]
+  },
+  "excluded_catalogue_assertions": [
+    {
+      "exclusion": "erythromycin",
+      "reason": "No erythromycin evidence exists anywhere in the audited rule. Must remain excluded unless independently sourced and reviewed (finding F1)."
+    },
+    {
+      "exclusion": "azithromycin",
+      "reason": "Already governed by the separate approved rule warfarin__azithromycin_oral (moderate). Must not be absorbed into a macrolide class promotion."
+    },
+    {
+      "exclusion": "pmbjp:2097",
+      "reason": "H. pylori combipack (clarithromycin + esomeprazole + amoxicillin). Distinct ingredient identity; not a single-ingredient oral tablet (finding F4)."
+    },
+    {
+      "exclusion": "pmbjp:380",
+      "reason": "500 mg product blocked by findings F2 and F3."
+    },
+    {
+      "exclusion": "clarithromycin oral suspension",
+      "reason": "Non-tablet presentation; RxNorm exposes non-tablet forms for this ingredient. No suspension assertion is reviewed."
+    },
+    {
+      "exclusion": "clarithromycin injection",
+      "reason": "Parenteral presentation; outside the oral-tablet scope and unreviewed."
+    },
+    {
+      "exclusion": "24 HR clarithromycin 500 MG Extended Release Oral Tablet",
+      "reason": "Distinct extended-release presentation concept; not the immediate-release assertion under audit."
+    },
+    {
+      "exclusion": "every other clarithromycin-containing product",
+      "reason": "345 catalogue products contain clarithromycin. Only the exact reviewed assertion above may ever be authorized; a reviewed ingredient does not authorize every product containing that ingredient."
+    }
+  ],
+  "approval_required": {
+    "reviewer_id": "clinician:subas",
+    "status": "not_yet_requested",
+    "items": [
+      "A1. Approve the ingredient identity clarithromycin = RxNorm 21212 (tty IN), UNII H1250JIK0A, as an exact mapping, explicitly not absorbing 'combipack of clarithromycin'.",
+      "A2. Approve the product-presentation mapping presentation:pmbjp:740:oral-tablet bound to product_id sha256:7a9b5161... and product_assertion_sha256 153530a9..., on PMBI tender RC-222/2025 page 64 item 122 evidence, internal-evaluation profile only.",
+      "A3. Decide the architecture: create exact draft row warfarin__clarithromycin_oral and remove clarithromycin from warfarin__macrolide_cyp_inhibitor members (SIM_B), accepting that this changes the attested draft and requires reassembly, live re-verification, refreshed attestation, and a newly bound draft-row SHA-256.",
+      "A4. Decide the fate of the residual macrolide class row, which after A3 would assert a major warfarin interaction for erythromycin with zero evidence (finding F1).",
+      "A5. Approve the clinical rule warfarin__clarithromycin_oral as major / confirm_and_monitor for internal evaluation only, limited to the 3 exact reviewed product pairs.",
+      "A6. Confirm that PMBJP code 380 stays excluded pending official tender evidence and immediate-release disambiguation."
+    ],
+    "explicitly_not_authorized_by_this_packet": [
+      "Any ingredient or product-presentation mapping.",
+      "Any runtime promotion or compiled runtime rule.",
+      "Any change to the attested draft pack.",
+      "Any promotion of the existing warfarin__macrolide_cyp_inhibitor class row.",
+      "Any production-open content whatsoever."
+    ]
+  }
+}
