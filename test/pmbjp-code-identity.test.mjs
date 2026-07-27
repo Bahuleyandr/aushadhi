@@ -1,7 +1,11 @@
-// Regression guards for the F5 remediation: PMBJP drug codes are not stable across
-// product-list editions, so (a) every catalogue snapshot must record which source
-// document it was parsed from, and (b) a mapping's code citation must be checkable
-// against a named source and fail closed when it cannot be confirmed.
+// Regression guards from the F5 investigation.
+//
+// F5 was raised as a code-identity defect and turned out to be an artifact of
+// extracting the PMBJP list with pdftotext -layout, which mis-renders this ruled
+// table. The committed codes were correct all along. What these tests pin is the
+// machinery that makes that verifiable rather than assumed: an explicit extraction
+// mode, an in-document completeness assertion, recorded source provenance, and a
+// mapping-code verifier that fails closed.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,10 +15,14 @@ import assert from 'node:assert/strict';
 
 import {
   PMBJP_PROVENANCE_FILENAME,
+  assertJanAushadhiParseComplete,
+  countJanAushadhiSerials,
+  janAushadhiParseIntegrity,
   parseJanAushadhiText,
   readJanAushadhiProvenance,
   writeJanAushadhiProvenance,
 } from '../src/adapters/janaushadhi.mjs';
+import { pdfToText } from '../src/lib/pdftotext.mjs';
 
 function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'pmbjp-provenance-'));
@@ -50,8 +58,8 @@ test('a text-only cache is recorded as an unverifiable code space rather than as
     pdfPath: null,
   });
 
-  // this is exactly the state the 2026-07-07 catalogue snapshot is in: the source
-  // document is gone, so its drug codes cannot be attributed to any edition
+  // a snapshot whose source PDF is gone cannot have its drug codes re-checked
+  // against the document that produced them, so say so rather than imply it was
   assert.equal(provenance.code_space_verifiable, false);
   assert.equal(provenance.pdf_sha256, null);
   assert.equal(provenance.pdf_byte_count, null);
@@ -103,21 +111,77 @@ test('the code verifier rejects a source list whose sha256 does not match', asyn
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-test('the committed mappings carry PMBJP codes that are not yet confirmed against any named source', () => {
-  // F5 quarantine: this documents the outstanding state rather than asserting it is
-  // acceptable. When the catalogue's source edition is pinned and the citations are
-  // re-verified, this expectation should be tightened to require full confirmation.
-  const quarantine = JSON.parse(fs.readFileSync(
+test('every committed mapping code verifies against the official list', () => {
+  const record = JSON.parse(fs.readFileSync(
     path.resolve('docs/interaction-review/2026-07-27-pmbjp-code-identity-quarantine.json'),
     'utf8',
   ));
-  assert.equal(quarantine.status, 'open');
-  assert.equal(quarantine.mappings_checked, 17);
-  assert.ok(quarantine.unconfirmed_count > 0);
-  assert.equal(
-    quarantine.confirmed_count + quarantine.unconfirmed_count,
-    quarantine.mappings_checked,
+  assert.equal(record.status, 'resolved_false_alarm');
+  assert.equal(record.mappings_checked, 17);
+  assert.equal(record.confirmed_count, 17);
+  assert.equal(record.unconfirmed_count, 0);
+  assert.equal(record.blocks_new_pmbjp_mappings, false);
+  // the extraction mode is part of the data contract and must stay recorded
+  assert.equal(record.verification_run.extraction_mode, 'table');
+});
+
+// ── extraction completeness must fail closed ───────────────────────────────
+//
+// The PMBJP list is a ruled table. Xpdf -layout renders many name cells into a
+// separate block, orphaning them from their drug code: 1466 parsed rows against
+// 2111 serial-numbered products. -table keeps every name on its own row. A build
+// that silently accepted the lossy extraction would mislabel drug codes wholesale,
+// so the row count is checked against an in-document ground truth.
+
+const LOSSY_EXTRACT = [
+  'S. No. Drug      Generic Name of Item                     Unit Size',
+  '1367  2138       Torsemide Tablets IP 100mg               10\'s',
+  '1368  2139',
+  '1369  2140       Valsartan Tablets IP 40 mg               10\'s',
+  '1370  2141',
+  '                 Zinc Sulphate Dispersible Tablets IP 20mg  10\'s',
+].join('\n');
+
+const COMPLETE_EXTRACT = [
+  'S. No. Drug      Generic Name of Item                     Unit Size',
+  '1367  2138       Torsemide Tablets IP 100mg               10\'s',
+  '1368  2139       Valsartan Tablets IP 40 mg               10\'s',
+  '1369  2140       Verapamil Tablets IP 40mg                10\'s',
+  '1370  2141       Warfarin Tablets IP 1mg                  10\'s',
+].join('\n');
+
+test('countJanAushadhiSerials reads the in-document ground truth', () => {
+  assert.equal(countJanAushadhiSerials(LOSSY_EXTRACT), 4);
+  assert.equal(countJanAushadhiSerials(COMPLETE_EXTRACT), 4);
+});
+
+test('a lossy extraction is detected rather than silently accepted', () => {
+  const rows = parseJanAushadhiText(LOSSY_EXTRACT, '2026-07-27');
+  const integrity = janAushadhiParseIntegrity(LOSSY_EXTRACT, rows);
+  assert.equal(integrity.serials_in_document, 4);
+  assert.ok(integrity.parsed_rows < integrity.serials_in_document);
+  assert.equal(integrity.complete, false);
+  assert.throws(
+    () => assertJanAushadhiParseComplete(LOSSY_EXTRACT, rows),
+    /extraction is lossy: parsed \d+ rows but the document contains \d+/u,
   );
-  assert.equal(quarantine.runtime_risk, 'low_content_hash_bound');
-  assert.equal(quarantine.blocks_new_pmbjp_mappings, true);
+});
+
+test('a complete extraction passes the integrity assertion', () => {
+  const rows = parseJanAushadhiText(COMPLETE_EXTRACT, '2026-07-27');
+  const integrity = assertJanAushadhiParseComplete(COMPLETE_EXTRACT, rows);
+  assert.equal(integrity.complete, true);
+  assert.equal(integrity.parsed_rows, integrity.serials_in_document);
+
+  // and the pairing is the one the catalogue actually holds
+  const byCode = new Map(rows.map((row) => [String(row.source_id), row.brand_name]));
+  assert.equal(byCode.get('2141'), 'Warfarin Tablets IP 1mg');
+  assert.equal(byCode.get('2140'), 'Verapamil Tablets IP 40mg');
+});
+
+test('pdfToText exposes table mode and rejects an unknown mode', async () => {
+  await assert.rejects(
+    () => pdfToText('x.pdf', 'x.txt', { mode: 'bbox' }),
+    /mode must be "layout" or "table"/u,
+  );
 });

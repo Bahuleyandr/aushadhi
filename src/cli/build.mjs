@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ctx } from '../lib/context.mjs';
 import { normalizeGithubJr } from '../adapters/github-jr.mjs';
-import { parseJanAushadhiText } from '../adapters/janaushadhi.mjs';
+import { assertJanAushadhiParseComplete, parseJanAushadhiText } from '../adapters/janaushadhi.mjs';
 import { loadCdscoFdcCombos } from '../adapters/cdsco-fdc.mjs';
 import { readOnemgNormalized } from '../adapters/onemg.mjs';
 import { readApolloNormalized } from '../adapters/apollo.mjs';
@@ -56,7 +56,9 @@ const jaDirs = fs.existsSync(jaRoot) ? fs.readdirSync(jaRoot).sort().reverse() :
 const jaDir = jaDirs.map((d) => path.join(jaRoot, d)).find((d) => fs.existsSync(path.join(d, 'pmbjp.txt')));
 if (jaDir) {
   try {
-    const jaRows = parseJanAushadhiText(fs.readFileSync(path.join(jaDir, 'pmbjp.txt'), 'utf8'), path.basename(jaDir));
+    const jaText = fs.readFileSync(path.join(jaDir, 'pmbjp.txt'), 'utf8');
+    const jaRows = parseJanAushadhiText(jaText, path.basename(jaDir));
+    assertJanAushadhiParseComplete(jaText, jaRows);
     for (const row of jaRows) {
       if (!row.brand_name) {
         errors.push({ source: 'janaushadhi', reason: 'empty brand_name', detail: JSON.stringify(row).slice(0, 200) });

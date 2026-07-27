@@ -82,14 +82,43 @@ export function parseJanAushadhiText(text, date) {
   });
 }
 
+// Every product row in the PMBJP list opens with "<serial> <drug code>". Counting
+// those serials is an in-document ground truth that is independent of how well the
+// extractor paired names to codes, so it detects a lossy extraction that would
+// otherwise pass silently. Xpdf -layout on this document yields 1466 parsed rows
+// against 2111 serials; -table yields 2111 against 2111.
+const SERIAL_RE = /^[^\S\n]*(\d{1,4})[^\S\n]+\d{1,4}\b/gmu;
+
+export function countJanAushadhiSerials(text) {
+  return new Set([...String(text).matchAll(SERIAL_RE)].map((match) => match[1])).size;
+}
+
+export function janAushadhiParseIntegrity(text, rows) {
+  const serials = countJanAushadhiSerials(text);
+  return { parsed_rows: rows.length, serials_in_document: serials, complete: rows.length === serials };
+}
+
+// Fail closed: a silently truncated catalogue is worse than a failed build, because
+// every downstream product_id and drug code is derived from these rows.
+export function assertJanAushadhiParseComplete(text, rows) {
+  const integrity = janAushadhiParseIntegrity(text, rows);
+  if (!integrity.complete) {
+    throw new Error(
+      `janaushadhi extraction is lossy: parsed ${integrity.parsed_rows} rows but the document `
+      + `contains ${integrity.serials_in_document} serial-numbered products. The PDF text extraction `
+      + 'mode is wrong for this table (use pdfToText mode "table") or the document layout changed.',
+    );
+  }
+  return integrity;
+}
+
 export const PMBJP_PROVENANCE_FILENAME = 'pmbjp.provenance.json';
 export const PMBJP_PROVENANCE_SCHEMA_VERSION = 1;
 
-// PMBJP drug codes are NOT stable across product-list editions: the same product
-// carries different codes in different documents. A catalogue row is therefore only
-// interpretable alongside the exact source document it was parsed from, so record
-// that document's identity. Without it, a `pmbjp:<code>` citation cannot be verified
-// and must fail closed rather than be assumed correct.
+// A catalogue row's drug code is only interpretable alongside the exact document it
+// was parsed from: PMBJP reissues the product list, and a `pmbjp:<code>` citation
+// downstream cannot be re-checked without knowing which issue produced it. Record the
+// document identity so that check is possible rather than assumed.
 export function writeJanAushadhiProvenance(dir, { origin, sourceUrl, pdfPath }) {
   const hasPdf = pdfPath !== null && fs.existsSync(pdfPath);
   const bytes = hasPdf ? fs.readFileSync(pdfPath) : null;
@@ -139,7 +168,7 @@ export async function fetchJanAushadhi({ rawRoot, date }) {
     sourceUrl: operatorDrop ? null : PDF_URL,
     pdfPath: pdf,
   });
-  const r = await pdfToText(pdf, txt);
+  const r = await pdfToText(pdf, txt, { mode: 'table' }); // ruled table: -layout orphans name cells
   if (r.skipped) return { ...r, provenance };
   return { file: txt, cached: false, provenance };
 }
