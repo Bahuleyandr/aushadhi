@@ -19,7 +19,7 @@ function readManifest(name) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, 'data-static', name), 'utf8'));
 }
 
-test('committed ingredient mappings contain only the six approved exact identities', () => {
+test('committed ingredient mappings contain only the eight approved exact identities', () => {
   const manifest = readManifest('ingredient-mapping-overrides.json');
   assert.equal(validateIngredientMappingManifest(manifest), true);
   assert.deepEqual(
@@ -87,16 +87,38 @@ test('committed ingredient mappings contain only the six approved exact identiti
         'JFU09I87TR',
         '8629d7d2e6fd59e501e19308ed87d738190431647d40268f0eba5a465b1b9c9b',
       ],
+      [
+        'ingredient:azithromycin:rxnorm-18631',
+        'sha256:a11cef0dcf59d647cc50aa3f94174e67599b079a0abc989a22ae61649ca2b783',
+        'azithromycin',
+        '18631',
+        '42d957f36937eab5f7d89ba38e8a4bbf70299193e8d409c36d75191a503fd0c1',
+        'F94OW58Y8V',
+        '293b8ebdb43c86d1345f43b8534c48e9fb105458b7a59a497edf3a5c8d740b71',
+      ],
+      [
+        'ingredient:tramadol:rxnorm-10689',
+        'sha256:7d4536b14c06903f91096e57cf43df6161f83c9bd2ac24738ca1da7d2d4dafc7',
+        'tramadol',
+        '10689',
+        '4b4e02db0e2103f038a66dbbfc9d14cb029e03337c9ec9311129af64d608371f',
+        '39J1LGJ30J',
+        'a58a094019cb1784d3e8eeeb3eb4bcc6a7a41ec7a944c48d19a750de8696fb4c',
+      ],
     ],
   );
   assert.ok(manifest.mappings.every((mapping) => (
     mapping.identity.relationship === 'exact'
     && mapping.review.status === 'reviewed'
     && mapping.review.reviewer_id === 'clinician:subas'
-    && mapping.review.reviewed_at === '2026-07-26'
+    && ['2026-07-26', '2026-07-27'].includes(mapping.review.reviewed_at)
     && mapping.review.evidence.length === 4
     && mapping.review.evidence.every((evidence) => evidence.source_id === 'rxnorm')
   )));
+  assert.deepEqual(
+    manifest.mappings.slice(-2).map((mapping) => mapping.review.reviewed_at),
+    ['2026-07-27', '2026-07-27'],
+  );
 });
 
 const approvedProducts = [
@@ -421,6 +443,106 @@ const approvedProducts = [
       ['rxnorm', 'rxcui:349434', '24d14758adbe9e951655b41fbc4823ce856bdd539c07c9c909a32c499f872349'],
     ],
   },
+  {
+    mapping_id: 'presentation:pmbjp:18:oral-tablet',
+    product_id: 'sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6',
+    product_assertion_sha256: '8857d75b73ec7f1e2600928d0d601e8c283dbd177ea8081ec83f7d93f996286d',
+    drug: 'azithromycin',
+    reviewed_at: '2026-07-27',
+    product: {
+      brand_name: 'Azithromycin Tablets IP 250 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "6's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'azithromycin',
+        strength_raw: '250 mg',
+        strength_value: 250,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '18' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-tender:RC-219/2024:18:page-57', 'cf5c444a41a1e633b3cd7a6346dd97e7b0c73a652869815b16ade89eba461d98'],
+      ['rxnorm', 'rxnorm-search:azithromycin-250-mg-oral-tablet', '3a9408ccb754184c2bdeb451647f3c847531efb26afc3b7c430c1fba100ed64f'],
+      ['rxnorm', 'rxcui:308460', 'b6476625370c9776d0c01d755441a96a62b094965e0039c010f670e879b7f5af'],
+    ],
+  },
+  {
+    mapping_id: 'presentation:pmbjp:72:oral-tablet',
+    product_id: 'sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25',
+    product_assertion_sha256: '486892da381243eee3d79a37e4708e2b74e38d9c35ed0fe0fb409f5455fe5db3',
+    drug: 'azithromycin',
+    reviewed_at: '2026-07-27',
+    product: {
+      brand_name: 'Azithromycin Tablets IP 500 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "3's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'azithromycin',
+        strength_raw: '500 mg',
+        strength_value: 500,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '72' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-tender:RC-219/2024:72:page-57', 'cf5c444a41a1e633b3cd7a6346dd97e7b0c73a652869815b16ade89eba461d98'],
+      ['rxnorm', 'rxnorm-search:azithromycin-500-mg-oral-tablet', '9afe76108a8d83ad539c07ffc0e549ba62dee93f7021a201822d5972085edb62'],
+      ['rxnorm', 'rxcui:248656', '66bf94a37c21d4f4818282b30cf3c97118bcada71510b3ecd3c09c24d1c76b70'],
+    ],
+  },
+  {
+    mapping_id: 'presentation:pmbjp:28:oral-tablet',
+    product_id: 'sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab',
+    product_assertion_sha256: '4e2bfd35afcc31cdb65fadf293c6d5a39e2ecbf5ecf58b428889132cb6816630',
+    drug: 'tramadol',
+    reviewed_at: '2026-07-27',
+    product: {
+      brand_name: 'Tramadol Tablets 50mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "10's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'tramadol',
+        strength_raw: '50mg',
+        strength_value: 50,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '28' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-tender:RC-221/2025:28:page-57', 'c885a7b5f438678cd25956f16eb070a44880dd7219ad8f0c46319f2b22113f15'],
+      ['rxnorm', 'rxnorm-search:tramadol-50-mg-oral-tablet', '97828c9aecf9373dcf2e1ae0829a2d0090ba934e652b727be35fa26b3263c60c'],
+      ['rxnorm', 'rxcui:835603', 'd6535ef2ab4f282eb14b13143f2c51968cc1e2fdf23a8efc1df6427d1da8a8e6'],
+    ],
+  },
+  {
+    mapping_id: 'presentation:pmbjp:521:oral-tablet',
+    product_id: 'sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4',
+    product_assertion_sha256: 'ebb760346acbcc1945168a642a25ecb265326476fbd6a723aeb5edba3629b829',
+    drug: 'tramadol',
+    reviewed_at: '2026-07-27',
+    product: {
+      brand_name: 'Tramadol Prolonged Release Tablets IP 100 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "10's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'tramadol',
+        strength_raw: '100 mg',
+        strength_value: 100,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '521' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-tender:RC-218/2024:521:page-63', 'c28dcc3bdd7add664887d240de9ca373ff09d37928201d16e32e34e00b3b968e'],
+      ['rxnorm', 'rxnorm-search:tramadol-hydrochloride-100-mg-24-hr-extended-release-oral-tablet', '63e713977e92111b0a487e75ffe14fd265002999b0e8311f69cbce68fdd989ab'],
+      ['rxnorm', 'rxcui:833709', '4e5afde5a5e46bf57e9fe6e7ebc316990f620374deceac75531b464f418c1d81'],
+    ],
+  },
 ];
 
 function approvedRecords() {
@@ -434,7 +556,7 @@ function approvedRecords() {
   }));
 }
 
-test('committed product presentation mappings contain only the thirteen approved PMBJP rows', () => {
+test('committed product presentation mappings contain only the seventeen approved PMBJP rows', () => {
   const presentationManifest = readManifest('product-presentation-overrides.json');
   const ingredientManifest = readManifest('ingredient-mapping-overrides.json');
   assert.equal(validateProductPresentationManifest(presentationManifest), true);
@@ -462,7 +584,7 @@ test('committed product presentation mappings contain only the thirteen approved
       presentation: { route: 'oral', formulation: 'tablet' },
       review_status: 'reviewed',
       reviewer_id: 'clinician:subas',
-      reviewed_at: '2026-07-26',
+      reviewed_at: entry.reviewed_at ?? '2026-07-26',
       evidence: entry.evidence,
     })),
   );
@@ -516,7 +638,7 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
   assert.equal(validateRulePack(productionPack), true);
   assert.equal(internalPack.profile, 'internal-evaluation');
   assert.equal(internalPack.declared_coverage, 'partial');
-  assert.equal(internalPack.rules.length, 5);
+  assert.equal(internalPack.rules.length, 7);
   assert.deepEqual(productionPack.rules, []);
   assert.equal(productionPack.declared_coverage, 'unknown');
 

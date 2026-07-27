@@ -585,6 +585,166 @@
           }
         ]
       }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:18:oral-tablet",
+      "product_id": "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+      "product_assertion_sha256": "8857d75b73ec7f1e2600928d0d601e8c283dbd177ea8081ec83f7d93f996286d",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-219/2024:18:page-57",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-219_09082024.pdf",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "cf5c444a41a1e633b3cd7a6346dd97e7b0c73a652869815b16ade89eba461d98"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:azithromycin-250-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=azithromycin+250+MG+Oral+Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "3a9408ccb754184c2bdeb451647f3c847531efb26afc3b7c430c1fba100ed64f"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:308460",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/308460/properties.json",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "b6476625370c9776d0c01d755441a96a62b094965e0039c010f670e879b7f5af"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:72:oral-tablet",
+      "product_id": "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25",
+      "product_assertion_sha256": "486892da381243eee3d79a37e4708e2b74e38d9c35ed0fe0fb409f5455fe5db3",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-219/2024:72:page-57",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-219_09082024.pdf",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "cf5c444a41a1e633b3cd7a6346dd97e7b0c73a652869815b16ade89eba461d98"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:azithromycin-500-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=azithromycin+500+MG+Oral+Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "9afe76108a8d83ad539c07ffc0e549ba62dee93f7021a201822d5972085edb62"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:248656",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/248656/properties.json",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "66bf94a37c21d4f4818282b30cf3c97118bcada71510b3ecd3c09c24d1c76b70"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:28:oral-tablet",
+      "product_id": "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+      "product_assertion_sha256": "4e2bfd35afcc31cdb65fadf293c6d5a39e2ecbf5ecf58b428889132cb6816630",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-221/2025:28:page-57",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-221_04042025.pdf",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "c885a7b5f438678cd25956f16eb070a44880dd7219ad8f0c46319f2b22113f15"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:tramadol-50-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=tramadol+50+MG+Oral+Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "97828c9aecf9373dcf2e1ae0829a2d0090ba934e652b727be35fa26b3263c60c"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:835603",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/835603/properties.json",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "d6535ef2ab4f282eb14b13143f2c51968cc1e2fdf23a8efc1df6427d1da8a8e6"
+          }
+        ]
+      }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:521:oral-tablet",
+      "product_id": "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4",
+      "product_assertion_sha256": "ebb760346acbcc1945168a642a25ecb265326476fbd6a723aeb5edba3629b829",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-218/2024:521:page-63",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-218_07112024.pdf",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "c28dcc3bdd7add664887d240de9ca373ff09d37928201d16e32e34e00b3b968e"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:tramadol-hydrochloride-100-mg-24-hr-extended-release-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=24+HR+tramadol+hydrochloride+100+MG+Extended+Release+Oral+Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "63e713977e92111b0a487e75ffe14fd265002999b0e8311f69cbce68fdd989ab"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:833709",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/833709/properties.json",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "4e5afde5a5e46bf57e9fe6e7ebc316990f620374deceac75531b464f418c1d81"
+          }
+        ]
+      }
     }
   ]
 }

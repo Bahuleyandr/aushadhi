@@ -4,7 +4,7 @@
   "output_pack": {
     "schema_version": "1.0.0",
     "pack_id": "aushadhi-internal-interactions",
-    "pack_version": "0.3.0",
+    "pack_version": "0.4.0",
     "licence": "CC-BY-4.0",
     "source_ids": [
       "aushadhi-open-clinician-rules"
@@ -207,6 +207,80 @@
             "ingredient_mapping_id": "ingredient:voriconazole:rxnorm-121243",
             "presentation_mapping_ids": [
               "presentation:pmbjp:2034:oral-tablet"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__azithromycin_oral",
+      "draft_rule_sha256": "f3cd2ac4598e2d602d9f48b452d354564aac185db473baf0e23f66c987b66ced",
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve the warfarin-azithromycin clinical rule for internal evaluation only, limited to the five reviewed PMBJP oral-tablet assertions (six cross-product combinations), as moderate severity with confirm-and-monitor management. The alert must require a prescriber/anticoagulation-service PT/INR monitoring plan during concomitant oral azithromycin use and a clinician-directed decision about follow-up when the course ends; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling; disclose that the U.S. label's signal is based on spontaneous postmarketing reports and that its dedicated azithromycin-warfarin study did not affect prothrombin time; exclude stale code 48, suspensions, dispersible tablets, and every other unreviewed or non-tablet presentation; do not invent a universal PT/INR schedule or fixed post-discontinuation interval; treat the evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep production-open disabled. Reviewer ID: clinician:subas",
+        "source_versions": [
+          "openfda-labels:db52b91e-79f7-4cc1-9564-f2eee8e31c45:48"
+        ]
+      },
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "expected_product_pair_count": 6,
+        "sides": [
+          {
+            "draft_role": "object",
+            "ingredient_mapping_id": "ingredient:warfarin:rxnorm-11289",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:2141:oral-tablet",
+              "presentation:pmbjp:2142:oral-tablet",
+              "presentation:pmbjp:452:oral-tablet"
+            ]
+          },
+          {
+            "draft_role": "perpetrator",
+            "ingredient_mapping_id": "ingredient:azithromycin:rxnorm-18631",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:18:oral-tablet",
+              "presentation:pmbjp:72:oral-tablet"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "rule_id": "warfarin__tramadol",
+      "draft_rule_sha256": "6fc7fe11082347ebc877d5a64469a67fe28f5a18c3942da10a1d45078212156b",
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve the warfarin-tramadol clinical rule for internal evaluation only, limited to the five reviewed PMBJP oral-tablet assertions (six cross-product combinations), as major severity with confirm-and-monitor management. The alert must require prescriber/anticoagulation-service review of whether warfarin dose adjustment is needed and additional PT/INR monitoring when oral tramadol is started, with a clinician-directed follow-up decision when tramadol is stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling and advice not to stop warfarin without consulting a healthcare professional; exclude injections, combination products, and every other unreviewed or non-tablet presentation; do not invent a universal PT/INR schedule or fixed post-discontinuation interval; treat the evidence as a UK MHRA safety update rather than a U.S. or Indian regulatory claim; and keep production-open disabled. Reviewer ID: clinician:subas",
+        "source_versions": [
+          "mhra-govuk-drug-safety-updates:warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol:2024-06-20T11:11:09+01:00"
+        ]
+      },
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "expected_product_pair_count": 6,
+        "sides": [
+          {
+            "draft_role": "object",
+            "ingredient_mapping_id": "ingredient:warfarin:rxnorm-11289",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:2141:oral-tablet",
+              "presentation:pmbjp:2142:oral-tablet",
+              "presentation:pmbjp:452:oral-tablet"
+            ]
+          },
+          {
+            "draft_role": "perpetrator",
+            "ingredient_mapping_id": "ingredient:tramadol:rxnorm-10689",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:28:oral-tablet",
+              "presentation:pmbjp:521:oral-tablet"
             ]
           }
         ]
