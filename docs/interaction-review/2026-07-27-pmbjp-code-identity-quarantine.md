@@ -35,7 +35,53 @@ drug at runtime; the content binding holds and fails closed.
 What is compromised is the **evidence chain**: a clinician approved each mapping against a tender
 citation identified by that code, and the code may point at the wrong tender row.
 
-## Root cause — it is *not* a parser bug
+## ⚠ Root cause — CORRECTED 2026-07-27 (an earlier version of this document was wrong)
+
+**Retracted claim:** *"PMBJP codes are not stable across editions; the catalogue came from a larger
+edition that is now unrecoverable."*
+
+**What tracing the source actually showed:** the catalogue was built from the **same document the
+adapter still points at**, unchanged. Git history shows the URL was never edited (only made
+env-overridable). That document contains **exactly 2111 serial-numbered products — matching the
+catalogue's 2111 janaushadhi rows exactly.** There is no missing edition.
+
+The real cause is **our own extraction**. The PMBJP list is a Word table in which many name cells
+render on a *separate line* from their serial/code cell — 1479 rows carry their name inline, **632 do
+not**. The 2026-07-07 extraction paired the code stream to the name stream *positionally*, so the
+pairing drifts wherever a name is orphaned.
+
+Read straight off PDF page 62:
+
+| code | catalogue (07-07 parse) | **actual document** |
+|---|---|---|
+| 2138 | Torsemide 100mg ✓ | Torsemide 100mg |
+| 2139 | Valsartan 40mg ✗ | *(bare — name renders lower)* |
+| 2140 | Verapamil 40mg ✗ | Valsartan 40mg |
+| 2141 | **Warfarin 1mg** ✗ | *(bare)* |
+| 2142 | Warfarin 2mg ✗ | Verapamil 40mg |
+| 2144 | Pyridostigmine ✗ | **Warfarin 1mg** |
+
+The real table uses every *other* code here (2138, 2140, 2142, 2144, 2146), with 2139/2141/2143/2145
+carrying the names that render lower (Zinc Sulphate, Pyridostigmine, Budesonide, Combikit). Zipping
+the name stream onto the code stream in order reproduces the catalogue **exactly**, right down to
+Pyridostigmine landing on 2144. That is a positional-pairing artifact, not an edition difference.
+
+**What is actually wrong is only the code *label*.** `product_id` hashes brand name, manufacturer,
+pack, form and ingredients — none of which came from the code column. **All 17 mappings bind the
+correct products.** What is mislabelled is the code in `mapping_id` and in the tender citation.
+
+### Corrected codes
+
+| status | product | mapped | true |
+|---|---|---|---|
+| already correct | Azithromycin 250mg · Metronidazole 400mg · Tramadol 50mg | 18 · 202 · 28 | same |
+| correctable now | Fluconazole 150 mg | 1246 | **1252** |
+| correctable now | Tramadol PR 100 mg | 521 | **519** |
+| correctable now | Voriconazole 200mg | 2034 | **2033** |
+| correctable now | Warfarin 1mg | 2141 | **2144** |
+| needs geometry-aware extraction | 10 products incl. both amiodarone, warfarin 2mg/5mg, ketoconazole | — | orphaned rows |
+
+## Superseded: the original "not a parser bug" reasoning
 
 I first suspected the janaushadhi adapter mis-assigned codes. It does not. Re-running the committed
 parser over the current official list yields `739 = Clarithromycin Tablets IP 250 mg` and
