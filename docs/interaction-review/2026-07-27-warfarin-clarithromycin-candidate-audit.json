@@ -2,14 +2,14 @@
   "schema_version": 1,
   "packet_id": "warfarin-clarithromycin-pmbjp-oral-tablets-candidate-audit-2026-07-27",
   "generated_at": "2026-07-27",
-  "review_status": "candidate_audit_pending_clinician",
+  "review_status": "clinician_reviewed",
   "release_profile": "internal-evaluation",
   "production_open_enabled": false,
   "authorization_state": {
-    "mappings_recorded": false,
-    "promotions_recorded": false,
+    "mappings_recorded": true,
+    "promotions_recorded": true,
     "draft_pack_modified": true,
-    "statement": "Items A3 and A4 were approved by clinician:subas on 2026-07-27 and have been executed. Items A1, A2 and A5 are HALTED by finding F5, which was discovered while executing them. No ingredient mapping, no product-presentation mapping and no promotion entry has been created. Production-open remains empty."
+    "statement": "A1-A6 were approved by clinician:subas on 2026-07-27 and all six are now executed. The ingredient identity, the single reviewed product presentation and the internal-evaluation promotion are recorded, and the runtime pack is compiled. Production-open remains empty."
   },
   "execution_status": {
     "approved_at": "2026-07-27",
@@ -32,21 +32,24 @@
         "item": "A6",
         "status": "done",
         "detail": "PMBJP code 380 remains excluded, now on three grounds: F2 (IR/ER ambiguity), F3 (no tender line) and F5 (the official list assigns clarithromycin 500 mg to code 383 and has no code 380 at all)."
-      }
-    ],
-    "halted": [
+      },
       {
-        "items": [
-          "A1",
-          "A2",
-          "A5"
-        ],
-        "status": "halted_pending_reapproval",
-        "blocked_by": "F5",
-        "detail": "A2 cannot be written honestly: the mapping_id would be presentation:pmbjp:740:oral-tablet and its tender evidence identifier would cite code 740, but the official PMBJP product list assigns code 740 to Cefpodoxime Proxetil Dispersible Tablets 50 mg and assigns clarithromycin 250 mg to code 739. A5 depends on A2. A1 is independently verified (RxNorm 21212 / UNII H1250JIK0A are correct regardless of PMBJP codes) but is held with A2 rather than landing a dangling half-state.",
-        "reapproval_note": "The A1/A2/A5 approval was given on the basis of this packet's original code_740_binding claim, which has since been retracted. Those three items should be re-decided against the corrected evidence rather than executed under the original approval."
+        "item": "A1",
+        "status": "done",
+        "detail": "Recorded ingredient:clarithromycin:rxnorm-21212 - RxNorm 21212 (tty IN), UNII H1250JIK0A, relationship exact. The H. pylori combipack carries a different catalogue ingredient_id (sha256:0250a0d0...) so it cannot resolve to this identity; the schema permits only six identity keys, so that exclusion is enforced structurally and stated in the approval text rather than as an extra field."
+      },
+      {
+        "item": "A2",
+        "status": "done",
+        "detail": "Recorded presentation:pmbjp:740:oral-tablet bound to product sha256:7a9b5161... and assertion 153530a9..., internal-evaluation profile only, with five evidence records: the official PMBJP product list (PDF f54a140d...), PMBI tender RC-222/2025 page 64 item 122 (PDF 47670d2b...), and the three RxNorm lookups pinning SCD 197516."
+      },
+      {
+        "item": "A5",
+        "status": "done",
+        "detail": "Recorded and compiled warfarin__clarithromycin_oral as major / confirm_and_monitor, bound to draft row 33a01de9..., scoped to exactly 3 product pairs (clarithromycin 740 x warfarin 2141/2142/452). Pack totals moved 7 -> 8 rules and 42 -> 45 exact pairs."
       }
     ],
+    "halted": [],
     "post_change_pack": {
       "pack_sha256": "3a9d053111389f9fba232add71548c15d80a3c3370fea0f634aa594e5ffd691f",
       "rule_count": 199,
@@ -58,6 +61,25 @@
         "warfarin+erythromycin": "no finding - uncovered pending independent erythromycin evidence, see F1",
         "warfarin+azithromycin": "warfarin__azithromycin_oral/moderate (unchanged)"
       }
+    },
+    "tender_binding_reverification": {
+      "checked_at": "2026-07-27",
+      "why": "The tender binding was retracted mid-investigation when F5 made every PMBJP code look wrong. F5 was resolved as an extraction artifact, so the binding was re-verified in table mode before anything was recorded.",
+      "document": "RC-222/2025",
+      "document_sha256": "47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff",
+      "extraction_mode": "table",
+      "result": "Page 64, item 122, drug code 740: \"Clarithromycin Tablets IP 250 mg\", composition \"Clarithromycin IP 250mg\", pack 10's; packing annexure repeats the row on page 98. The original audit claim is confirmed, and the retraction of it is itself withdrawn.",
+      "independent_agreement": "Catalogue, official PMBJP product list and tender all assign code 740 to Clarithromycin Tablets IP 250 mg."
+    },
+    "resulting_state": {
+      "ingredient_mappings": 9,
+      "presentation_mappings": 18,
+      "promotions": 8,
+      "exact_product_pairs": 45,
+      "internal_pack_version": "0.4.0",
+      "production_open_rules": 0,
+      "production_open_declared_coverage": "unknown",
+      "pmbjp_code_verifier": "18/18 confirmed, exit 0"
     }
   },
   "audited_draft_state": {

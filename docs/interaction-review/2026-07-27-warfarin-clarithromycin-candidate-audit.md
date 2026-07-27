@@ -3,7 +3,25 @@
 **Date:** 2026-07-27
 **Packet:** `warfarin-clarithromycin-pmbjp-oral-tablets-candidate-audit-2026-07-27`
 **Machine-readable companion:** `2026-07-27-warfarin-clarithromycin-candidate-audit.json`
-**Status:** A1–A6 approved by `clinician:subas` on 2026-07-27 · **A3/A4/A6 executed · A1/A2/A5 HALTED**
+**Status:** A1–A6 approved by `clinician:subas` on 2026-07-27 · **ALL SIX EXECUTED**
+**Approval record:** `2026-07-27-warfarin-clarithromycin-clinician-approval.md`
+
+> ## ✅ Completed 2026-07-27
+>
+> A1, A2 and A5 were unblocked once F5 was resolved as an extraction artifact, and are now recorded:
+> ingredient identity `clarithromycin` = RxNorm 21212 / UNII H1250JIK0A, presentation
+> `presentation:pmbjp:740:oral-tablet`, and the compiled rule `warfarin__clarithromycin_oral`
+> (major / confirm_and_monitor, **3 exact pairs**).
+>
+> **The tender binding retracted below is itself withdrawn.** Re-read in `table` mode, RC-222/2025
+> page 64 item 122 does bind code 740 to "Clarithromycin Tablets IP 250 mg" — the original claim was
+> right, and catalogue, official product list and tender all agree.
+>
+> Totals: mappings 8→9 and 17→18, promotions 7→8, exact pairs 42→45.
+> **Production-open unchanged: 0 rules.** Code verifier: 18/18 confirmed.
+
+<details>
+<summary>Historical: the halt that applied before F5 was resolved</summary>
 
 > ## ⚠ Execution halted partway — read this first
 >
@@ -22,16 +40,18 @@
 >
 > **No mapping and no promotion has been recorded. Production-open is still empty (0 rules).**
 
+</details>
+
 ### What was executed
 
 | Item | Status | Result |
 |---|---|---|
 | **A3** | ✅ done | `warfarin__clarithromycin_oral` added; clarithromycin removed from the class row; pack reassembled with live verification of all **245** evidence records; attestation + review index refreshed. New pack SHA `02f1a115…0009d`, **200 rules**, all still draft-gated. |
 | **A4** | ✅ done — **decision revised to _retire_** | I first rescoped the row to erythromycin-only with an `evidence_gap` marker. That state failed a repo invariant: it duplicated the clarithromycin fragment across two rules (the pack forbids duplicate evidence fragments), and it left an *erythromycin* rule citing a *clarithromycin* label. Both point the same way, and it matches F1's own required action, so the row was **retired**. See the note below. |
-| **A6** | ✅ done | Code 380 excluded — now on **three** grounds (F2, F3 and F5). |
-| **A1** | ⛔ halted | Independently verified (RxNorm 21212 / UNII H1250JIK0A are correct regardless of codes) but held with A2 rather than landing a dangling half-state. |
-| **A2** | ⛔ halted | Cannot be written honestly — see F5. |
-| **A5** | ⛔ halted | Depends on A2. |
+| **A6** | ✅ done | Code 380 excluded. F3/F5 turned out to be extraction artifacts, so the standing ground is **F2**: RxNorm exposes both an immediate-release and a 24 HR extended-release 500 mg oral tablet, which the catalogue row cannot disambiguate. |
+| **A1** | ✅ done | `ingredient:clarithromycin:rxnorm-21212` — RxNorm 21212 (`tty IN`), UNII H1250JIK0A, relationship `exact`. |
+| **A2** | ✅ done | `presentation:pmbjp:740:oral-tablet` → product `sha256:7a9b5161…`, assertion `153530a9…`, internal-evaluation only, 5 evidence records. |
+| **A5** | ✅ done | `warfarin__clarithromycin_oral` compiled — major / confirm_and_monitor, bound to draft row `33a01de9…`, **3 exact pairs**. |
 
 The split works as designed — the duplicate alert is gone:
 

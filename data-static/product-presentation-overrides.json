@@ -745,6 +745,60 @@
           }
         ]
       }
+    },
+    {
+      "mapping_id": "presentation:pmbjp:740:oral-tablet",
+      "product_id": "sha256:7a9b5161bf110a9fc1618c1f284d73e29f56b8e80b2dc3c5ba7467bd5edf29f4",
+      "product_assertion_sha256": "153530a93aec622ade8df6ab27d8202414c703f0fe076c8d25a99382391afa52",
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "presentation": {
+        "route": "oral",
+        "formulation": "tablet"
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "evidence": [
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-product-list:740",
+            "source_url": "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2026/feb/doc202626781701.pdf",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "f54a140d9dc82880dcbb7672c18942417e8c9fe904376c742b6319665cdf9a08"
+          },
+          {
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-222/2025:740:page-64",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-222_30042025.pdf",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-version:06-Jul-2026",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/version.json",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:clarithromycin-250-mg-oral-tablet",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=clarithromycin+250+MG+Oral+Tablet&allsrc=0&search=0",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "c84bfce30a0291157e87aa12bd4250dc151655ed2600da56fbe49bebec973ac5"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:197516",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/197516/properties.json",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "957ebc984a2a67883105b7e064cb81162fa9f1964065a89c00ff61e09b776616"
+          }
+        ]
+      }
     }
   ]
 }

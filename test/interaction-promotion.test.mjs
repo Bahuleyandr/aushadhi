@@ -75,7 +75,7 @@ test('the promotion manifest deterministically compiles the checked-in internal 
     'utf8',
   );
   assert.equal(serializeInteractionRuntimePack(compiled), checkedIn);
-  assert.equal(compiled.rules.length, 7);
+  assert.equal(compiled.rules.length, 8);
   const amiodarone = compiled.rules.find(
     (rule) => rule.rule_id === 'warfarin__amiodarone',
   );

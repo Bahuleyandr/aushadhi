@@ -493,6 +493,67 @@
           }
         ]
       }
+    },
+    {
+      "mapping_id": "ingredient:clarithromycin:rxnorm-21212",
+      "assertion": {
+        "ingredient_id": "sha256:5bf88d10c60cafcc4e9cf86ed79f6de8044b22687c78ac2fb0ac5c6799170710",
+        "canonical_name": "clarithromycin"
+      },
+      "identity": {
+        "clinical_ingredient_id": "sha256:5bf88d10c60cafcc4e9cf86ed79f6de8044b22687c78ac2fb0ac5c6799170710",
+        "canonical_name": "clarithromycin",
+        "runtime_drug": "clarithromycin",
+        "relationship": "exact",
+        "rxnorm": {
+          "rxcui": "21212",
+          "name": "clarithromycin",
+          "tty": "IN",
+          "version": "06-Jul-2026",
+          "api_version": "3.1.354",
+          "response_sha256": "3ee1e690c54c4cff82ea0dd30e1e64bfb1fd32dbd4015dd78bf7c5983ec49c15"
+        },
+        "unii": {
+          "code": "H1250JIK0A",
+          "preferred_name": "clarithromycin",
+          "response_sha256": "1fc8fd12f8411273dd04f48c3b638042239b3b67ce29948c5ba252a1aa643d18"
+        }
+      },
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "evidence": [
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-version:06-Jul-2026",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/version.json",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxnorm-search:clarithromycin",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui.json?name=clarithromycin&allsrc=0&search=0",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "aa4632527875ae409cad18761a1264df098814182d030fe973c261cf064334b1"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "rxcui:21212",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/rxcui/21212/properties.json",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "3ee1e690c54c4cff82ea0dd30e1e64bfb1fd32dbd4015dd78bf7c5983ec49c15"
+          },
+          {
+            "source_id": "rxnorm",
+            "identifier": "unii:H1250JIK0A",
+            "source_url": "https://rxnav.nlm.nih.gov/REST/Prescribe/rxcui/21212/property.json?propName=UNII_CODE",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "1fc8fd12f8411273dd04f48c3b638042239b3b67ce29948c5ba252a1aa643d18"
+          }
+        ]
+      }
     }
   ]
 }

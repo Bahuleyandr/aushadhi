@@ -285,6 +285,42 @@
           }
         ]
       }
+    },
+    {
+      "rule_id": "warfarin__clarithromycin_oral",
+      "draft_rule_sha256": "33a01de9d7f556241de4be8fd9fcb76def45d51f7fa05c730bb7f2431b163499",
+      "approval": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "approval_text": "I approve the warfarin-clarithromycin clinical rule for internal evaluation only, limited to the four reviewed PMBJP oral-tablet assertions (three cross-product combinations: clarithromycin 250 mg crossed with warfarin 1 mg, 2 mg and 5 mg), as major severity with confirm-and-monitor management. The alert must require the prescriber or anticoagulation service to direct whether warfarin dose adjustment is needed and to arrange PT/INR monitoring during concomitant oral clarithromycin use, with a clinician-directed follow-up decision when the course ends; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling and advice not to stop warfarin without consulting a healthcare professional. Exclude erythromycin and every other macrolide (azithromycin is governed by its own separate rule), the H. pylori combipack PMBJP 2097, the 500 mg assertion PMBJP 380, oral suspensions, injections and every other unreviewed or non-tablet presentation. Do not invent a universal PT/INR schedule or a fixed post-discontinuation interval. Treat the evidence as a U.S. label statement rather than an Indian regulatory claim, and keep production-open disabled. Reviewer ID: clinician:subas",
+        "source_versions": [
+          "openfda-labels:b98b02bb-2609-49a0-b29f-e5911aa0cbc1:23"
+        ]
+      },
+      "scope": {
+        "route": "oral",
+        "formulation": "tablet",
+        "expected_product_pair_count": 3,
+        "sides": [
+          {
+            "draft_role": "object",
+            "ingredient_mapping_id": "ingredient:warfarin:rxnorm-11289",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:2141:oral-tablet",
+              "presentation:pmbjp:2142:oral-tablet",
+              "presentation:pmbjp:452:oral-tablet"
+            ]
+          },
+          {
+            "draft_role": "perpetrator",
+            "ingredient_mapping_id": "ingredient:clarithromycin:rxnorm-21212",
+            "presentation_mapping_ids": [
+              "presentation:pmbjp:740:oral-tablet"
+            ]
+          }
+        ]
+      }
     }
   ]
 }

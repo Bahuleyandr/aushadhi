@@ -122,32 +122,76 @@ test('F5 is recorded and the code-740 tender binding is retracted', () => {
   assert.equal(binding.superseded_claim.retracted, true);
 });
 
-test('A1, A2 and A5 are halted and nothing is mapped or promoted', () => {
-  const halted = audit.execution_status.halted[0];
-  assert.deepEqual(halted.items, ['A1', 'A2', 'A5']);
-  assert.equal(halted.blocked_by, 'F5');
-
+test('A1/A2/A5 are recorded exactly as approved, and only for the reviewed assertions', () => {
+  // A1 - the exact ingredient identity
   const ingredients = readJson(path.join(ROOT, 'data-static/ingredient-mapping-overrides.json'));
-  assert.equal(
-    ingredients.mappings.some((m) => /clarithromycin/iu.test(m.mapping_id ?? '')),
-    false,
+  const identity = ingredients.mappings.find((m) => m.mapping_id === 'ingredient:clarithromycin:rxnorm-21212');
+  assert.ok(identity, 'the clarithromycin ingredient identity must be recorded');
+  assert.equal(identity.identity.rxnorm.rxcui, '21212');
+  assert.equal(identity.identity.unii.code, 'H1250JIK0A');
+  assert.equal(identity.identity.relationship, 'exact');
+  assert.equal(identity.review.reviewer_id, 'clinician:subas');
+  // the H. pylori combipack carries a different ingredient_id, so it cannot resolve here
+  assert.notEqual(
+    identity.assertion.ingredient_id,
+    'sha256:0250a0d0e1d82095304d136f538d26d3ba07c95435c0a01841777b2e3d74765b',
   );
 
+  // A2 - the single reviewed presentation, and nothing beyond it
   const presentations = readJson(path.join(ROOT, 'data-static/product-presentation-overrides.json'));
   const codes = presentations.mappings.map((m) => m.mapping_id.split(':')[2]);
-  for (const blocked of ['380', '739', '740', '2097']) {
-    assert.equal(codes.includes(blocked), false, `pmbjp:${blocked} must not be mapped`);
+  assert.ok(codes.includes('740'), 'the reviewed 250 mg oral tablet must be mapped');
+  for (const excluded of ['380', '2097']) {
+    assert.equal(codes.includes(excluded), false, `pmbjp:${excluded} must stay excluded`);
   }
+  const presentation = presentations.mappings.find((m) => m.mapping_id === 'presentation:pmbjp:740:oral-tablet');
+  assert.deepEqual(presentation.allowed_profiles, ['internal-evaluation']);
+  assert.deepEqual(presentation.presentation, { route: 'oral', formulation: 'tablet' });
 
+  // A5 - the promotion, bound to the exact draft row and scoped to 3 pairs
   const promotions = readJson(
     path.join(ROOT, 'data-static/interaction-promotions.internal-evaluation.json'),
   );
+  const promotion = promotions.promotions.find((p) => p.rule_id === 'warfarin__clarithromycin_oral');
+  assert.ok(promotion, 'the clarithromycin promotion must be recorded');
+  assert.equal(promotion.approval.status, 'clinician_reviewed');
+  assert.equal(promotion.approval.reviewer_id, 'clinician:subas');
+  assert.equal(promotion.scope.expected_product_pair_count, 3);
+  assert.deepEqual(promotion.approval.source_versions, [
+    'openfda-labels:b98b02bb-2609-49a0-b29f-e5911aa0cbc1:23',
+  ]);
+  // the promotion must bind the draft row it was approved against
+  const draftRow = fs.readFileSync(PACK_PATH, 'utf8').split('\n')
+    .find((line) => line.includes('"warfarin__clarithromycin_oral"'));
   assert.equal(
-    promotions.promotions.some((p) => /clarithromycin|macrolide/iu.test(p.rule_id)),
-    false,
+    crypto.createHash('sha256').update(draftRow).digest('hex'),
+    promotion.draft_rule_sha256,
   );
-  assert.equal(audit.authorization_state.mappings_recorded, false);
-  assert.equal(audit.authorization_state.promotions_recorded, false);
+  // no macrolide class rule was promoted
+  assert.equal(promotions.promotions.some((p) => /macrolide/iu.test(p.rule_id)), false);
+});
+
+test('the compiled internal rule carries exactly the three approved product pairs', () => {
+  const pack = readJson(path.join(ROOT, 'data-static/interaction-rules.internal-evaluation.json'));
+  const rule = pack.rules.find((r) => r.rule_id === 'warfarin__clarithromycin_oral');
+  assert.ok(rule, 'the rule must be compiled into the internal-evaluation pack');
+  assert.equal(rule.severity, 'major');
+  assert.equal(rule.dispense_action, 'confirm_and_monitor');
+  assert.equal(rule.product_pairs.length, 3);
+  // every pair is the one reviewed clarithromycin product against a reviewed warfarin product
+  const clarithromycin = 'sha256:7a9b5161bf110a9fc1618c1f284d73e29f56b8e80b2dc3c5ba7467bd5edf29f4';
+  const warfarins = new Set([
+    'sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca',
+    'sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548',
+    'sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141',
+  ]);
+  for (const [a, b] of rule.product_pairs) {
+    assert.equal(a, clarithromycin);
+    assert.ok(warfarins.has(b), `unexpected warfarin product in pair: ${b}`);
+  }
+  // the management text must never direct the pharmacy to act alone
+  assert.match(rule.management, /prescriber or anticoagulation service/u);
+  assert.match(rule.management, /not independently change a dose or stop either medicine/u);
 });
 
 test('production-open remains empty and coverage stays unknown', () => {

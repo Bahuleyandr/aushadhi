@@ -162,6 +162,59 @@
       }
     },
     {
+      "rule_id": "warfarin__clarithromycin_oral",
+      "pair": [
+        "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06",
+        "sha256:5bf88d10c60cafcc4e9cf86ed79f6de8044b22687c78ac2fb0ac5c6799170710"
+      ],
+      "product_pairs": [
+        [
+          "sha256:7a9b5161bf110a9fc1618c1f284d73e29f56b8e80b2dc3c5ba7467bd5edf29f4",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:7a9b5161bf110a9fc1618c1f284d73e29f56b8e80b2dc3c5ba7467bd5edf29f4",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:7a9b5161bf110a9fc1618c1f284d73e29f56b8e80b2dc3c5ba7467bd5edf29f4",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ]
+      ],
+      "applicability": {
+        "routes": [
+          "oral tablet for both exact reviewed product assertions"
+        ],
+        "dose_conditions": [],
+        "population_conditions": []
+      },
+      "severity": "major",
+      "dispense_action": "confirm_and_monitor",
+      "mechanism": "Clarithromycin inhibits CYP3A and the US clarithromycin label reports postmarketing potentiation of oral anticoagulant effects, so concomitant use can raise anticoagulant effect and bleeding risk. The magnitude and time course in an individual patient are not established by this source.",
+      "management": "Confirm that the prescriber or anticoagulation service has arranged a PT/INR monitoring plan during concomitant oral clarithromycin use and will decide whether follow-up is needed when the course ends. Do not independently change a dose or stop either medicine. Use prescriber-directed PT/INR monitoring during concomitant use; no universal schedule or fixed post-discontinuation interval is asserted. Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools. This review scope is limited to exact reviewed PMBJP oral-tablet assertions. Erythromycin and every other macrolide are excluded; azithromycin is handled by the separate rule warfarin__azithromycin_oral. The H. pylori combipack (PMBJP code 2097) resolves to a distinct catalogue ingredient identity and is excluded. The 500 mg assertion (PMBJP code 380) is excluded pending official tender evidence and immediate-release disambiguation, because RxNorm exposes both an immediate-release and a 24 HR extended-release 500 mg oral tablet concept. Oral suspensions, injections and every other unreviewed or non-tablet presentation are excluded.",
+      "evidence": [
+        {
+          "source": "openFDA drug label: clarithromycin",
+          "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%22b98b02bb-2609-49a0-b29f-e5911aa0cbc1%22&limit=100",
+          "document_id": "b98b02bb-2609-49a0-b29f-e5911aa0cbc1",
+          "document_version": "23",
+          "retrieved_at": "2026-07-24",
+          "jurisdiction": "US",
+          "excerpt": "Clarithromycin may potentiate the effects of oral anticoagulants (US clarithromycin label). Supports CLARITHROMYCIN only.",
+          "licence": "CC0-1.0",
+          "review_status": "clinician_reviewed"
+        }
+      ],
+      "review": {
+        "status": "clinician_reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "source_versions": [
+          "openfda-labels:b98b02bb-2609-49a0-b29f-e5911aa0cbc1:23"
+        ]
+      }
+    },
+    {
       "rule_id": "warfarin__fluconazole",
       "pair": [
         "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06",

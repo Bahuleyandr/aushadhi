@@ -19,7 +19,7 @@ function readManifest(name) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, 'data-static', name), 'utf8'));
 }
 
-test('committed ingredient mappings contain only the eight approved exact identities', () => {
+test('committed ingredient mappings contain only the nine approved exact identities', () => {
   const manifest = readManifest('ingredient-mapping-overrides.json');
   assert.equal(validateIngredientMappingManifest(manifest), true);
   assert.deepEqual(
@@ -104,6 +104,15 @@ test('committed ingredient mappings contain only the eight approved exact identi
         '4b4e02db0e2103f038a66dbbfc9d14cb029e03337c9ec9311129af64d608371f',
         '39J1LGJ30J',
         'a58a094019cb1784d3e8eeeb3eb4bcc6a7a41ec7a944c48d19a750de8696fb4c',
+      ],
+      [
+        'ingredient:clarithromycin:rxnorm-21212',
+        'sha256:5bf88d10c60cafcc4e9cf86ed79f6de8044b22687c78ac2fb0ac5c6799170710',
+        'clarithromycin',
+        '21212',
+        '3ee1e690c54c4cff82ea0dd30e1e64bfb1fd32dbd4015dd78bf7c5983ec49c15',
+        'H1250JIK0A',
+        '1fc8fd12f8411273dd04f48c3b638042239b3b67ce29948c5ba252a1aa643d18',
       ],
     ],
   );
@@ -543,6 +552,33 @@ const approvedProducts = [
       ['rxnorm', 'rxcui:833709', '4e5afde5a5e46bf57e9fe6e7ebc316990f620374deceac75531b464f418c1d81'],
     ],
   },
+  {
+    mapping_id: 'presentation:pmbjp:740:oral-tablet',
+    product_id: 'sha256:7a9b5161bf110a9fc1618c1f284d73e29f56b8e80b2dc3c5ba7467bd5edf29f4',
+    product_assertion_sha256: '153530a93aec622ade8df6ab27d8202414c703f0fe076c8d25a99382391afa52',
+    drug: 'clarithromycin',
+    reviewed_at: '2026-07-27',
+    product: {
+      brand_name: 'Clarithromycin Tablets IP 250 mg',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "10's",
+      form_raw: null,
+      ingredients: [{
+        molecule: 'clarithromycin',
+        strength_raw: '250 mg',
+        strength_value: 250,
+        strength_unit: 'mg',
+      }],
+      sources: [{ source: 'janaushadhi', source_id: '740' }],
+    },
+    evidence: [
+      ['janaushadhi', 'pmbjp-product-list:740', 'f54a140d9dc82880dcbb7672c18942417e8c9fe904376c742b6319665cdf9a08'],
+      ['janaushadhi', 'pmbjp-tender:RC-222/2025:740:page-64', '47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff'],
+      ['rxnorm', 'rxnorm-version:06-Jul-2026', 'ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd'],
+      ['rxnorm', 'rxnorm-search:clarithromycin-250-mg-oral-tablet', 'c84bfce30a0291157e87aa12bd4250dc151655ed2600da56fbe49bebec973ac5'],
+      ['rxnorm', 'rxcui:197516', '957ebc984a2a67883105b7e064cb81162fa9f1964065a89c00ff61e09b776616'],
+    ],
+  },
 ];
 
 function approvedRecords() {
@@ -556,7 +592,7 @@ function approvedRecords() {
   }));
 }
 
-test('committed product presentation mappings contain only the seventeen approved PMBJP rows', () => {
+test('committed product presentation mappings contain only the eighteen approved PMBJP rows', () => {
   const presentationManifest = readManifest('product-presentation-overrides.json');
   const ingredientManifest = readManifest('ingredient-mapping-overrides.json');
   assert.equal(validateProductPresentationManifest(presentationManifest), true);
@@ -638,7 +674,7 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
   assert.equal(validateRulePack(productionPack), true);
   assert.equal(internalPack.profile, 'internal-evaluation');
   assert.equal(internalPack.declared_coverage, 'partial');
-  assert.equal(internalPack.rules.length, 7);
+  assert.equal(internalPack.rules.length, 8);
   assert.deepEqual(productionPack.rules, []);
   assert.equal(productionPack.declared_coverage, 'unknown');
 
