@@ -1,0 +1,189 @@
+{
+  "schema_version": 1,
+  "packet_id": "warfarin-cotrimoxazole-pmbjp-oral-tablets-candidate-audit-2026-07-27",
+  "generated_at": "2026-07-27",
+  "review_status": "candidate_audit_blocked_pending_clinician",
+  "release_profile": "internal-evaluation",
+  "production_open_enabled": false,
+
+  "authorization_state": {
+    "mappings_recorded": false,
+    "promotions_recorded": false,
+    "draft_pack_modified": false,
+    "statement": "READ-ONLY audit. No ingredient mapping, product-presentation mapping, promotion entry or attested draft byte was created or changed. Production-open remains empty."
+  },
+
+  "outcome": {
+    "verdict": "cannot_be_promoted_under_the_current_mapping_model",
+    "summary": "The clinical evidence is sound and the products are verified, but warfarin__cotrimoxazole is the first rule in this series whose perpetrator is a FIXED-DOSE COMBINATION. The promotion architecture maps one catalogue ingredient identity to one runtime drug with relationship 'exact', and the ingredient-mapping validator requires the RxNorm term type to be IN or PIN. A combination cannot be expressed that way, so this rule is blocked on a model gap rather than on evidence.",
+    "blocked_on": "B1",
+    "not_blocked_on": [
+      "Evidence quality - the openFDA label is live, current and verbatim-verified.",
+      "Product identification - PMBJP codes 89 and 90 are confirmed against the official product list.",
+      "Clinical merit - the mechanism and management are well supported."
+    ]
+  },
+
+  "audited_draft_state": {
+    "pack_path": "docs/interaction-review/batch-01-v2/batch-01-v2.jsonl",
+    "audited_rule_id": "warfarin__cotrimoxazole",
+    "audited_draft_row_sha256": "cfc5c958f5cb939353716b324669906fd5043a1a605ff1d776549299d018004e",
+    "severity": "major",
+    "dispense_action": "confirm_and_monitor",
+    "risk_basis": "pk_perpetrator",
+    "runtime_enabled": false,
+    "promotion_eligible": false,
+    "perpetrator_selector": { "drug": "co-trimoxazole", "route": ["systemic", "oral"], "formulation": [] },
+    "selector_note": "The draft perpetrator route includes 'systemic', which would encompass intravenous co-trimoxazole. Any promotion must be narrowed to oral tablets, as every other promoted rule in this series is."
+  },
+
+  "findings": [
+    {
+      "id": "B1",
+      "severity": "blocking",
+      "title": "A fixed-dose combination cannot be expressed in the ingredient-mapping model",
+      "detail": "Every one of the nine committed ingredient mappings uses relationship 'exact' with an RxNorm term type of IN, and validateIngredientMappingManifest rejects any tty outside {IN, PIN} (src/lib/interaction-mapping.mjs, RXNORM_INGREDIENT_TYPES). The combination concept is 'sulfamethoxazole / trimethoprim', RxCUI 10831, tty MIN — a Multiple Ingredient term. It is therefore not merely unconventional but structurally rejected by the manifest schema.",
+      "compounding": "The runtime drug name the draft rule uses, 'co-trimoxazole', has NO RxNorm concept at all: an exact search returns zero candidates.",
+      "required_action": "Either extend the mapping model to admit multi-ingredient identities (MIN) with an explicit component list, or express this rule as a combination-aware selector rather than a single runtime drug. Both are design changes and belong to a clinician/owner decision, not to this audit."
+    },
+    {
+      "id": "B2",
+      "severity": "blocking_for_the_obvious_workaround",
+      "title": "Mapping through trimethoprim would mis-scope the rule and misattribute the mechanism",
+      "detail": "The tempting workaround is to map the catalogue's 'trimethoprim' identity (RxCUI 10829, tty IN) to runtime drug co-trimoxazole. That is wrong twice over. First, six SINGLE-INGREDIENT trimethoprim products exist in the catalogue (Bacstol Tablet, Bacstol 200 Tablet, Keno 200mg Tablet, Metstol 100mg Tablet, Tmp 300mg Tablet, Tabrol Syrup); they would all inherit a warfarin interaction they were never reviewed for. Second, the label attributes the mechanism to the OTHER component: its verbatim text is 'Sulfamethoxazole is an inhibitor of CYP2C9.'",
+      "required_action": "Do not map trimethoprim to co-trimoxazole."
+    },
+    {
+      "id": "B3",
+      "severity": "blocking_for_the_other_workaround",
+      "title": "Mapping through sulfamethoxazole is mechanistically right but denotes the wrong thing",
+      "detail": "Sulfamethoxazole (RxCUI 10180, tty IN) is the component the label names as the CYP2C9 inhibitor, so it is mechanistically apt. But it is an ingredient, not the combination product, and it appears in 158 combination products in the catalogue. Mapping it to runtime drug co-trimoxazole would assert that any sulfamethoxazole-containing product is co-trimoxazole.",
+      "required_action": "Do not map sulfamethoxazole to co-trimoxazole either."
+    },
+    {
+      "id": "B4",
+      "severity": "informational",
+      "title": "The catalogue's own identity for these products is a normalization artifact",
+      "detail": "The three PMBJP co-trimoxazole products carry the catalogue ingredient identity 'co-trimoxazole sulphamethoxazole' (sha256:f6834403...), produced by normalizing the brand string 'Co-trimoxazole (Sulphamethoxazole 800mg and Trimethoprim 160mg) Tablets IP'. That is not a real ingredient name and could not honestly be recorded with relationship 'exact'. A separate identity 'co-trimoxazole' (sha256:bbcf7b71...) exists but covers a single github-jr product and none of the PMBJP tablets."
+    },
+    {
+      "id": "B5",
+      "severity": "informational",
+      "title": "No tender coverage for these products in the tender examined",
+      "detail": "Tender RC-222/2025 (PDF 47670d2b...) contains no co-trimoxazole line, so the pmbjp-tender citation pattern used by every existing presentation mapping cannot be reproduced from that document. The official PMBJP product list does confirm the codes, so this is a citation-completeness gap rather than an identification failure."
+    }
+  ],
+
+  "evidence_reverification": {
+    "checked_at": "2026-07-27",
+    "openfda_label": {
+      "set_id": "7f82e5e0-b627-a3f3-e053-2991aa0abaa5",
+      "http_status": 200,
+      "live_version": "6",
+      "draft_recorded_version": "6",
+      "version_matches": true,
+      "version_field_note": "This record carries no openfda.spl_version field; the version is the top-level 'version' key. An initial pass read the wrong path and briefly reported a mismatch — the values agree.",
+      "live_effective_time": "20260209",
+      "draft_effective_time": "20260209",
+      "effective_time_matches": true,
+      "fragments": [
+        {
+          "text": "Sulfamethoxazole is an inhibitor of CYP2C9.",
+          "sha256": "c0fb47f494a1a43f71d48d9298a92854e3e9c0de8ec40cd99e032dd3e23b3d02",
+          "hash_stable": true,
+          "found_verbatim": true
+        },
+        {
+          "text": "It has been reported that sulfamethoxazole and trimethoprim may prolong the prothrombin time in patients who are receiving the anticoagulant warfarin (a CYP2C9 substrate). This interaction should be kept in mind when sulfamethoxazole and trimethoprim is given to patients already on anticoagulant therapy, and the coagulation time should be reassessed.",
+          "sha256": "ab592d24f03eaccf6fcc91f344da320fa27b38226884ae501853bbcd07b62a25",
+          "hash_stable": true,
+          "found_verbatim": true
+        }
+      ],
+      "jurisdiction": "US",
+      "assessment": "Sound. The label names the mechanism (sulfamethoxazole inhibits CYP2C9), the effect (prolonged prothrombin time with warfarin) and the action (reassess coagulation time), which matches the draft rule's major / confirm_and_monitor mapping."
+    },
+    "rxnorm": {
+      "api_version": "06-Jul-2026",
+      "version_response_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd",
+      "candidates": {
+        "co-trimoxazole": { "rxcuis": [], "note": "no RxNorm concept for this name" },
+        "sulfamethoxazole": { "rxcui": "10180", "tty": "IN" },
+        "trimethoprim": { "rxcui": "10829", "tty": "IN" },
+        "sulfamethoxazole / trimethoprim": { "rxcui": "10831", "tty": "MIN", "note": "the correct combination concept, but MIN is rejected by the mapping schema" }
+      },
+      "presentation_concepts": {
+        "sulfamethoxazole 800 MG / trimethoprim 160 MG Oral Tablet": { "rxcui": "198335", "tty": "SCD", "exact_single": true },
+        "sulfamethoxazole 100 MG / trimethoprim 20 MG Oral Tablet": { "rxcui": "142118", "exact_single": true }
+      }
+    },
+    "pmbjp_product_list": {
+      "source_url": "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2026/feb/doc202626781701.pdf",
+      "pdf_sha256": "f54a140d9dc82880dcbb7672c18942417e8c9fe904376c742b6319665cdf9a08",
+      "extraction_mode": "table",
+      "completeness_asserted": "2111 parsed rows against 2111 serial-numbered products",
+      "column_note": "The list carries TWO number columns: 'S. No.' then 'Drug Code'. Every code in this packet and in every committed mapping is the DRUG CODE, not the serial. Reading the serial column instead returns unrelated products (serials 88/89/90 are gentamicin and levofloxacin), which is the same class of column/extraction confusion that produced the retracted F5 claim.",
+      "rows": {
+        "88": {
+          "serial_no": 83,
+          "text": "Co-trimoxazole (Sulphamethoxazole 200mg and Trimethoprim 40mg per 5ml) Oral Suspension IP, 50 ml"
+        },
+        "89": {
+          "serial_no": 84,
+          "text": "Co-trimoxazole (Sulphamethoxazole 800mg and Trimethoprim 160mg) Tablets IP, 10's"
+        },
+        "90": {
+          "serial_no": 85,
+          "text": "Co-trimoxazole (Sulphamethoxazole 100mg and Trimethoprim 20mg) Tablets IP, 10's"
+        }
+      },
+      "catalogue_agreement": "All three drug codes agree with the catalogue snapshot."
+    }
+  },
+
+  "candidate_products_if_the_model_gap_is_closed": [
+    {
+      "pmbjp_code": "89",
+      "brand_name": "Co-trimoxazole (Sulphamethoxazole 800mg and Trimethoprim 160mg) Tablets IP",
+      "pack_label": "10's",
+      "product_id": "sha256:f3835b624129e57ede72edc56a6106782aa9df2e6f5491ebd09bd0ac9656e03a",
+      "rxnorm_scd": "198335",
+      "eligibility": "blocked_by_B1_only"
+    },
+    {
+      "pmbjp_code": "90",
+      "brand_name": "Co-trimoxazole (Sulphamethoxazole 100mg and Trimethoprim 20mg) Tablets IP",
+      "pack_label": "10's",
+      "product_id": "sha256:1b8857c5423094122e608d865db146fa2ffc7e434df540a2b0cf8bd821d33521",
+      "rxnorm_scd": "142118",
+      "eligibility": "blocked_by_B1_only",
+      "clinical_note": "Paediatric-strength tablet. Whether it belongs in an adult warfarin-interaction scope is a clinician decision."
+    }
+  ],
+
+  "excluded_catalogue_assertions": [
+    { "exclusion": "pmbjp:88", "reason": "Oral suspension, 50 ml. Not a tablet; outside the oral-tablet scope every promoted rule in this series uses." },
+    { "exclusion": "single-ingredient trimethoprim", "reason": "Six catalogue products contain trimethoprim alone. They are not co-trimoxazole and must never inherit this rule (finding B2)." },
+    { "exclusion": "single-ingredient sulfamethoxazole", "reason": "Not the combination product (finding B3)." },
+    { "exclusion": "intravenous co-trimoxazole", "reason": "The draft selector's 'systemic' route would encompass IV; any promotion must be narrowed to oral tablets." },
+    { "exclusion": "every other sulfamethoxazole-containing combination", "reason": "158 catalogue products contain sulfamethoxazole; only exact reviewed co-trimoxazole assertions could ever be in scope." }
+  ],
+
+  "decisions_required": {
+    "reviewer_id": "clinician:subas",
+    "status": "not_yet_requested",
+    "items": [
+      "C1. Decide whether the promotion model should be extended to admit fixed-dose combinations - for example an ingredient identity whose RxNorm term type is MIN, carrying an explicit component list (sulfamethoxazole 10180 + trimethoprim 10829) - or whether combination rules stay out of scope for internal evaluation.",
+      "C2. If combinations are admitted, decide whether the paediatric 100/20 tablet (PMBJP 90) belongs in an adult warfarin-interaction scope alongside the 800/160 adult tablet (PMBJP 89).",
+      "C3. Confirm that any promotion is narrowed to oral tablets, excluding the 50 ml oral suspension (PMBJP 88) and intravenous presentations, despite the draft selector's broader 'systemic' route.",
+      "C4. Decide whether a pmbjp-tender citation is required for these products, given co-trimoxazole does not appear in RC-222/2025 and the official product list is the only PMBJP source that confirms the codes."
+    ],
+    "explicitly_not_authorized_by_this_packet": [
+      "Any ingredient or product-presentation mapping.",
+      "Any runtime promotion or compiled runtime rule.",
+      "Any change to the attested draft pack.",
+      "Any change to the ingredient-mapping schema.",
+      "Any production-open content whatsoever."
+    ]
+  }
+}
