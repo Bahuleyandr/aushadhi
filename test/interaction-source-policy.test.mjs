@@ -134,7 +134,7 @@ function allowed(manifest, sourceId, overrides = {}) {
 test('loads and validates the committed source manifest', () => {
   const manifest = loadSourceManifest();
   assert.equal(manifest.schema_version, 1);
-  assert.equal(manifest.policy_reviewed_at, '2026-07-24');
+  assert.equal(manifest.policy_reviewed_at, '2026-07-28');
   assert.deepEqual(Object.keys(manifest.profiles).sort(), [
     'internal-evaluation',
     'production-open',

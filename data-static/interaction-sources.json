@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "policy_reviewed_at": "2026-07-24",
+  "policy_reviewed_at": "2026-07-28",
   "uses": [
     "catalogue",
     "ingredient-index",
