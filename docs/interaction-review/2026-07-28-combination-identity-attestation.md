@@ -315,3 +315,63 @@ Production-open still 0 rules · combination manifest still empty · resolver st
 unwired · `warfarin__cotrimoxazole` still blocked.
 
 **Remaining:** D1 resolver wiring, pending combination/component deduplication tests.
+
+---
+
+## Addendum — D1 complete
+
+**Code head `b85d421bbb6fa7b275c17b1f7f2de6cfada54ac0`.** The resolver is wired and
+the deduplication it depended on is built and tested.
+
+The decision, implemented as recorded: **combination subjects supplement component
+subjects.** Deduplication is at rule level, never subject level. A finding is
+superseded only when *all* of these hold:
+
+```text
+the overlap is DECLARED in supersedes_rule_ids   (never inferred)
+both rules declare the SAME interaction_family_id
+both findings concern the SAME victim
+the suppressor is STRICTLY more specific
+neither finding is unresolved
+```
+
+Specificity ranks `class < exact_member < exact_fixed_dose_combination`. Superseded
+findings are **not dropped** — they are returned in `result.superseded_findings` with
+`superseded_by` and a reason, so the audit trace stays complete. Nothing is inferred
+from alert text, severity or drug names.
+
+**Worth flagging:** the pre-existing `canExplicitlySuppress()` does **not** compare
+victims. `canSupersede()` does, and that is precisely what keeps
+`methotrexate__trimethoprim` alive when a warfarin combination rule fires in the same
+check. Both required scenarios are pinned:
+
+```text
+warfarin + co-trimoxazole  vs  warfarin + sulfamethoxazole
+  -> one anticoagulation alert, the combination rule wins
+methotrexate + trimethoprim
+  -> retained, untouched by the co-trimoxazole identity
+```
+
+One fixture initially failed because US-scoped rules without a jurisdiction context
+resolve to `unresolved_pending_jurisdiction`, and supersession refuses to hide an
+unresolved finding. That was the implementation being correctly conservative rather
+than a defect — hiding an alert whose applicability could not be established is the
+wrong failure direction — and the behaviour now has its own test.
+
+**Wiring.** `mapResolvedProducts` takes an optional `combinationManifest` and emits
+`product.combination` *alongside* the per-ingredient runtime subjects. It compiles as
+`verified_manifest` and requires an explicit profile, so an audit fixture can never
+reach this path. Omitting the manifest leaves resolution byte-identical to before.
+Inert by construction today, since the committed manifest is empty.
+
+```text
+821 tests / 816 passed / 5 explicitly skipped / 0 failed   (exit 0)
+verify:pmbjp-mapping-codes 18/18 · promote:check exit 0 · evidence gate exit 0
+```
+
+Production-open still 0 rules · combination manifest still empty ·
+`warfarin__cotrimoxazole` still blocked.
+
+**Remaining before that rule could be promoted:** a real evidence bundle for the
+combination itself (the verifier and its gate are in place; nothing is authored),
+and independent approval.
