@@ -148,8 +148,10 @@ verify:interaction-evidence -A       39 records verified live
 git diff --check                     clean
 ```
 
-Production-open still 0 rules · combination manifest still empty ·
-`warfarin__cotrimoxazole` still blocked.
+At this audit's code head, production-open had 0 rules, the combination manifest was
+empty, and `warfarin__cotrimoxazole` was blocked. The later identity activation is
+recorded in
+[`2026-07-28-combination-identity-activation-attestation.md`](./2026-07-28-combination-identity-activation-attestation.md).
 
 ## What this audit does not cover
 

@@ -1,297 +1,337 @@
 # Handover — aushadhi drug-interaction checker
 
 **Written:** 2026-07-28 · **For:** the next agent picking this up
-**Read this before touching anything in `data-static/` or `src/lib/interaction-*`.**
+**Read this before touching anything in `data-static/`,**
+**`data/interaction/internal-evaluation/`, or `src/lib/interaction-*`.**
 
----
-
-## 0 · Exact state
+## 0 · Exact reviewed state
 
 ```text
-repository        Bahuleyandr/aushadhi   (PRIVATE — a connector 404 is expected)
-branch            main
-HEAD              3c61a187f3112b38398285917ffd0e86715958c2
-origin/main       3c61a187f3112b38398285917ffd0e86715958c2   (identical)
-working tree      clean
+repository        Bahuleyandr/aushadhi (PRIVATE — a connector 404 is expected)
+reviewed code     9ba7833819649c187daa7ebc97eee379324b3a85
+review range      0a5d5acc2d20d481b92d9306e7140ff71b63892e..9ba7833819649c187daa7ebc97eee379324b3a85
 node              v26.5.0
-platform          Windows 11, PowerShell + Git Bash both available
+platform          Windows 11, PowerShell + Git Bash available
 ```
+
+Later commits may contain review documentation only. The reviewed code pointer is in
+[`HEAD_COMMIT.txt`](./HEAD_COMMIT.txt), and the current disposition is in
+[`2026-07-28-combination-identity-activation-attestation.md`](./2026-07-28-combination-identity-activation-attestation.md).
 
 ```text
-npm test                             821 tests / 816 passed / 5 skipped / 0 FAILED (exit 0)
-npm run interactions:promote:check   exit 0
-npm run verify:combination-rxnorm-evidence   exit 0
-npm run verify:pmbjp-mapping-codes -- --list=<pmbjp-list.pdf> --sha256=f54a…   18/18 confirmed
-git diff --check                     clean
+npm test                                  891 total / 888 passed / 3 skipped / 0 failed
+npm run interactions:promote:check        exit 0
+npm run verify:combination-rxnorm-evidence
+                                              1 checked / 1 verified
+npm run verify:pmbjp-mapping-codes -- --list=<official PDF> --sha256=f54a...
+                                              18/18 confirmed with Xpdf 4.06 -table
+git diff --check                          clean
+independent hostile reviews               GO / GO at exact reviewed code
 ```
 
-The 5 skips are deliberate and named: 2 `cache-retention` tests skip because `pigz`
-isn't installed on this machine, plus 3 pre-existing. **A red suite is now a real
-signal** — do not wave failures through as "pre-existing".
+The three skips are deliberate integration tests that need optional exact source
+payloads or a cached live-openFDA response. None skips the combination identity,
+mapping, PMBJP source boundary, promotion gate, or checker path. A red suite is a real
+signal.
 
-| artifact | count |
-|---|---|
-| production-open rules (`data-static/interaction-rules.json`) | **0**, `declared_coverage: unknown` |
-| internal-evaluation rules + promotions | 8 / 8 (45 exact product pairs) |
-| ingredient mappings | 9 |
-| product-presentation mappings | 18 (all source-bound) |
-| **combination identities** | **0** (deliberately empty) |
-| attested draft pack (`batch-01-v2.jsonl`) | 199 rules, **all** `runtime_enabled:false` + `promotion_eligible:false` |
+| artifact | current count |
+|---|---:|
+| production-open rules | **0**, `declared_coverage: unknown` |
+| internal-evaluation rules / promotions | **8 / 8** |
+| internal exact product pairs | **45** |
+| co-trimoxazole clinical rules / promotions | **0 / 0** |
+| ingredient mappings | **9** |
+| product-presentation mappings | **18**, all source-bound |
+| internal combination identities | **1** |
+| reviewed combination presentations | **2**, PMBJP 89 and 90 |
+| attested draft rows | **199**, all non-authorizing |
 
----
+## 1 · Standing prohibitions
 
-## 1 · Standing prohibitions — these are not negotiable
-
-These came from the owner and from two rounds of independent review. Do not relax any
-of them without an explicit, recorded decision from `clinician:subas`.
+These came from the owner and independent clinical/governance review. Do not relax
+them without an explicit, recorded decision from `clinician:subas`.
 
 1. **Do not deploy anything.** Deployment requires separate explicit approval.
-2. **Do not weaken the fail-closed production-open boundary.** `interaction-rules.json`
-   is deliberately empty. It is not a bug.
-3. **Do not copy internal-evaluation mappings or rules into production-open.** The
-   catalogue carries restricted `janaushadhi` / `onemg-live` provenance; it may be used
-   for internal evaluation and candidate discovery but must never leak into a
-   redistributable artifact.
-4. The checker must keep failing closed on missing, stale, ambiguous or drifted
-   mappings; keep hiding severity/mechanism/management for unreviewed findings; avoid
-   fuzzy ingredient acceptance; never infer oral/systemic presentation from a brand
-   name; distinguish therapeutic duplication from an interaction; and never imply that
-   a blank result means safety.
-5. Clinical workflow boundaries for every promoted rule: the prescriber or
-   anticoagulation service directs warfarin review and PT/INR monitoring; never direct
-   the pharmacy to change a dose or stop a medicine independently; no invented PT/INR
-   schedule; no invented post-discontinuation interval; preserve evidence jurisdiction;
-   never present US or UK evidence as an Indian regulatory-label claim.
-6. **The draft pack cannot self-authorize.** Runtime authority exists only through the
+2. **Do not weaken production-open fail-closed behavior.**
+   `data-static/interaction-rules.json` is deliberately empty.
+3. **Do not copy internal-evaluation identities, mappings, catalogue rows, or rules
+   into production-open.** Janaushadhi and `onemg-live` provenance is restricted and
+   non-redistributable.
+4. Keep failing closed on missing, stale, ambiguous, drifted, or unreviewed mappings.
+   Do not accept fuzzy ingredient identity, infer oral/systemic presentation from a
+   brand name, expose clinical details for unreviewed findings, or imply that a blank
+   result means safety.
+5. Keep therapeutic duplication distinct from a drug interaction.
+6. For any promoted warfarin rule, the prescriber or anticoagulation service directs
+   warfarin review and PT/INR monitoring. Never direct the pharmacy to stop or change
+   a dose independently. Do not invent a monitoring schedule or
+   post-discontinuation interval. Preserve evidence jurisdiction; US or UK evidence
+   is not an Indian regulatory-label claim.
+7. **The draft pack and the combination identity cannot self-authorize a clinical
+   rule.** Runtime clinical authority exists only through an explicit
    clinician-approved promotion manifest.
 
----
+## 2 · Architecture
 
-## 2 · Architecture in one page
+### Two rule packs
 
-**Two packs.** `data-static/interaction-rules.json` is production-open and empty.
-`interaction-rules.internal-evaluation.json` + `interaction-promotions.internal-evaluation.json`
-hold the 8 clinician-approved warfarin rules. Never merge them.
+`data-static/interaction-rules.json` is production-open, empty, and reports unknown
+coverage. `interaction-rules.internal-evaluation.json` plus
+`interaction-promotions.internal-evaluation.json` hold the eight existing
+clinician-approved warfarin rules. Never merge these packs.
 
-**Three identity layers**, all fail-closed:
+### Three identity layers
 
 ```text
-ingredient-mapping-overrides.json        one catalogue ingredient -> one runtime drug
-                                         RxNorm tty must be IN or PIN   (9 mappings)
+ingredient-mapping-overrides.json
+  one catalogue ingredient -> one runtime drug
+  RxNorm TTY restricted to IN or PIN
 
-combination-identity-overrides.json      fixed-dose combinations, SEPARATE path
-                                         RxNorm tty MIN, verified component list
-                                         (0 combinations — empty on purpose)
+combination-identity-overrides.json
+  separate product-level path for fixed-dose combinations
+  RxNorm TTY MIN, exact verified component set, exact reviewed products
+  internal-evaluation only
 
-product-presentation-overrides.json      product -> route/formulation
-                                         source-bound (see D2 below)   (18 mappings)
+product-presentation-overrides.json
+  exact product -> route/formulation
+  content-hash and source-identity bound
 ```
 
-**Resolution keys on content hashes, not codes.** `productIdForRow()` hashes
-brand/manufacturer/pack/form/ingredient-signature. Drug codes are descriptive metadata.
-`product_assertion_sha256` is revalidated at resolution and returns `stale` on drift.
+The combination path does not widen the single-ingredient IN/PIN allowlist.
+`exact_active_set` is a perfect pairing: every declared component consumes one
+observed ingredient slot, and no active ingredient may remain. A component never
+inherits the combination runtime subject.
 
-**Key files**
+Combination subjects supplement component subjects. Any duplicate clinical alert is
+removed only by explicit D1 rule-family supersession, with the victim, product
+overlap, subject roles, specificity, and applicability checked.
+
+### Identity and authority keys
+
+`productIdForRow()` hashes brand, manufacturer, pack, form, and ingredient signature.
+Drug codes are descriptive source metadata, not identity by themselves.
+`product_assertion_sha256` is revalidated against the exact reviewed catalogue
+assertion.
+
+Authority-bearing inputs use strict plain-data snapshots. Proxies, accessors, exotic
+prototypes, symbols, cycles, and custom serialization fail closed. An authentic
+reviewed combination mapping is deep-frozen, privately branded by object identity,
+and bound to a full final-content fingerprint before the checker can consume it.
+
+### Key files
 
 ```text
-src/lib/interaction-engine.mjs               matching, resolution, suppression, supersession
-src/lib/interaction-mapping.mjs              ingredient + presentation manifests, mapResolvedProducts
-src/lib/interaction-combination-identity.mjs fixed-dose combination path
-src/lib/combination-rxnorm-evidence.mjs      offline RxNorm evidence verifier
-src/lib/product-resolver.mjs                 productIdForRow / productAssertionHashForRow
-src/cli/build-interaction-runtime-pack.mjs   promotion gate (also runs the evidence gate)
+src/lib/interaction-engine.mjs
+src/lib/interaction-checker.mjs
+src/lib/interaction-mapping.mjs
+src/lib/interaction-combination-identity.mjs
+src/lib/combination-rxnorm-evidence.mjs
+src/lib/pmbjp-combination-evidence.mjs
+src/lib/strict-plain-data.mjs
+src/lib/product-resolver.mjs
+src/cli/build-interaction-runtime-pack.mjs
 src/cli/verify-combination-rxnorm-evidence.mjs
-src/cli/verify-pmbjp-mapping-codes.mjs       verifies the RESOLVER BINDING, not list membership
-docs/interaction-review/                     all review packets + audit fixtures
+src/cli/verify-pmbjp-mapping-codes.mjs
+docs/interaction-review/
 ```
 
----
+## 3 · What is now complete
 
-## 3 · What was built this session
+### Existing clinical rules
 
-Chronologically, each merged to `main` with `--no-ff` and pushed.
+The eight clinician-approved internal warfarin rules remain byte-stable at runtime:
+eight rules, eight promotions, and 45 exact product pairs. Production-open remains at
+zero rules.
 
-**Warfarin–clarithromycin** (`054bceb`) — A1/A2/A5 recorded and compiled: 9th ingredient
-mapping, 18th presentation mapping, 8th promotion, 3 exact pairs.
+### Fixed-dose combination foundation
 
-**Warfarin–co-trimoxazole audit** (`fb57c17`) — **BLOCKED**, and still is. Evidence is
-sound (openFDA `7f82e5e0-b627-a3f3-e053-2991aa0abaa5` v6, both fragments verbatim and
-hash-stable; PMBJP drug codes 88/89/90 confirmed). The blocker is architectural: the
-perpetrator is a **fixed-dose combination**, RxCUI 10831 `tty: MIN`, and the
-single-ingredient model admits only IN/PIN.
-
-**Fixed-dose combination path** (`a9e18c1` → hardened through `1ecfb59`, `b85d421`) —
-clinician approved C1 **with an architectural condition: do not widen the IN/PIN
-allowlist**. So combinations live on their own module. `exact_active_set` is a perfect
-pairing (every component consumes exactly one ingredient slot, no leftovers), matched at
-**product** level, so no component can independently inherit a combination's rule.
-
-**RxNorm evidence gate** (`3443e34`) — offline verifier + mandatory CLI gate.
-
-**D2, source-bound presentations** (`45764a2`) — all 18 mappings now bind a stable
-`source_identity` alongside the content id and assertion hash.
-
-**D1, supersession** (`b85d421`) — combination subjects **supplement** component
-subjects; duplicate alerts removed at rule level only, on declared overlaps.
-
----
-
-## 4 · Landmines — read this section twice
-
-These each cost real time or produced a wrong answer that had to be retracted.
-
-### 4.1 `pdftotext -layout` silently mis-renders ruled tables
-
-Extracting the PMBJP product list with `-layout` orphans **632 of 2111** name cells from
-their codes. I concluded the committed codes were wrong (finding "F5"), wrote a
-correction, and the correction was *also* wrong. `-table` reproduces the catalogue
-exactly. **Always assert an independent in-document row count against the parse** —
-`assertJanAushadhiParseComplete()` does this now.
-
-### 4.2 The PMBJP list has TWO number columns
-
-`S. No.` then `Drug Code`. **Mappings key on the DRUG CODE.** Co-trimoxazole is serials
-83/84/85 = drug codes 88/89/90. Grepping the serial column returns gentamicin and
-levofloxacin. I hit this even after fixing 4.1.
-
-### 4.3 `createIngredientIdentity` does not read `name`
-
-It reads `observed_name` / `molecule_raw` / `molecule`. PMBJP rows have `name: null`;
-reading it makes products look ingredient-less. Related: `/sulph?a/` matches "sulpha"
-but **never** "sul**f**a" — use `sul[fp]h?a`.
-
-### 4.4 A verifier written against self-authored fixtures proves only self-agreement
-
-My RxNorm SCD verification parsed an endpoint shape I invented. Against real RxNav
-responses it found nothing to compare **and reported success**. Real shapes, verified
-live 2026-07-28 (release `06-Jul-2026`, api `3.1.354`):
+Clinician decisions C1–C4, D1, and D2 are implemented:
 
 ```text
-rxcui/<id>/properties               -> properties.tty / .name
-rxcui/<id>/related?rela=has_part    -> relatedGroup.conceptGroup[].conceptProperties[]   (MIN -> IN/PIN)
-rxcui/<id>/related?rela=has_ingredients -> SCD -> MIN
-rxcui/<id>/historystatus            -> rxcuiStatusHistory.metaData.status / .isCurrent
-                                       ...definitionalFeatures.ingredientAndStrength[]
-                                         { baseRxcui, bossRxcui, activeIngredientRxcui,
-                                           moietyRxcui, numeratorValue, numeratorUnit,
-                                           denominatorValue, denominatorUnit }   ← camelCase
-                                       ...definitionalFeatures.doseFormConcept[].doseFormName
+C1  separate fixed-dose-combination path; never add MIN to IN/PIN
+C2  include PMBJP 89 (800/160) and 90 (100/20 paediatric)
+C3  oral tablets only; exclude PMBJP 88 suspension and IV
+C4  authoritative PMBJP product identity is required; tender presence is not
+D1  combination subjects supplement component subjects
+D2  source-specific presentations bind source_identity
 ```
 
-Note the SCD's **term type comes from its own `properties`**, not history-status.
+The internal identity is
+`combination:co-trimoxazole:rxnorm-10831`. It uses MIN 10831, components
+sulfamethoxazole 10180 IN and trimethoprim 10829 IN, and two reviewed oral-tablet
+SCDs: 198335 and 142118.
 
-### 4.5 `Object.freeze` is shallow, and `structuredClone` preserves `Map`/`Set`
-
-A shallow freeze still allows `compiled.combinations[0].components[0].assertion_ingredient_ids.push(...)`.
-The compiled form now deep-clones + recursively freezes and exposes **no reachable
-collection instance**. Also: `structuredClone` does **not** preserve a null prototype, so
-null-proto objects must be created *after* cloning.
-
-### 4.6 Unresolved findings are never superseded — that is correct
-
-US-scoped rules with no `patientContext.jurisdiction` resolve to
-`unresolved_pending_jurisdiction`, and supersession refuses to hide them. A test fixture
-of mine failed because of this and I nearly "fixed" the implementation. Hiding an alert
-whose applicability could not be established is the wrong failure direction.
-
-### 4.7 `canExplicitlySuppress()` does not compare victims
-
-The pre-existing suppression path ignores the victim drug. `canSupersede()` does compare
-it, which is what keeps `methotrexate__trimethoprim` alive when a warfarin combination
-rule fires in the same check. **If you touch suppression, preserve this.**
-
-### 4.8 Manifest schemas are strict allowlists
-
-`identity` takes exactly 6 keys; evidence records take exactly 5 (no `note`, no
-`excludes`). Exclusions belong in `approval_text`. Adding a field means updating the
-allowlist deliberately.
-
-### 4.9 Shell quoting on this box
-
-Inline `node -e` and bash heredocs mangle regexes and quotes regularly. Write a `.mjs`
-or `.py` file to the scratchpad and run that. Also: `node -e` inherits whatever cwd the
-shell is in — I once wrote a file to `D:\Dev\data-static` instead of the project. Never
-leave loose files at `D:\Dev` root.
-
----
-
-## 5 · Open items
-
-### 5.1 Warfarin–co-trimoxazole — BLOCKED, awaiting two things
-
-Clinician decisions C1–C4 are **recorded and implemented**. What remains:
-
-1. **A real RxNorm evidence bundle for the combination.** The verifier and its mandatory
-   gate exist; nothing is authored. A read-only integration fixture with real responses
-   already lives at
-   `data-static/combination-rxnorm-evidence/integration-fixture/` — that is
-   `classification: verifier_integration_fixture`, `promotion_authority: none`, and is
-   **not** the combination's own bundle.
-2. **Independent approval** of the foundation.
-
-Recorded clinician decisions, for context:
+The real authoritative RxNorm evidence bundle exists at:
 
 ```text
-C1  extend the model for fixed-dose combinations, but via a SEPARATE path.
-    Do NOT add MIN to the IN/PIN allowlist.                        [implemented]
-C2  include both PMBJP 89 (800/160) and 90 (100/20 paediatric).    [implemented]
-C3  restrict scope to oral tablets; exclude PMBJP 88 suspension and IV. [implemented]
-C4  a tender citation is not required when the product is absent from it;
-    an authoritative PMBJP product-identity source is.             [implemented]
-    Clinical mapping stays major / confirm_and_monitor.
-D1  combination subjects SUPPLEMENT component subjects.            [implemented]
-D2  bind source_identity on source-specific presentation mappings. [implemented]
+data-static/combination-rxnorm-evidence/
+  combination_co-trimoxazole_rxnorm-10831.json
+sha256 be734f07cceffad4f8309008a9d4df994f8141cef24b842b8d3797dea0758cbb
+release 06-Jul-2026 / API 3.1.354
 ```
 
-**Do not author the combination without a real evidence bundle.** The promotion gate
-will refuse it, by design.
-
-### 5.2 Independent-review status
-
-Disposition after three rounds: **conditional acceptance of the empty, unwired
-foundation; full approval withheld.** The reviewer's four final items were all addressed
-(provenance reconciliation, deep immutability, an unavoidable evidence gate, RxNorm
-status + per-entry ingredient field). The response packets are:
+The combination manifest is:
 
 ```text
-docs/interaction-review/2026-07-28-combination-identity-attestation.md   ← canonical
-docs/interaction-review/2026-07-28-combination-identity-review-response{,-2}.md
-docs/interaction-review/2026-07-27-warfarin-cotrimoxazole-candidate-audit.{json,md}
-docs/interaction-review/2026-07-28-fixed-dose-combination-identity-implementation.md
+data-static/combination-identity-overrides.json
+sha256 a0813b2a4d80198c6793d6e576b41847da31415f51a68ee75c744a8656223466
 ```
 
-The attestation packet supersedes the two response packets where they disagree.
+The mandatory gate checks exact names and term types, Active/current status, MIN
+parts, SCD-to-MIN relations, ingredient strengths including denominators, dose form,
+release/API version, and every captured-response hash.
 
-### 5.3 Known gaps I flagged rather than fixed
+The PMBJP product verifier binds codes 89 and 90 to the exact official-list rows,
+asserts 2,111 parsed rows, and pins the PDF, Xpdf `-table` extract, and semantic row
+ledger. The verifier owns the restricted source root and rejects junctions or
+symbolic links at the root or any ancestor.
 
-- The new `verify:pmbjp-mapping-codes` statuses (`bound_product_id_changed`,
-  `source_identity_claimed_by_several_rows`, …) are exercised through library tests, not
-  the CLI, because the CLI reads the manifest from a fixed path.
-- No CI lane installs `pigz`, so those 2 tests always skip here.
-- The openFDA and PMBJP evidence paths were **not** re-audited for the 4.4 failure mode
-  (verifier written against self-authored fixtures). They have real captured sources so
-  they are better placed, but it is worth a look.
+### Independent review
 
-### 5.4 Unrelated, still open
+Two hostile reviews and a separate patch review re-anchored on exact code SHA
+`9ba7833`. They replayed the known mapping accessor authority-transplant schedules and
+the Windows junction-root escape, plus related proxy, clone, alias, product-code,
+source-policy, D1, schema, and production-isolation attacks. All returned **GO** with
+no clinical promotion authority.
 
-Task list carries **"Aushadhi: validate formulation layer on real data + deploy to DD"**
-as in-progress from before this thread. Untouched here, and the only item involving a
-deployment.
+## 4 · Landmines
 
----
+### 4.1 Use Xpdf `pdftotext -table`
+
+Poppler's `pdftotext` does not support `-table`. Xpdf 4.06 does. On this machine the
+verified binary is under:
+
+```text
+D:\Dev\_codex\artifacts\scratch\2026-07-28\aushadhi-clear-blockers\
+  xpdf-tools\xpdf-tools-win-4.06\bin64\pdftotext.exe
+```
+
+Put that directory first on `PATH` for the mapping-code verifier. Do not substitute
+`-layout`: it orphaned 632 of 2,111 name cells from their codes. Always keep the
+independent in-document row-count assertion.
+
+### 4.2 PMBJP has two number columns
+
+The first number is `S. No.`; the second is `Drug Code`. Mappings use **Drug Code**.
+Co-trimoxazole serials 83/84/85 correspond to drug codes 88/89/90.
+
+### 4.3 Ingredient identity does not read `name`
+
+`createIngredientIdentity()` reads `observed_name`, `molecule_raw`, or `molecule`.
+PMBJP rows have `name: null`. Also, `/sulph?a/` does not match `sulfa`; use
+`sul[fp]h?a`.
+
+### 4.4 Self-authored verifier fixtures prove only self-agreement
+
+The earlier SCD verifier passed against an invented endpoint shape. Real RxNav shapes
+are:
+
+```text
+rxcui/<id>/properties
+  properties.tty / properties.name
+
+rxcui/<id>/related?rela=has_part
+  relatedGroup.conceptGroup[].conceptProperties[]
+
+rxcui/<id>/related?rela=has_ingredients
+  SCD -> MIN
+
+rxcui/<id>/historystatus
+  rxcuiStatusHistory.metaData.status / isCurrent
+  definitionalFeatures.ingredientAndStrength[]
+  definitionalFeatures.doseFormConcept[]
+```
+
+The SCD TTY comes from its own `properties`, not `historystatus`.
+
+### 4.5 Freeze, clone, and getter traps
+
+`Object.freeze()` is shallow. `structuredClone()` preserves `Map` and `Set` but does
+not preserve a null prototype. Build null-prototype indexes after cloning, and
+recursively freeze every reachable authority object.
+
+Never read an untrusted envelope or product repeatedly. A stateful accessor once
+allowed different product views during resolution and capability minting.
+`mapResolvedProducts()` must continue snapshotting the whole record before any read.
+
+### 4.6 Restricted roots can move through junctions
+
+`realpathSync(TRUSTED_RESTRICTED_ROOT)` alone is not a boundary: an NTFS junction can
+make the hard-coded root resolve outside the intended zone. Preserve the
+segment-by-segment `lstatSync()` check on the root and every ancestor.
+
+### 4.7 Unresolved findings are never superseded
+
+This is intentional. A rule pending jurisdiction or other applicability data must not
+be hidden.
+
+### 4.8 Suppression and victims
+
+The older `canExplicitlySuppress()` path does not compare victims.
+`canSupersede()` does. Preserve the latter behavior so an unrelated
+methotrexate–trimethoprim alert survives when a warfarin combination rule fires.
+
+### 4.9 Schemas are strict allowlists
+
+Adding any manifest or evidence field requires deliberate runtime and JSON Schema
+updates. Rule-pack `licence_notices` is required, attributions must contain non-space
+text, and URLs must be exact trimmed lowercase `https://`.
+
+### 4.10 Shell quoting
+
+Inline `node -e` and shell heredocs are unreliable on this Windows setup. Put one-off
+scripts under `D:\Dev\_codex\artifacts\scratch\YYYY-MM-DD\`, never at `D:\Dev` root.
+
+## 5 · What remains
+
+### 5.1 One clinical decision
+
+The technical identity foundation is no longer blocked. What remains for
+warfarin–co-trimoxazole is explicit clinician approval of the exact clinical rule and
+promotion entry.
+
+Do not infer that approval from:
+
+- the reviewed combination identity;
+- C1–C4, D1, or D2;
+- the RxNorm or PMBJP identity evidence;
+- the candidate audit;
+- the draft pack; or
+- the independent technical GO verdicts.
+
+The clinical review must approve exact product pairs, evidence jurisdiction,
+severity, action, mechanism, and management wording. Until then, co-trimoxazole has
+zero clinical runtime rules.
+
+### 5.2 Deployment remains separate
+
+The unrelated task “Aushadhi: validate formulation layer on real data + deploy to DD”
+was not touched. Nothing in this work authorizes a deployment.
+
+### 5.3 Nonblocking coverage notes
+
+- Some detailed PMBJP mapping-code failure statuses are exercised through library
+  tests rather than the fixed-path CLI.
+- Three source-payload/live-cache integration tests skip when their optional local
+  fixtures are absent.
+- Restricted PMBJP source bytes are intentionally ignored by Git and must remain in
+  `data/interaction/internal-evaluation/`.
+- The restricted-root boundary is check-then-use rather than directory-handle
+  anchored. A privileged concurrent filesystem mutator is a theoretical residual
+  race; no bypass was demonstrated, and changed bytes remain hash- and
+  semantics-checked.
+- Omitting PMBJP path arguments fails closed but currently emits Node deprecation
+  warning `DEP0187`; explicit path-type validation would remove the warning.
+- The hard-pinned PMBJP source contract and `interaction-sources.json` agree at the
+  reviewed SHA, but no explicit cross-file consistency assertion prevents future
+  policy drift.
 
 ## 6 · Working agreements
 
-- **Verify every inherited claim against the repository before acting on it.** The
-  handover I received contained a "0 failed" claim that was false in this environment,
-  and my own audit contained two errors I only found by re-checking against the
-  catalogue.
-- Establish ground truth **before** migrating data. Binding a code without checking it
-  first would have cemented a wrong one — see 4.1/4.2.
-- TDD throughout: write the failing test, watch it fail *for the right reason*, then
-  implement. Several bugs here were found because a test failed unexpectedly.
-- Default git flow: branch → commit → merge `--no-ff` into `main` → push → delete branch.
-  There is **no CI** (`.github/workflows` does not exist), so pushing `main` is safe and
-  triggers no deploy.
-- State limits plainly. Where something proves less than it appears to, say so in the
-  packet rather than letting the reader infer more.
+- Re-verify inherited claims against the live checkout before acting.
+- Establish catalogue ground truth before migrating any code or source binding.
+- Use TDD: observe the intended failure, implement, then rerun the relevant full gate.
+- Default git flow is branch, commit, merge `--no-ff` into `main`, push, and delete the
+  branch. This repository has no `.github/workflows` CI lane.
+- State proof limits plainly. Identity authority is not clinical authority, a hash is
+  not remote-origin authentication, and a blank checker result is not safety.

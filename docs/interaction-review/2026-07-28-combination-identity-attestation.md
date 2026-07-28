@@ -1,5 +1,10 @@
 # Fixed-dose combination identity — canonical attestation packet
 
+> **Historical foundation packet.** This document describes the pre-activation state.
+> For the current reviewed state, including the non-empty internal combination manifest
+> and real evidence bundle, see
+> [`2026-07-28-combination-identity-activation-attestation.md`](./2026-07-28-combination-identity-activation-attestation.md).
+
 **Date:** 2026-07-28 · **Supersedes** both prior response packets as the record of truth.
 Where an earlier packet disagrees with this one, this one is correct.
 
