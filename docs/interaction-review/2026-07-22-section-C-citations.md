@@ -5,7 +5,7 @@
 Machine-generated from enriched evidence. Citation status and clinician-review state are reported exactly as stored in the JSONL.
 
 - Section: `C`
-- JSONL SHA-256: `d5ef02f6b4d2e3295bc138bedaede16d69b6cfb44e0f01d6eb09f7a2c609ffef`
+- JSONL SHA-256: `d57bbdd579696481a0e2cdd846d917cf10f32043bdf7588632dd1e9cf77a1702`
 - Commit: `worktree-uncommitted`
 - citation_status: `{"machine_confirmed_openfda_reconciled_pending_clinician":24}`
 
@@ -342,11 +342,11 @@ Machine-generated from enriched evidence. Citation status and clinician-review s
 - source: openFDA drug-label record (company-submitted SPL); DailyMed reference locator — AUVELITY (dextromethorphan hydrobromide and bupropion hydrochloride) | regulator="FDA (United States)" | product="AUVELITY (dextromethorphan hydrobromide and bupropion hydrochloride)" | section: "Warnings and Precautions, Serotonin Syndrome (5.8)"
 - url: https://api.fda.gov/drug/label.json?search=set_id%3A%22dcefda7c-9a68-278e-e053-2995a90aec79%22&limit=100 (host api.fda.gov; setid dcefda7c-9a68-278e-e053-2995a90aec79)
 - policy: `openfda-labels` / `interaction-evidence` | licence: `CC0-1.0`
-- document: `dcefda7c-9a68-278e-e053-2995a90aec79` @ `15` | retrieved: 2026-07-23 | jurisdiction: `US`
-- date: 2026-06-01 (`openFDA SPL effective_time`) | accessed: 2026-07-23
+- document: `dcefda7c-9a68-278e-e053-2995a90aec79` @ `15` | retrieved: 2026-07-28 | jurisdiction: `US`
+- date: 2026-06-01 (`openFDA SPL effective_time`) | accessed: 2026-07-28
 - reference_url: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=dcefda7c-9a68-278e-e053-2995a90aec79
-- provenance: `{"set_id":"dcefda7c-9a68-278e-e053-2995a90aec79","version":"15","effective_time":"20260601","payload_sha256":"22aa9facdefff987060f6f4c02eccb95c98e61d3a87f65bfbfe30e05a5b83123","payload_canonicalization":"sorted-json-keys-v1","normalization_version":"openfda-spl-text-v1","source_paths":["warnings_and_cautions[0]","warnings_and_cautions[0]"]}`
-- currentness: `checked_current_openfda` @2026-07-23
+- provenance: `{"set_id":"dcefda7c-9a68-278e-e053-2995a90aec79","version":"15","effective_time":"20260601","payload_sha256":"a517f95ace4958a4f87bb18f225318743ec589f729069f42036459f1dfcdae09","payload_canonicalization":"sorted-json-keys-v1","normalization_version":"openfda-spl-text-v1","source_paths":["warnings_and_cautions[0]","warnings_and_cautions[0]"]}`
+- currentness: `checked_current_openfda` @2026-07-28
 - quote_integrity: `multi_fragment_verbatim`
 - proposition: AUVELITY labeling warns that its dextromethorphan component can cause serotonin syndrome with SSRIs or TCAs and directs monitoring when other serotonergic drugs are used.
 - interaction_exists: `true`
@@ -394,11 +394,11 @@ Machine-generated from enriched evidence. Citation status and clinician-review s
 - source: openFDA drug-label record (company-submitted SPL); DailyMed reference locator — gabapentin | regulator="FDA (United States)" | product="gabapentin" | section: "Warnings and Precautions, Respiratory Depression (5.8)"
 - url: https://api.fda.gov/drug/label.json?search=set_id%3A%22c7f21eaa-68ee-420c-9c98-e997cc73a297%22&limit=100 (host api.fda.gov; setid c7f21eaa-68ee-420c-9c98-e997cc73a297)
 - policy: `openfda-labels` / `interaction-evidence` | licence: `CC0-1.0`
-- document: `c7f21eaa-68ee-420c-9c98-e997cc73a297` @ `4` | retrieved: 2026-07-26 | jurisdiction: `US`
-- date: 2026-06-23 (`openFDA SPL effective_time`) | accessed: 2026-07-26
+- document: `c7f21eaa-68ee-420c-9c98-e997cc73a297` @ `4` | retrieved: 2026-07-28 | jurisdiction: `US`
+- date: 2026-06-23 (`openFDA SPL effective_time`) | accessed: 2026-07-28
 - reference_url: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=c7f21eaa-68ee-420c-9c98-e997cc73a297
-- provenance: `{"set_id":"c7f21eaa-68ee-420c-9c98-e997cc73a297","version":"4","effective_time":"20260623","payload_sha256":"7c09583f778a0e7e9da9077eeb93f73f8fa555e1c6b38e5652ff9f5fe2f78eaf","payload_canonicalization":"sorted-json-keys-v1","normalization_version":"openfda-spl-text-v1","source_paths":["warnings_and_cautions[0]","warnings_and_cautions[0]"]}`
-- currentness: `checked_current_openfda` @2026-07-26
+- provenance: `{"set_id":"c7f21eaa-68ee-420c-9c98-e997cc73a297","version":"4","effective_time":"20260623","payload_sha256":"157540f5a0b51e7361d8ca530b0c07a706c72bd4dbc6c7e65bdd4de06597d77f","payload_canonicalization":"sorted-json-keys-v1","normalization_version":"openfda-spl-text-v1","source_paths":["warnings_and_cautions[0]","warnings_and_cautions[0]"]}`
+- currentness: `checked_current_openfda` @2026-07-28
 - quote_integrity: `multi_fragment_verbatim`
 - proposition: Gabapentin can cause serious, life-threatening, or fatal respiratory depression with CNS depressants including opioids; monitor for respiratory depression and sedation and consider a low starting dose.
 - interaction_exists: `true`

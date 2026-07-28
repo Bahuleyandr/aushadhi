@@ -401,6 +401,60 @@ function hasReviewedRuntimeSubject(record, ingredient) {
   return ingredient.runtime_drug === undefined || subject.drug === ingredient.runtime_drug;
 }
 
+function reviewedCombinationSubjectId(record) {
+  const combination = record.product.combination;
+  const presentation = record.product.presentation;
+  if (!isObject(combination) || combination.status !== 'reviewed_override') return null;
+  if (typeof combination.combination_id !== 'string'
+      || combination.combination_id.trim() === '') {
+    return null;
+  }
+  if (!isObject(presentation)
+      || presentation.status !== 'reviewed_override'
+      || presentation.mapping_scope !== 'reviewed_combination_product'
+      || presentation.combination_id !== combination.combination_id) {
+    return null;
+  }
+  const subject = combination.runtime_subject;
+  if (!isObject(subject)) return null;
+  for (const field of ['drug', 'route', 'formulation']) {
+    if (typeof subject[field] !== 'string' || subject[field].trim() === '') return null;
+  }
+  if (subject.route !== presentation.route || subject.formulation !== presentation.formulation) {
+    return null;
+  }
+  if (!Array.isArray(combination.components) || combination.components.length < 2) return null;
+
+  const componentIds = new Set();
+  for (const component of combination.components) {
+    if (!isObject(component)
+        || typeof component.runtime_ingredient_id !== 'string'
+        || component.runtime_ingredient_id.trim() === ''
+        || typeof component.assertion_ingredient_id !== 'string'
+        || component.assertion_ingredient_id.trim() === '') {
+      return null;
+    }
+    componentIds.add(component.runtime_ingredient_id);
+  }
+  if (componentIds.size !== combination.components.length) return null;
+
+  const mappedIngredientIds = new Set();
+  for (const ingredient of record.product.ingredients) {
+    if (!MAPPED_STATUSES.has(mappingStatus(ingredient))) continue;
+    if (!hasReviewedRuntimeSubject(record, ingredient)) continue;
+    try {
+      mappedIngredientIds.add(ingredientId(ingredient, 'combination component'));
+    } catch {
+      return null;
+    }
+  }
+  if (mappedIngredientIds.size !== componentIds.size
+      || ![...componentIds].every((id) => mappedIngredientIds.has(id))) {
+    return null;
+  }
+  return combination.combination_id;
+}
+
 function presentationIssueStatus(record) {
   const status = record.product.presentation?.status;
   if (status === 'stale') return 'stale_presentation';
@@ -661,6 +715,10 @@ export function checkResolvedProducts({
         if (issueStatus === 'operational_error') mappingOperationalError = true;
         unresolved.push(mappingIssue(record, ingredient, ingredientIndex, issueStatus));
       }
+    }
+    const combinationSubjectId = reviewedCombinationSubjectId(record);
+    if (combinationSubjectId !== null) {
+      mappedIngredients.push({ ingredient_id: combinationSubjectId });
     }
     mappedProducts.push({
       product_id: record.product.product_id,

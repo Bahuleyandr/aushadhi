@@ -17,7 +17,7 @@ import {
   normalizeRuntimeInteractionSubject,
 } from './interaction-engine.mjs';
 import {
-  compileCombinationIdentityManifest,
+  assertVerifiedCombinationIdentityManifest,
   resolveCombinationIdentity,
 } from './interaction-combination-identity.mjs';
 
@@ -616,10 +616,10 @@ function mappedPresentation(product, indexes) {
   };
 }
 
-function mappedIngredient(ingredient, productId, presentation, entry) {
+function ingredientMappingBase(ingredient, productId) {
   const assertion = createIngredientIdentity(ingredient);
   const occurrenceId = ingredientOccurrenceId(productId, ingredient);
-  const base = {
+  return {
     ...ingredient,
     assertion_ingredient_id: assertion.ingredient_id,
     ingredient_occurrence_id: occurrenceId,
@@ -628,6 +628,10 @@ function mappedIngredient(ingredient, productId, presentation, entry) {
     assertion_precision: assertion.precision,
     assertion_source_field: assertion.source_field,
   };
+}
+
+function mappedIngredient(ingredient, productId, presentation, entry) {
+  const base = ingredientMappingBase(ingredient, productId);
   if (!entry) {
     return {
       ...base,
@@ -675,6 +679,56 @@ function mappedIngredient(ingredient, productId, presentation, entry) {
   };
 }
 
+function presentationFromReviewedCombination(combination) {
+  return {
+    status: 'reviewed_override',
+    mapping_id: `${combination.combination_id}:presentation`,
+    mapping_scope: 'reviewed_combination_product',
+    combination_id: combination.combination_id,
+    source_identity: combination.source_identity,
+    product_assertion_sha256: combination.product_assertion_sha256,
+    route: combination.runtime_subject.route,
+    formulation: combination.runtime_subject.formulation,
+  };
+}
+
+function mappedCombinationComponent(
+  ingredient,
+  productId,
+  presentation,
+  combination,
+  component,
+) {
+  const base = ingredientMappingBase(ingredient, productId);
+  const runtimeDrug = canonicalDrug(component.name);
+  return {
+    ...base,
+    ingredient_id: component.runtime_ingredient_id,
+    canonical_name: runtimeDrug,
+    runtime_drug: runtimeDrug,
+    identity_relationship: 'exact',
+    external_identifiers: {
+      rxnorm: {
+        rxcui: component.rxcui,
+        name: component.name,
+        tty: component.tty,
+        version: component.version,
+        api_version: component.api_version,
+      },
+      unii: null,
+    },
+    mapping_id: `${combination.combination_id}:component:${component.rxcui}`,
+    mapping_status: 'reviewed_override',
+    mapping_scope: 'reviewed_combination_product',
+    combination_id: combination.combination_id,
+    runtime_subject: normalizeRuntimeInteractionSubject({
+      drug: runtimeDrug,
+      route: presentation.route,
+      formulation: presentation.formulation,
+    }),
+  };
+}
+
 export function mapResolvedProducts({
   records,
   ingredientManifest,
@@ -692,10 +746,7 @@ export function mapResolvedProducts({
   // compiled manifest, so an audit fixture can never reach this path.
   const compiledCombinations = combinationManifest === null
     ? null
-    : compileCombinationIdentityManifest(combinationManifest, {
-      kind: 'verified_manifest',
-      evidenceVerified: combinationManifest.combinations.length === 0,
-    });
+    : assertVerifiedCombinationIdentityManifest(combinationManifest);
   const indexes = buildMappingIndexes(ingredientManifest, presentationManifest, profile);
   // a source identity must be unique across the catalogue: two rows claiming one
   // reviewed identity is an ambiguity, never something to guess between
@@ -717,16 +768,42 @@ export function mapResolvedProducts({
       }
       seenSourceIdentities.add(key);
     }
-    const presentation = mappedPresentation(record.product, indexes);
+    const combination = compiledCombinations === null || profile === null
+      ? null
+      : resolveCombinationIdentity({
+        product: record.product,
+        manifest: compiledCombinations,
+        profile,
+      });
+    const reviewedCombination = combination?.status === 'reviewed_override'
+      ? combination
+      : null;
+    const presentation = reviewedCombination === null
+      ? mappedPresentation(record.product, indexes)
+      : presentationFromReviewedCombination(reviewedCombination);
+    const combinationComponents = reviewedCombination === null
+      ? new Map()
+      : new Map(reviewedCombination.components.map((component) => (
+        [component.assertion_ingredient_id, component]
+      )));
     const seenOccurrences = new Set();
     const ingredients = record.product.ingredients.map((ingredient) => {
       const assertion = createIngredientIdentity(ingredient);
-      const mapped = mappedIngredient(
-        ingredient,
-        expectedProductId,
-        presentation,
-        indexes.ingredients.get(assertion.ingredient_id),
-      );
+      const combinationComponent = combinationComponents.get(assertion.ingredient_id);
+      const mapped = combinationComponent === undefined
+        ? mappedIngredient(
+          ingredient,
+          expectedProductId,
+          presentation,
+          indexes.ingredients.get(assertion.ingredient_id),
+        )
+        : mappedCombinationComponent(
+          ingredient,
+          expectedProductId,
+          presentation,
+          reviewedCombination,
+          combinationComponent,
+        );
       if (seenOccurrences.has(mapped.ingredient_occurrence_id)) {
         throw new TypeError(
           `record ${recordIndex} contains indistinguishable duplicate ingredient occurrences`,
@@ -735,13 +812,6 @@ export function mapResolvedProducts({
       seenOccurrences.add(mapped.ingredient_occurrence_id);
       return mapped;
     });
-    const combination = compiledCombinations === null || profile === null
-      ? null
-      : resolveCombinationIdentity({
-        product: record.product,
-        manifest: compiledCombinations,
-        profile,
-      });
     return {
       ...structuredClone(record),
       product: {
@@ -779,6 +849,11 @@ export function summarizeInteractionMappings(records) {
       if (ingredient.runtime_subject !== null && ingredient.runtime_subject !== undefined) {
         summary.runtime_subjects += 1;
       }
+    }
+    if (record.product?.combination?.status === 'reviewed_override'
+        && record.product.combination.runtime_subject !== null
+        && record.product.combination.runtime_subject !== undefined) {
+      summary.runtime_subjects += 1;
     }
   }
   return summary;

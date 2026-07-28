@@ -11,7 +11,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assertCombinationEvidenceVerified } from '../src/cli/build-interaction-runtime-pack.mjs';
+import {
+  assertCombinationEvidenceVerified,
+  buildCommittedRuntimePack,
+} from '../src/cli/build-interaction-runtime-pack.mjs';
+import {
+  assertVerifiedCombinationManifestEvidence,
+} from '../src/lib/combination-rxnorm-evidence.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
@@ -20,6 +26,9 @@ const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
 const FIXTURE = readJson(
   'docs/interaction-review/audit-fixtures/2026-07-28-cotrimoxazole-audit-fixture-manifest.json',
 );
+for (const component of FIXTURE.combinations[0].components) {
+  [component.runtime_ingredient_id] = component.assertion_ingredient_ids;
+}
 
 function scratchRoot(manifest, bundles = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aushadhi-gate-'));
@@ -40,10 +49,36 @@ function scratchRoot(manifest, bundles = {}) {
   return dir;
 }
 
-test('the committed empty manifest passes the gate vacuously', () => {
+test('the committed manifest returns an authentic report bound to its frozen manifest', () => {
   const result = assertCombinationEvidenceVerified(ROOT);
-  assert.deepEqual(result, { combinations: 0, verified: true });
-  assert.deepEqual(readJson('data-static/combination-identity-overrides.json').combinations, []);
+  assert.equal(
+    result.report.combinations_checked,
+    result.manifest.combinations.length,
+  );
+  assert.equal(result.report.verified, true);
+  assert.equal(Object.isFrozen(result), true);
+  assert.equal(Object.isFrozen(result.manifest), true);
+  assert.equal(Object.isFrozen(result.manifest.combinations), true);
+  assert.strictEqual(
+    assertVerifiedCombinationManifestEvidence(result.report, result.manifest),
+    result.report,
+  );
+});
+
+test('the committed runtime build consumes the verified manifest handoff', () => {
+  const pack = buildCommittedRuntimePack();
+  assert.equal(pack.rules.length, 8);
+  assert.equal(pack.profile, 'internal-evaluation');
+});
+
+test('a missing combination manifest fails closed', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aushadhi-gate-missing-'));
+  fs.mkdirSync(path.join(dir, 'data-static'), { recursive: true });
+  assert.throws(
+    () => assertCombinationEvidenceVerified(dir),
+    /combination identity manifest is missing/u,
+  );
+  fs.rmSync(dir, { recursive: true, force: true });
 });
 
 test('a non-empty manifest with NO evidence bundle fails the promotion gate', () => {

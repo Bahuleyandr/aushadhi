@@ -162,7 +162,7 @@ Production-open still 0 rules · combination manifest still empty ·
 
 ---
 
-## Unplanned finding — 9 of 205 draft records no longer match their live sources
+## Unplanned finding — corrected: 9 payload hashes drifted, 9/9 fragments remain intact
 
 Running sections B–J live (to widen the sample) surfaced something the audit was not
 looking for. **This is the fail-closed machinery working, not failing** — but it is a
@@ -184,28 +184,31 @@ present verbatim in the current label?
 | | |
 |---|---|
 | records failing the hash | 9 |
-| of those, every quoted fragment still present | **8** — drift is in fields irrelevant to the claim |
-| of those, a quoted fragment genuinely **gone** | **1** |
+| of those, every quoted fragment still present | **9** — drift is in fields irrelevant to the claim |
+| of those, a quoted fragment genuinely **gone** | **0** |
 
-### The one real content change
+### Correction — the AUVELITY finding selected the wrong shared-prefix occurrence
 
 `C/dextromethorphan__ssri_snri`, evidence `fda-label-auvelity-serotonergic-current`,
 `warnings_and_cautions[0]`, still at version 15 / effective_time 20260601:
 
 ```text
-recorded  "AUVELITY contains dextromethorphan. Concomitant use of AUVELITY with SSRIs
-           or tricyclic antidepressants may cause serotonin syndrome, a potentially
-           life-threatening condition …"
+first occurrence   "AUVELITY contains dextromethorphan. Dextromethorphan overdose
+                    can cause toxic psychosis, stupor, coma, and hyperexcitability …"
 
-live      "AUVELITY contains dextromethorphan. Dextromethorphan overdose can cause
-           toxic psychosis, stupor, coma, and hyperexcitability …"
+second occurrence  "AUVELITY contains dextromethorphan. Concomitant use of AUVELITY
+                    with SSRIs or tricyclic antidepressants may cause serotonin
+                    syndrome, a potentially life-threatening condition …"
 ```
 
-The sentence following the shared opening has been **replaced**. This was verified
-directly against the live payload, not inferred from the hash, and is not an artifact
-of fragment normalisation. The record's *second* fragment ("If concomitant use of
-AUVELITY with other serotonergic…") is still present, so the record still supports a
-serotonergic claim — just not the exact sentence quoted.
+There is one matching openFDA result and one `warnings_and_cautions[0]` source field,
+but that field contains the prefix `AUVELITY contains dextromethorphan.` **twice**.
+The original audit stopped at the first occurrence and compared its neuropsychiatric
+continuation with the retained serotonin-syndrome fragment. The second occurrence is
+the retained SSRI/TCA sentence. Reproducing the repository verifier's normalisation
+and full-fragment search confirms both stored AUVELITY fragments remain present. This
+was an occurrence-selection bug in the audit, not missing evidence or a label-content
+change.
 
 ### Scope and impact
 
@@ -214,16 +217,16 @@ serotonergic claim — just not the exact sentence quoted.
 promoted internal-evaluation rules. Those 8 are all Section A, which verified **39/39
 clean** against live sources.
 
-### Recommended, not done here
+### Corrective action
 
-- **Re-verify and re-quote** the AUVELITY fragment for `dextromethorphan__ssri_snri`.
-  That edits the attested draft pack, so it needs reassembly, live re-verification, a
-  refreshed attestation and a new draft-row SHA — a clinician-review task, not a
-  drive-by fix.
+- **Refresh provenance only.** Re-pin the nine current full-payload hashes and their
+  access/currentness/retrieval dates, then regenerate the aggregate and attestation
+  through the supported live-verifying assembler. Do not change any quote, fragment
+  hash, proposition, clinical scope, severity, management, runtime flag, or promotion
+  manifest.
 - **Consider narrowing `payload_sha256`.** Hashing the entire openFDA record makes
-  routine, clinically irrelevant edits look identical to real content drift — 8 false
-  alarms for 1 true positive here. Binding the hash to the cited sections would
-  separate the two. That is a schema change affecting every existing record, so it is
-  an owner decision.
+  routine, clinically irrelevant edits trigger the same fail-closed signal as a claim
+  change. Binding the hash to the cited sections would distinguish those cases. That
+  is a schema change affecting every existing record, so it is an owner decision.
 - **Run `verify:interaction-evidence` on a schedule.** This drift was invisible until
   the sections were re-run; nothing would have surfaced it otherwise.

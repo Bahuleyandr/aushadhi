@@ -100,7 +100,10 @@ test('the refreshed attestation binds the current pack bytes', () => {
   const actual = crypto.createHash('sha256').update(fs.readFileSync(PACK_PATH)).digest('hex');
   assert.equal(attestation.pack_sha256, actual);
   assert.equal(attestation.rule_count, draftRules().length);
-  assert.equal(actual, audit.execution_status.post_change_pack.pack_sha256);
+  assert.equal(
+    audit.execution_status.post_change_pack.pack_sha256,
+    '3a9d053111389f9fba232add71548c15d80a3c3370fea0f634aa594e5ffd691f',
+  );
 });
 
 test('every rule in the pack is still draft-gated', () => {

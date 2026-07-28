@@ -30,10 +30,12 @@ const product = (product_id, ingredientIds, {
     route: 'oral',
     formulation: 'tablet',
   },
+  combination,
 } = {}) => ({
   product_id,
   presentation,
   ingredients: ingredientIds.map((id) => typeof id === 'string' ? ingredient(id) : id),
+  ...(combination === undefined ? {} : { combination }),
 });
 const resolved = (input, value) => ({ input, status: 'resolved', product: value });
 
@@ -140,6 +142,151 @@ test('generateCrossDrugPairs is deterministic, deduplicates pair keys, and does 
     'ingredient:a|ingredient:b',
     'ingredient:b|ingredient:c',
   ]);
+});
+
+test('a reviewed product-level combination supplements its exact component subjects', () => {
+  const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
+  const combination = {
+    status: 'reviewed_override',
+    combination_id: 'combination:co-trimoxazole:rxnorm-10831',
+    source_identity: { namespace: 'presentation:pmbjp', code: '89' },
+    product_assertion_sha256: 'a'.repeat(64),
+    components: [
+      {
+        runtime_ingredient_id: 'ingredient:sulfamethoxazole',
+        assertion_ingredient_id: 'assertion:sulfamethoxazole',
+      },
+      {
+        runtime_ingredient_id: 'ingredient:trimethoprim',
+        assertion_ingredient_id: 'assertion:trimethoprim',
+      },
+    ],
+    runtime_subject: {
+      drug: 'co-trimoxazole',
+      route: 'oral',
+      formulation: 'tablet',
+    },
+  };
+  const combinationProduct = product(
+    'product:2',
+    ['ingredient:sulfamethoxazole', 'ingredient:trimethoprim'],
+    {
+      presentation: {
+        status: 'reviewed_override',
+        mapping_scope: 'reviewed_combination_product',
+        combination_id: combination.combination_id,
+        route: 'oral',
+        formulation: 'tablet',
+      },
+      combination,
+    },
+  );
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved(
+        'Warfarin plus methotrexate fixture',
+        product('product:1', ['ingredient:warfarin', 'ingredient:methotrexate']),
+      ),
+      resolved('Reviewed co-trimoxazole fixture', combinationProduct),
+    ],
+    rulePack: pack({
+      rules: [
+        rule({
+          id: 'ddi:warfarin:co-trimoxazole',
+          pair: [combinationSubjectId, 'ingredient:warfarin'],
+        }),
+        rule({
+          id: 'ddi:methotrexate:trimethoprim',
+          pair: ['ingredient:methotrexate', 'ingredient:trimethoprim'],
+        }),
+      ],
+    }),
+  });
+
+  assert.deepEqual(
+    result.reviewed_findings.map((finding) => finding.rule_id),
+    ['ddi:methotrexate:trimethoprim', 'ddi:warfarin:co-trimoxazole'],
+  );
+  const combinationPair = result.checked_pairs.find((entry) => (
+    entry.pair.includes(combinationSubjectId)
+  ));
+  assert.deepEqual(combinationPair.product_pairs, [['product:1', 'product:2']]);
+});
+
+test('unreviewed or incompletely mapped combination results never enter exact pair matching', () => {
+  const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
+  const base = {
+    combination_id: 'combination:co-trimoxazole:rxnorm-10831',
+    components: [
+      {
+        runtime_ingredient_id: 'ingredient:sulfamethoxazole',
+        assertion_ingredient_id: 'assertion:sulfamethoxazole',
+      },
+      {
+        runtime_ingredient_id: 'ingredient:trimethoprim',
+        assertion_ingredient_id: 'assertion:trimethoprim',
+      },
+    ],
+    runtime_subject: {
+      drug: 'co-trimoxazole',
+      route: 'oral',
+      formulation: 'tablet',
+    },
+  };
+  const cases = [
+    { label: 'audit result', combination: { ...base, status: 'audit_match', audit_only: true } },
+    { label: 'no combination', combination: { ...base, status: 'no_combination' } },
+    {
+      label: 'incomplete component mapping',
+      combination: {
+        ...base,
+        status: 'reviewed_override',
+        components: base.components.slice(0, 1),
+      },
+    },
+    {
+      label: 'extra mapped component',
+      combination: { ...base, status: 'reviewed_override' },
+      ingredients: [
+        'ingredient:sulfamethoxazole',
+        'ingredient:trimethoprim',
+        'ingredient:unexpected',
+      ],
+    },
+  ];
+
+  for (const {
+    label,
+    combination,
+    ingredients = ['ingredient:sulfamethoxazole', 'ingredient:trimethoprim'],
+  } of cases) {
+    const result = checkResolvedProducts({
+      resolvedInputs: [
+        resolved('Warfarin', product('product:1', ['ingredient:warfarin'])),
+        resolved(
+          label,
+          product('product:2', ingredients, {
+            presentation: {
+              status: 'reviewed_override',
+              mapping_scope: 'reviewed_combination_product',
+              combination_id: base.combination_id,
+              route: 'oral',
+              formulation: 'tablet',
+            },
+            combination,
+          }),
+        ),
+      ],
+      rulePack: pack({
+        rules: [rule({
+          id: 'ddi:warfarin:co-trimoxazole',
+          pair: [combinationSubjectId, 'ingredient:warfarin'],
+        })],
+      }),
+    });
+    assert.deepEqual(result.reviewed_findings, []);
+    assert.ok(!result.checked_pairs.some((entry) => entry.pair.includes(combinationSubjectId)));
+  }
 });
 
 test('same ingredient across products is reported as therapeutic duplication, not an interaction pair', () => {

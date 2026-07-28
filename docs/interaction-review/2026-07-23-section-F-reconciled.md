@@ -1,6 +1,6 @@
 # Batch 1 v2 — Section F (hyperkalaemia / renal / nephrotoxicity) reconciled packet
 
-- Source JSONL SHA-256: `c8d3ace2dc86768aba5509423e3df84a59fc7e86985189b0e05723ce6fc7d7a8`
+- Source JSONL SHA-256: `73a68362fda43c9ff266940199f322339aad50ee3a11e440806af5b2efe31037`
 - Rules: 16
 - Evidence records: 17
 - Exact fragments: 42
@@ -22,6 +22,7 @@ Every rule is fail-closed. A diagnostic matcher may support engineering review, 
 5. **Co-trimoxazole same-product identity fails closed.** All three affected rules are matcher-quarantined until product-bound ingredient occurrences exist.
 6. **Methotrexate plus NSAID is split by source qualifier.** The high-dose outcome record has no label action; the lower-dose record retains only the caution and animal-model statement. Both are non-executable.
 7. **Defensible catalog identities were added conservatively.** Seven catalog-backed NSAIDs and metolazone were added to the relevant review rosters; affected rules remain runtime-disabled.
+8. **The 2026-07-28 BACTRIM recheck was provenance-only.** Both evidence records retain the same SPL version, effective time, exact fragments, propositions, clinical scope, and runtime status; only the current canonical payload hash and retrieval dates were refreshed.
 
 ## Rule matrix
 

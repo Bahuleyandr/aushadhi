@@ -34,12 +34,16 @@
 import {
   INGREDIENT_IDENTITY_NAMESPACE,
   createIngredientIdentity,
+  ingredientIdForName,
 } from './ingredient-identity.mjs';
 import { productAssertionHashForRow, productIdForRow } from './product-resolver.mjs';
 import {
   canonicalDrug,
   normalizeRuntimeInteractionSubject,
 } from './interaction-engine.mjs';
+import {
+  assertVerifiedCombinationManifestEvidence,
+} from './combination-rxnorm-evidence.mjs';
 
 export const COMBINATION_IDENTITY_SCHEMA_VERSION = 1;
 export const MAX_COMBINATION_COMPONENTS = 8;
@@ -64,6 +68,7 @@ const IDENTITY_SOURCE_KINDS = new Set([
   'pmbjp_tender',
 ]);
 const TENDER_STATUSES = new Set(['present', 'not_present', 'not_checked']);
+const COMPILED_MANIFEST_KINDS = new WeakMap();
 
 function isObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -241,7 +246,9 @@ function validateComponents(components, label) {
     requireObject(component, componentLabel);
     requireExactKeys(
       component,
-      new Set(['name', 'rxcui', 'tty', 'assertion_ingredient_ids']),
+      new Set([
+        'name', 'rxcui', 'tty', 'runtime_ingredient_id', 'assertion_ingredient_ids',
+      ]),
       componentLabel,
     );
     const name = requireString(component.name, `${componentLabel}.name`);
@@ -259,17 +266,33 @@ function validateComponents(components, label) {
       component.assertion_ingredient_ids,
       `${componentLabel}.assertion_ingredient_ids`,
     );
+    const assertionIds = new Set();
     for (let idIndex = 0; idIndex < component.assertion_ingredient_ids.length; idIndex += 1) {
       const assertionId = requireLocalId(
         component.assertion_ingredient_ids[idIndex],
         `${componentLabel}.assertion_ingredient_ids[${idIndex}]`,
       );
+      assertionIds.add(assertionId);
       if (claimed.has(assertionId)) {
         throw new TypeError(
           `${label} assertion identity ${assertionId} is claimed by more than one component`,
         );
       }
       claimed.add(assertionId);
+    }
+    const runtimeIngredientId = requireLocalId(
+      component.runtime_ingredient_id,
+      `${componentLabel}.runtime_ingredient_id`,
+    );
+    if (!assertionIds.has(runtimeIngredientId)) {
+      throw new TypeError(
+        `${componentLabel}.runtime_ingredient_id must be one of assertion_ingredient_ids`,
+      );
+    }
+    if (runtimeIngredientId !== ingredientIdForName(name)) {
+      throw new TypeError(
+        `${componentLabel}.runtime_ingredient_id must match the component name`,
+      );
     }
   }
   return { rxcuis, claimed };
@@ -362,13 +385,16 @@ function validateScd(value, label, componentRxcuis) {
       throw new TypeError(`${entryLabel}.numerator_value must be numeric`);
     }
     requireString(entry.numerator_unit, `${entryLabel}.numerator_unit`);
+    if ((entry.denominator_value === null) !== (entry.denominator_unit === null)) {
+      throw new TypeError(
+        `${entryLabel}.denominator_value and denominator_unit must both be null or both be non-null`,
+      );
+    }
     if (entry.denominator_value !== null) {
       const denominator = requireString(entry.denominator_value, `${entryLabel}.denominator_value`);
       if (!NUMERIC.test(denominator)) {
         throw new TypeError(`${entryLabel}.denominator_value must be numeric`);
       }
-    }
-    if (entry.denominator_unit !== null) {
       requireString(entry.denominator_unit, `${entryLabel}.denominator_unit`);
     }
   }
@@ -433,7 +459,7 @@ function validatePresentations(combination, label, componentRxcuis) {
     const route = requireString(presentation.route, `${presentationLabel}.route`);
     const formulation = requireString(presentation.formulation, `${presentationLabel}.formulation`);
     canonicalPresentationValues(route, formulation, presentationLabel);
-    presentedScopes.add(`${route} ${formulation}`);
+    presentedScopes.add(`${route}\u0000${formulation}`);
     validateScd(presentation.rxnorm_scd, `${presentationLabel}.rxnorm_scd`, componentRxcuis);
   }
   return { presentedScopes, seenSourceIdentities };
@@ -459,7 +485,7 @@ function validatePresentationScopes(values, label) {
     if (normalized.formulation !== formulation) {
       throw new TypeError(`${scopeLabel}.formulation must be a canonical formulation`);
     }
-    const key = `${route} ${formulation}`;
+    const key = `${route}\u0000${formulation}`;
     if (seen.has(key)) {
       throw new TypeError(`${label} contains duplicate scope ${route}/${formulation}`);
     }
@@ -652,18 +678,16 @@ export const COMPILED_KINDS = new Set(['verified_manifest', 'audit_fixture']);
 // runtime resolver refuses outright, so synthetic evidence cannot produce a
 // runtime-acceptable result however the fixture happens to be documented. A
 // non-empty manifest may only compile as `verified_manifest` when its RxNorm
-// evidence has been verified, which the caller asserts with `evidenceVerified`.
+// evidence has been verified. The verifier binds its report to the exact manifest
+// object, so a caller-supplied boolean or report-shaped object cannot cross this boundary.
 export function compileCombinationIdentityManifest(manifest, options = {}) {
-  const { kind = 'verified_manifest', evidenceVerified = false } = options;
+  const { kind = 'verified_manifest', verificationReport = null } = options;
   if (!COMPILED_KINDS.has(kind)) {
     throw new TypeError(`compiled kind must be one of: ${[...COMPILED_KINDS].join(', ')}`);
   }
   validateCombinationIdentityManifest(manifest);
-  if (kind === 'verified_manifest' && manifest.combinations.length > 0 && !evidenceVerified) {
-    throw new TypeError(
-      'a non-empty combination manifest may only compile as verified_manifest once its RxNorm '
-      + 'evidence has been verified; compile it as audit_fixture, or verify the evidence first',
-    );
+  if (kind === 'verified_manifest' && manifest.combinations.length > 0) {
+    assertVerifiedCombinationManifestEvidence(verificationReport, manifest);
   }
   const combinations = deepFreeze(structuredClone(manifest.combinations));
   // module-private: never reachable from the returned object. Object.freeze does not
@@ -679,17 +703,22 @@ export function compileCombinationIdentityManifest(manifest, options = {}) {
   const lookup = Object.freeze(Object.assign(Object.create(null), {
     get: (key) => reviewedProducts.get(key) ?? null,
   }));
-  return Object.freeze(Object.assign(Object.create(null), {
+  const compiledManifest = Object.freeze(Object.assign(Object.create(null), {
     compiled: true,
     compiled_kind: kind,
     combinations,
     reviewed_products: lookup,
   }));
+  COMPILED_MANIFEST_KINDS.set(compiledManifest, kind);
+  return compiledManifest;
 }
 
 function requireCompiled(manifest, allowedKinds) {
   if (!isObject(manifest) || manifest.compiled !== true) {
     throw new TypeError('manifest must be compiled with compileCombinationIdentityManifest first');
+  }
+  if (COMPILED_MANIFEST_KINDS.get(manifest) !== manifest.compiled_kind) {
+    throw new TypeError('manifest is not an authentic compiled combination identity manifest');
   }
   if (!allowedKinds.has(manifest.compiled_kind)) {
     throw new TypeError(
@@ -698,6 +727,10 @@ function requireCompiled(manifest, allowedKinds) {
     );
   }
   return manifest;
+}
+
+export function assertVerifiedCombinationIdentityManifest(manifest) {
+  return requireCompiled(manifest, new Set(['verified_manifest']));
 }
 
 function requireReleaseProfile(profile) {
@@ -728,22 +761,26 @@ function sourceIdentityKeys(product) {
     .map((entry) => `presentation:${entry.source}:${entry.source_id}`);
 }
 
-function matchesExactActiveSet(components, assertionIds) {
-  if (assertionIds.length !== components.length) return false;
+function matchExactActiveSet(components, assertionIds) {
+  if (assertionIds.length !== components.length) return null;
   const accepts = components.map((component) => new Set(component.assertion_ingredient_ids));
   const usedSlots = new Array(assertionIds.length).fill(false);
+  const assignedSlots = new Array(components.length).fill(-1);
   const assign = (componentIndex) => {
     if (componentIndex === accepts.length) return true;
     for (let slot = 0; slot < assertionIds.length; slot += 1) {
       if (usedSlots[slot]) continue;
       if (!accepts[componentIndex].has(assertionIds[slot])) continue;
       usedSlots[slot] = true;
+      assignedSlots[componentIndex] = slot;
       if (assign(componentIndex + 1)) return true;
       usedSlots[slot] = false;
+      assignedSlots[componentIndex] = -1;
     }
     return false;
   };
-  return assign(0);
+  if (!assign(0)) return null;
+  return assignedSlots.map((slot) => assertionIds[slot]);
 }
 
 const noCombination = (reason, extra = {}) => ({
@@ -808,7 +845,8 @@ function resolveInternal(
         error: 'product_assertion_changed_since_review',
       };
     }
-    if (!matchesExactActiveSet(combination.components, assertionIds)) {
+    const matchedAssertionIds = matchExactActiveSet(combination.components, assertionIds);
+    if (matchedAssertionIds === null) {
       return {
         status: 'stale',
         combination_id: combination.combination_id,
@@ -823,8 +861,12 @@ function resolveInternal(
       source_identity: presentation.source_identity,
       product_assertion_sha256: assertionSha256,
       exposure_scope: combination.exposure_scope,
-      components: combination.components.map((component) => ({
+      components: combination.components.map((component, componentIndex) => ({
         name: component.name, rxcui: component.rxcui, tty: component.tty,
+        version: combination.rxnorm.version,
+        api_version: combination.rxnorm.api_version,
+        runtime_ingredient_id: component.runtime_ingredient_id,
+        assertion_ingredient_id: matchedAssertionIds[componentIndex],
       })),
       rxnorm_scd: presentation.rxnorm_scd,
     };
@@ -850,7 +892,7 @@ function resolveInternal(
   }
 
   const matching = compiledManifest.combinations.filter((combination) => (
-    allowed(combination) && matchesExactActiveSet(combination.components, assertionIds)
+    allowed(combination) && matchExactActiveSet(combination.components, assertionIds) !== null
   ));
   if (matching.length === 0) return noCombination('no_reviewed_combination_matches_active_set');
   return {
@@ -860,7 +902,7 @@ function resolveInternal(
 }
 
 export function resolveCombinationIdentity({ product, manifest, profile }) {
-  const compiledManifest = requireCompiled(manifest, new Set(['verified_manifest']));
+  const compiledManifest = assertVerifiedCombinationIdentityManifest(manifest);
   const releaseProfile = requireReleaseProfile(profile);
   return resolveInternal(product, compiledManifest, releaseProfile);
 }

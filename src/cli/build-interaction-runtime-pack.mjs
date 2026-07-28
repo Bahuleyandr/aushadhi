@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { validateCombinationIdentityManifest } from '../lib/interaction-combination-identity.mjs';
-import { verifyCombinationManifestEvidence } from '../lib/combination-rxnorm-evidence.mjs';
+import {
+  assertVerifiedCombinationManifestEvidence,
+  verifyCombinationManifestEvidence,
+} from '../lib/combination-rxnorm-evidence.mjs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -46,7 +49,15 @@ function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
+function deepFreeze(value, seen = new Set()) {
+  if (value === null || typeof value !== 'object' || seen.has(value)) return value;
+  seen.add(value);
+  for (const child of Object.values(value)) deepFreeze(child, seen);
+  return Object.freeze(value);
+}
+
 export function buildCommittedRuntimePack() {
+  const { manifest, report } = assertCombinationEvidenceVerified();
   return compileInteractionRuntimePack({
     promotionManifest: readJson(PATHS.promotion),
     draftPackBytes: fs.readFileSync(PATHS.draft),
@@ -54,6 +65,8 @@ export function buildCommittedRuntimePack() {
     memberSetsBytes: fs.readFileSync(PATHS.memberSets),
     ingredientManifest: readJson(PATHS.ingredients),
     presentationManifest: readJson(PATHS.presentations),
+    combinationManifest: manifest,
+    combinationEvidenceReport: report,
   });
 }
 
@@ -80,15 +93,17 @@ function replaceAtomically(targetPath, text) {
   }
 }
 
-// Machine-enforced coupling: a non-empty combination manifest may not be compiled or
-// promoted until its RxNorm evidence verifies. This is not a separately documented
-// command a developer can forget -- the promotion gate runs it.
+// Machine-enforced coupling: the manifest must exist, and any recorded combinations
+// may not be compiled or promoted until their RxNorm evidence verifies. The returned
+// manifest/report pair preserves the verifier capability for downstream compilation.
 export function assertCombinationEvidenceVerified(root = ROOT) {
   const manifestPath = path.join(root, 'data-static', 'combination-identity-overrides.json');
-  if (!fs.existsSync(manifestPath)) return { combinations: 0, verified: true };
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`combination identity manifest is missing: ${manifestPath}`);
+  }
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   validateCombinationIdentityManifest(manifest);
-  if (manifest.combinations.length === 0) return { combinations: 0, verified: true };
+  deepFreeze(manifest);
 
   const bundleDir = path.join(root, 'data-static', 'combination-rxnorm-evidence');
   const bundles = {};
@@ -112,7 +127,8 @@ export function assertCombinationEvidenceVerified(root = ROOT) {
       + `checked: ${detail}`,
     );
   }
-  return { combinations: report.combinations_checked, verified: true };
+  assertVerifiedCombinationManifestEvidence(report, manifest);
+  return Object.freeze({ manifest, report });
 }
 
 function main() {
@@ -120,10 +136,6 @@ function main() {
   if (args.some((arg) => arg !== '--check') || args.filter((arg) => arg === '--check').length > 1) {
     throw new TypeError('usage: node src/cli/build-interaction-runtime-pack.mjs [--check]');
   }
-  // Machine-enforced coupling: a non-empty combination manifest may not compile or
-  // promote until its RxNorm evidence verifies. This is not a separately documented
-  // command a developer can forget -- the promotion gate runs it.
-  assertCombinationEvidenceVerified();
   const serialized = serializeInteractionRuntimePack(buildCommittedRuntimePack());
   if (args.includes('--check')) {
     if (!fs.existsSync(PATHS.output) || fs.readFileSync(PATHS.output, 'utf8') !== serialized) {

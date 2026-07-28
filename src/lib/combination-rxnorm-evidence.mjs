@@ -34,6 +34,13 @@ export const INGREDIENT_RXCUI_FIELDS = new Set([
 // current.
 const ACCEPTABLE_STATUS = 'Active';
 const ACCEPTABLE_IS_CURRENT = 'YES';
+const RXNORM_REST_BASE_URL = 'https://rxnav.nlm.nih.gov/REST';
+const AUTHORITATIVE_CLASSIFICATION = 'combination_identity_evidence';
+// This authority is limited to compiling the identity manifest. It never authorises
+// a clinical rule; that remains the clinician-approved promotion manifest's job.
+const AUTHORITATIVE_PROMOTION_AUTHORITY = 'identity_only';
+const INTEGRATION_FIXTURE_CLASSIFICATION = 'verifier_integration_fixture';
+const MANIFEST_REPORT_BINDINGS = new WeakMap();
 
 const SHA256 = /^[a-f0-9]{64}$/u;
 // fixture hashes exist so tests can exercise matching without network capture; a
@@ -45,6 +52,13 @@ const FIXTURE_HASHES = new Set([
 const sha256 = (text) => createHash('sha256').update(text, 'utf8').digest('hex');
 const sameSet = (left, right) => left.size === right.size && [...left].every((v) => right.has(v));
 
+function deepFreeze(value, seen = new Set()) {
+  if (value === null || typeof value !== 'object' || seen.has(value)) return value;
+  seen.add(value);
+  for (const child of Object.values(value)) deepFreeze(child, seen);
+  return Object.freeze(value);
+}
+
 function fail(findings, code, detail) {
   findings.push({ code, detail });
   return findings;
@@ -53,6 +67,117 @@ function fail(findings, code, detail) {
 function bundleEntry(bundle, key) {
   const raw = bundle.responses?.[key];
   return typeof raw === 'string' ? raw : null;
+}
+
+function verifyBundleAuthority(findings, combination, bundle, options) {
+  const fixtureAllowed = options?.allowNonAuthoritativeFixture === true;
+  const isFixture = bundle.classification === INTEGRATION_FIXTURE_CLASSIFICATION;
+  if (isFixture && fixtureAllowed) {
+    if (bundle.promotion_authority !== 'none') {
+      fail(findings, 'invalid_fixture_promotion_authority',
+        'an integration fixture must declare promotion_authority none');
+    }
+    if (bundle.audit_only !== true) {
+      fail(findings, 'invalid_fixture_audit_flag',
+        'an integration fixture must declare audit_only true');
+    }
+    return findings;
+  }
+
+  if (bundle.classification !== AUTHORITATIVE_CLASSIFICATION) {
+    fail(findings, 'invalid_bundle_classification',
+      `authoritative evidence must declare classification ${AUTHORITATIVE_CLASSIFICATION}`);
+  }
+  if (bundle.promotion_authority !== AUTHORITATIVE_PROMOTION_AUTHORITY) {
+    fail(findings, 'invalid_promotion_authority',
+      `authoritative evidence must declare promotion_authority `
+      + AUTHORITATIVE_PROMOTION_AUTHORITY);
+  }
+  if (bundle.audit_only !== false) {
+    fail(findings, 'audit_only_evidence',
+      'authoritative combination identity evidence must declare audit_only false');
+  }
+  if (bundle.combination_id !== combination.combination_id) {
+    fail(findings, 'bundle_combination_id_mismatch',
+      `evidence bundle declares combination_id ${bundle.combination_id ?? '(missing)'} `
+      + `but is being used for ${combination.combination_id}`);
+  }
+  return findings;
+}
+
+function verifyCapture(findings, bundle) {
+  const capture = bundle.capture;
+  if (!capture || typeof capture !== 'object' || Array.isArray(capture)) {
+    return fail(findings, 'missing_capture_metadata',
+      'evidence bundle has no RxNorm capture metadata');
+  }
+  if (capture.base_url !== RXNORM_REST_BASE_URL) {
+    fail(findings, 'invalid_capture_base_url',
+      `capture.base_url must be exactly ${RXNORM_REST_BASE_URL}`);
+  }
+  if (bundle.classification === AUTHORITATIVE_CLASSIFICATION
+      && (typeof capture.captured_at !== 'string'
+        || !/^\d{4}-\d{2}-\d{2}T.*Z$/u.test(capture.captured_at)
+        || Number.isNaN(Date.parse(capture.captured_at)))) {
+    fail(findings, 'invalid_capture_timestamp',
+      'authoritative evidence capture.captured_at must be an ISO UTC timestamp');
+  }
+
+  const captures = [];
+  for (const position of ['before', 'after']) {
+    const responseField = `version_${position}_response`;
+    const hashField = `version_${position}_sha256`;
+    const raw = capture[responseField];
+    const declaredHash = capture[hashField];
+    if (typeof raw !== 'string' || raw === '') {
+      fail(findings, 'missing_capture_version_response',
+        `capture.${responseField} must contain the raw RxNorm version response`);
+    }
+    if (!SHA256.test(String(declaredHash ?? '')) || FIXTURE_HASHES.has(declaredHash)) {
+      fail(findings, 'invalid_capture_version_hash',
+        `capture.${hashField} must be a non-placeholder lowercase SHA-256`);
+    } else if (typeof raw === 'string' && sha256(raw) !== declaredHash) {
+      fail(findings, 'capture_version_hash_mismatch',
+        `capture.${hashField} does not hash capture.${responseField}`);
+    }
+
+    let parsed = null;
+    if (typeof raw === 'string') {
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        fail(findings, 'unreadable_capture_version_response',
+          `capture.${responseField} is not valid JSON`);
+      }
+    }
+    captures.push({ raw, declaredHash, parsed, position });
+  }
+
+  if (capture.version_stable !== true) {
+    fail(findings, 'capture_version_unstable',
+      'capture.version_stable must be true for authoritative evidence');
+  }
+  const [before, after] = captures;
+  if (before.raw !== after.raw || before.declaredHash !== after.declaredHash) {
+    fail(findings, 'capture_version_disagreement',
+      'the before and after RxNorm version responses are not byte-identical');
+  }
+  for (const captured of captures) {
+    if (!captured.parsed) continue;
+    if (captured.parsed.version !== bundle.rxnorm_release) {
+      fail(findings, 'capture_release_disagreement',
+        `capture.${captured.position} reports RxNorm release `
+        + `${captured.parsed.version ?? '(missing)'} but the bundle declares `
+        + `${bundle.rxnorm_release}`);
+    }
+    if (captured.parsed.apiVersion !== bundle.api_version) {
+      fail(findings, 'capture_api_version_disagreement',
+        `capture.${captured.position} reports API version `
+        + `${captured.parsed.apiVersion ?? '(missing)'} but the bundle declares `
+        + `${bundle.api_version}`);
+    }
+  }
+  return findings;
 }
 
 // A hash is only meaningful if it is recomputed from the committed raw response.
@@ -123,10 +248,16 @@ function verifyConceptStatus(findings, rxcui, role, bundle) {
     return fail(findings, 'missing_concept_status',
       `${role} ${rxcui} has no committed history-status response`);
   }
-  const status = parseBundle(bundle, key)?.rxcuiStatusHistory?.metaData;
+  const history = parseBundle(bundle, key)?.rxcuiStatusHistory;
+  const status = history?.metaData;
   if (!status) {
     return fail(findings, 'unreadable_concept_status',
       `${role} ${rxcui} history-status response is unparseable`);
+  }
+  if (String(history.attributes?.rxcui ?? '') !== rxcui) {
+    fail(findings, 'concept_status_rxcui_mismatch',
+      `${role} ${rxcui} history-status response identifies concept `
+      + `${history.attributes?.rxcui ?? '(missing)'}`);
   }
   if (status.status !== ACCEPTABLE_STATUS) {
     return fail(findings, 'concept_not_active',
@@ -144,6 +275,28 @@ function verifyCombinationConcept(findings, combination, bundle) {
   verifyConceptStatus(findings, rxnorm.rxcui, 'combination MIN', bundle);
   for (const component of combination.components) {
     verifyConceptStatus(findings, component.rxcui, 'component', bundle);
+    const componentPropertiesKey = `rxcui/${component.rxcui}/properties`;
+    const componentProperties = parseBundle(bundle, componentPropertiesKey)?.properties;
+    if (!componentProperties) {
+      fail(findings, 'missing_component_properties',
+        `component ${component.rxcui} has no readable properties response`);
+      continue;
+    }
+    if (String(componentProperties.rxcui ?? '') !== component.rxcui) {
+      fail(findings, 'component_properties_rxcui_mismatch',
+        `component ${component.rxcui} properties response identifies concept `
+        + `${componentProperties.rxcui ?? '(missing)'}`);
+    }
+    if (componentProperties.name !== component.name) {
+      fail(findings, 'component_name_mismatch',
+        `component ${component.rxcui} declares name "${component.name}" but RxNorm returned `
+        + `"${componentProperties.name ?? '(missing)'}"`);
+    }
+    if (componentProperties.tty !== component.tty) {
+      fail(findings, 'component_properties_tty_mismatch',
+        `component ${component.rxcui} declares ${component.tty} but its properties response `
+        + `returned ${componentProperties.tty ?? '(missing)'}`);
+    }
   }
   const propertiesKey = `rxcui/${rxnorm.rxcui}/properties`;
   verifyHash(findings, bundle, propertiesKey, rxnorm.properties_response_sha256,
@@ -179,11 +332,11 @@ function verifyCombinationConcept(findings, combination, bundle) {
     return findings;
   }
   const observed = new Set();
-  const observedTty = new Map();
+  const observedConcepts = new Map();
   for (const group of related.relatedGroup?.conceptGroup ?? []) {
     for (const concept of group.conceptProperties ?? []) {
       observed.add(String(concept.rxcui));
-      observedTty.set(String(concept.rxcui), concept.tty);
+      observedConcepts.set(String(concept.rxcui), concept);
     }
   }
   const declared = new Set(rxnorm.component_relation.component_rxcuis);
@@ -193,11 +346,18 @@ function verifyCombinationConcept(findings, combination, bundle) {
       + `but RxNorm returned ${[...observed].sort().join(', ') || '(none)'}`);
   }
   for (const component of combination.components) {
-    const tty = observedTty.get(component.rxcui);
+    const relatedComponent = observedConcepts.get(component.rxcui);
+    const tty = relatedComponent?.tty;
     if (tty !== undefined && tty !== component.tty) {
       fail(findings, 'component_tty_mismatch',
         `${combination.combination_id} component ${component.rxcui} declares ${component.tty} `
         + `but RxNorm returned ${tty}`);
+    }
+    if (relatedComponent !== undefined && relatedComponent.name !== component.name) {
+      fail(findings, 'component_relation_name_mismatch',
+        `${combination.combination_id} component ${component.rxcui} declares name `
+        + `"${component.name}" but has_part returned `
+        + `"${relatedComponent.name ?? '(missing)'}"`);
     }
   }
   return findings;
@@ -208,6 +368,11 @@ function verifyPresentation(findings, combination, presentation, bundle) {
   const label = `${combination.combination_id} presentation `
     + `${presentation.source_identity.namespace}:${presentation.source_identity.code}`;
 
+  if (scd.version !== bundle.rxnorm_release) {
+    fail(findings, 'scd_release_disagreement',
+      `${label} pins RxNorm release ${scd.version} but the evidence bundle was captured `
+      + `against ${bundle.rxnorm_release}`);
+  }
   verifyConceptStatus(findings, scd.rxcui, 'presentation SCD', bundle);
 
   // --- term type comes from the properties endpoint -------------------------
@@ -257,16 +422,44 @@ function verifyPresentation(findings, combination, presentation, bundle) {
         `${label} compares an unsupported field ${entry.ingredient_rxcui_field}`);
       return findings;
     }
+    if (declared.has(entry.component_rxcui)) {
+      fail(findings, 'duplicate_scd_component',
+        `${label} declares component ${entry.component_rxcui} more than once`);
+    }
+    if (typeof entry.denominator_value !== 'string' || entry.denominator_value === ''
+        || typeof entry.denominator_unit !== 'string' || entry.denominator_unit === '') {
+      fail(findings, 'missing_scd_denominator',
+        `${label} component ${entry.component_rxcui} must declare an exact denominator `
+        + 'value and unit');
+    }
     declared.set(entry.component_rxcui, entry);
   }
 
   // match each declared entry on the field it nominated, so a MIN may mix IN and PIN
   const matchedComponents = new Set();
+  const claimedRows = new Set();
   for (const [componentRxcui, entry] of declared) {
-    const row = observedRows.find((observed) => (
-      String(observed[entry.ingredient_rxcui_field] ?? '') === componentRxcui
-    ));
-    if (!row) continue;
+    const matchingRowIndexes = [];
+    for (const [index, observed] of observedRows.entries()) {
+      if (String(observed[entry.ingredient_rxcui_field] ?? '') === componentRxcui) {
+        matchingRowIndexes.push(index);
+      }
+    }
+    if (matchingRowIndexes.length === 0) continue;
+    if (matchingRowIndexes.length > 1) {
+      fail(findings, 'scd_ingredient_row_ambiguous',
+        `${label} component ${componentRxcui} matches more than one RxNorm strength row`);
+      continue;
+    }
+    const rowIndex = matchingRowIndexes[0];
+    if (claimedRows.has(rowIndex)) {
+      fail(findings, 'scd_ingredient_row_reused',
+        `${label} component ${componentRxcui} reuses an RxNorm strength row already assigned `
+        + 'to another component');
+      continue;
+    }
+    claimedRows.add(rowIndex);
+    const row = observedRows[rowIndex];
     matchedComponents.add(componentRxcui);
     if (String(row.numeratorValue) !== entry.numerator_value
         || String(row.numeratorUnit) !== entry.numerator_unit) {
@@ -274,9 +467,10 @@ function verifyPresentation(findings, combination, presentation, bundle) {
         `${label} declares ${componentRxcui} at ${entry.numerator_value}${entry.numerator_unit} `
         + `but RxNorm returned ${row.numeratorValue}${row.numeratorUnit}`);
     }
-    if (entry.denominator_value !== null
+    if (typeof entry.denominator_value === 'string'
+        && typeof entry.denominator_unit === 'string'
         && (String(row.denominatorValue) !== entry.denominator_value
-          || String(row.denominatorUnit) !== entry.denominator_unit)) {
+        || String(row.denominatorUnit) !== entry.denominator_unit)) {
       fail(findings, 'scd_denominator_mismatch',
         `${label} declares ${componentRxcui} per ${entry.denominator_value}${entry.denominator_unit} `
         + `but RxNorm returned ${row.denominatorValue}${row.denominatorUnit}`);
@@ -284,6 +478,7 @@ function verifyPresentation(findings, combination, presentation, bundle) {
   }
   // exact equality in BOTH directions: an extra returned row fails like a missing one
   if (!sameSet(matchedComponents, new Set(declared.keys()))
+      || claimedRows.size !== observedRows.length
       || observedRows.length !== declared.size) {
     fail(findings, 'scd_ingredient_mismatch',
       `${label} declares ${[...declared.keys()].sort().join(', ')} but RxNorm returned `
@@ -311,9 +506,10 @@ function verifyPresentation(findings, combination, presentation, bundle) {
       if (concept.tty === 'MIN') relatedMins.add(String(concept.rxcui));
     }
   }
-  if (!relatedMins.has(combination.rxnorm.rxcui)) {
+  const expectedMins = new Set([combination.rxnorm.rxcui]);
+  if (!sameSet(relatedMins, expectedMins)) {
     fail(findings, 'scd_min_relation_mismatch',
-      `${label} SCD ${scd.rxcui} does not relate to MIN ${combination.rxnorm.rxcui} `
+      `${label} SCD ${scd.rxcui} must relate exactly to MIN ${combination.rxnorm.rxcui} `
       + `(has_ingredients returned ${[...relatedMins].sort().join(', ') || '(no MIN)'})`);
   }
   return findings;
@@ -333,9 +529,10 @@ function verifyRelease(findings, combination, bundle) {
   return findings;
 }
 
-// Verifies one combination against the committed raw evidence bundle. Returns a
-// report; the CLI turns a non-empty findings list into a non-zero exit.
-export function verifyCombinationRxNormEvidence(combination, bundle) {
+// Verifies one combination against the committed raw evidence bundle. The
+// non-authoritative option exists solely for the real-response integration test;
+// manifest verification deliberately has no equivalent option.
+export function verifyCombinationRxNormEvidence(combination, bundle, options = undefined) {
   const findings = [];
   if (!bundle || typeof bundle !== 'object') {
     fail(findings, 'missing_evidence_bundle',
@@ -345,6 +542,8 @@ export function verifyCombinationRxNormEvidence(combination, bundle) {
   if (bundle.schema_version !== EVIDENCE_BUNDLE_SCHEMA_VERSION) {
     fail(findings, 'unsupported_bundle_schema', 'evidence bundle schema_version is unsupported');
   }
+  verifyBundleAuthority(findings, combination, bundle, options);
+  verifyCapture(findings, bundle);
   verifyBundleIntegrity(findings, bundle);
   verifyRelease(findings, combination, bundle);
   verifyCombinationConcept(findings, combination, bundle);
@@ -362,9 +561,33 @@ export function verifyCombinationManifestEvidence(manifest, bundles) {
   const reports = manifest.combinations.map((combination) => (
     verifyCombinationRxNormEvidence(combination, bundles?.[combination.combination_id])
   ));
-  return {
+  const report = deepFreeze({
     verified: reports.every((report) => report.verified),
     combinations_checked: reports.length,
     reports,
-  };
+  });
+  if (report.verified) {
+    MANIFEST_REPORT_BINDINGS.set(report, {
+      manifest,
+      fingerprint: sha256(JSON.stringify(manifest)),
+    });
+  }
+  return report;
+}
+
+export function assertVerifiedCombinationManifestEvidence(report, manifest) {
+  if (!report || typeof report !== 'object' || !MANIFEST_REPORT_BINDINGS.has(report)) {
+    throw new TypeError('combination evidence report is not an authentic verifier result');
+  }
+  const binding = MANIFEST_REPORT_BINDINGS.get(report);
+  if (binding.manifest !== manifest) {
+    throw new TypeError('combination evidence report is not bound to this exact manifest object');
+  }
+  if (sha256(JSON.stringify(manifest)) !== binding.fingerprint) {
+    throw new TypeError('combination evidence manifest changed since evidence verification');
+  }
+  if (report.verified !== true) {
+    throw new TypeError('combination evidence report is not verified');
+  }
+  return report;
 }

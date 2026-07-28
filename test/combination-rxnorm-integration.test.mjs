@@ -29,15 +29,34 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { verifyCombinationRxNormEvidence } from '../src/lib/combination-rxnorm-evidence.mjs';
+import {
+  assertVerifiedCombinationManifestEvidence,
+  verifyCombinationManifestEvidence,
+  verifyCombinationRxNormEvidence,
+} from '../src/lib/combination-rxnorm-evidence.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BUNDLE = path.join(
   ROOT, 'data-static', 'combination-rxnorm-evidence', 'integration-fixture',
   'combination_co-trimoxazole_rxnorm-10831.json',
 );
-const bundle = JSON.parse(fs.readFileSync(BUNDLE, 'utf8'));
+const capturedBundle = JSON.parse(fs.readFileSync(BUNDLE, 'utf8'));
+// This fixture predates the authoritative bundle schema and stores one canonical
+// copy of the byte-identical before/after version response. Expand it explicitly
+// for verifier-shape coverage; the test-only option below still denies authority.
+const bundle = {
+  ...capturedBundle,
+  capture: {
+    ...capturedBundle.capture,
+    version_before_response: capturedBundle.capture.version_response,
+    version_after_response: capturedBundle.capture.version_response,
+  },
+};
+const NON_AUTHORITATIVE_FIXTURE = Object.freeze({ allowNonAuthoritativeFixture: true });
 const hash = (key) => bundle.response_hashes[key];
+const verifyFixture = (entry) => (
+  verifyCombinationRxNormEvidence(entry, bundle, NON_AUTHORITATIVE_FIXTURE)
+);
 
 const scd = (rxcui, name, smx, tmp) => ({
   rxcui,
@@ -100,16 +119,13 @@ test('the captured bundle is a non-authoritative integration fixture', () => {
   assert.equal(bundle.classification, 'verifier_integration_fixture');
   assert.equal(bundle.promotion_authority, 'none');
   assert.equal(bundle.audit_only, true);
-  // it lives outside the combination manifest, which is still empty
-  const manifest = JSON.parse(fs.readFileSync(
-    path.join(ROOT, 'data-static', 'combination-identity-overrides.json'), 'utf8',
-  ));
-  assert.deepEqual(manifest.combinations, []);
+  assert.match(BUNDLE, /combination-rxnorm-evidence[\\/]integration-fixture[\\/]/u);
 });
 
 test('the RxNorm version response was stable across the capture', () => {
   // captured immediately before and after the concept requests; both must agree
   assert.equal(bundle.capture.version_stable, true);
+  assert.equal(bundle.capture.version_before_response, bundle.capture.version_after_response);
   assert.equal(
     bundle.capture.version_before_sha256,
     bundle.capture.version_after_sha256,
@@ -117,37 +133,50 @@ test('the RxNorm version response was stable across the capture', () => {
   assert.equal(bundle.rxnorm_release, '06-Jul-2026');
 });
 
-test('the verifier passes against REAL RxNorm responses', () => {
-  const result = verifyCombinationRxNormEvidence(combination(), bundle);
+test('the verifier passes against REAL RxNorm responses only with the explicit fixture option', () => {
+  assert.equal(verifyCombinationRxNormEvidence(combination(), bundle).verified, false);
+  const result = verifyFixture(combination());
   assert.deepEqual(result.findings, []);
   assert.equal(result.verified, true);
+});
+
+test('the real integration fixture cannot produce a manifest-verification capability', () => {
+  const manifest = { combinations: [combination()] };
+  const report = verifyCombinationManifestEvidence(manifest, {
+    [manifest.combinations[0].combination_id]: bundle,
+  });
+  assert.equal(report.verified, false);
+  assert.throws(
+    () => assertVerifiedCombinationManifestEvidence(report, manifest),
+    /authentic verifier result|not verified/u,
+  );
 });
 
 test('real responses still catch a wrong strength', () => {
   const entry = combination();
   entry.presentations[0].rxnorm_scd.ingredients_and_strengths[0].numerator_value = '400';
-  assert.ok(codes(verifyCombinationRxNormEvidence(entry, bundle)).includes('scd_strength_mismatch'));
+  assert.ok(codes(verifyFixture(entry)).includes('scd_strength_mismatch'));
 });
 
 test('real responses still catch a wrong denominator', () => {
   const entry = combination();
   entry.presentations[0].rxnorm_scd.ingredients_and_strengths[0].denominator_value = '5';
   assert.ok(
-    codes(verifyCombinationRxNormEvidence(entry, bundle)).includes('scd_denominator_mismatch'),
+    codes(verifyFixture(entry)).includes('scd_denominator_mismatch'),
   );
 });
 
 test('real responses still catch a wrong dose form', () => {
   const entry = combination();
   entry.presentations[0].rxnorm_scd.dose_form = 'Oral Suspension';
-  assert.ok(codes(verifyCombinationRxNormEvidence(entry, bundle)).includes('scd_dose_form_mismatch'));
+  assert.ok(codes(verifyFixture(entry)).includes('scd_dose_form_mismatch'));
 });
 
 test('real responses still catch a component RxNorm does not list', () => {
   const entry = combination();
   entry.components[1] = { name: 'ciprofloxacin', rxcui: '2551', tty: 'IN' };
   entry.rxnorm.component_relation.component_rxcuis = ['10180', '2551'];
-  const result = verifyCombinationRxNormEvidence(entry, bundle);
+  const result = verifyFixture(entry);
   assert.ok(codes(result).includes('component_relation_mismatch'));
 });
 

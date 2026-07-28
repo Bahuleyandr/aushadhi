@@ -2,9 +2,13 @@
 
 Machine evidence: **24** records across **19** rules.
 
-- JSONL SHA-256: `7848b2958c21052ba05fd7fd357bba512bb5251fa481b95853fe48f21db4854c`
+- JSONL SHA-256: `a641a697fb189884b15b35301079e5997a94226b1b7c140ffc25ecbd832707fe`
 - Schema validation: `validateDraftRules` passes; evidence and member
   allowlists remain frozen and every rule remains `promotion_eligible:false`.
+- The four TEGRETOL evidence records were checked, accessed, and retrieved on
+  2026-07-28 against current payload SHA-256
+  `4db3d833a8073218010440d21355612fc75742fa22e1b328f4cedbc72db29467`;
+  all 11 retained fragments remain exact.
 
 Excluded or rights-unclear sources are not linked, quoted, summarized, or represented as machine evidence.
 
