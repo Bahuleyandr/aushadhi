@@ -45,6 +45,7 @@ import {
   assertVerifiedCombinationManifestEvidence,
   verifiedCombinationManifestSnapshot,
 } from './combination-rxnorm-evidence.mjs';
+import { strictPlainDataSnapshot } from './strict-plain-data.mjs';
 
 export const COMBINATION_IDENTITY_SCHEMA_VERSION = 1;
 export const MAX_COMBINATION_COMPONENTS = 8;
@@ -57,6 +58,7 @@ const IDENTITY_KINDS = new Set(['fixed_dose_combination']);
 const COMPONENT_MATCH_MODES = new Set(['exact_active_set']);
 const EXPOSURE_SCOPES = new Set(['systemic', 'local']);
 const COMPONENT_TERM_TYPES = new Set(['IN', 'PIN']);
+const ASSERTION_ALIAS_SOURCE_FIELDS = new Set(['observed_name', 'molecule_raw', 'molecule']);
 const RELEASE_PROFILES = new Set(['production-open', 'internal-evaluation']);
 const AUTHORABLE_PROFILES = new Set(['internal-evaluation']);
 const MIN_RELATIONSHIPS = new Set(['has_part']);
@@ -233,7 +235,16 @@ function validateReview(value, label) {
   return refs;
 }
 
-function validateComponents(components, label) {
+function componentAliasWords(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, ' ')
+    .trim()
+    .replace(/\bsulph/gu, 'sulf');
+}
+
+function validateComponents(components, label, runtimeDrug) {
   requireNonEmptyArray(components, `${label}.components`);
   if (components.length < 2) throw new TypeError(`${label} requires at least two components`);
   if (components.length > MAX_COMBINATION_COMPONENTS) {
@@ -250,6 +261,7 @@ function validateComponents(components, label) {
       component,
       new Set([
         'name', 'rxcui', 'tty', 'runtime_ingredient_id', 'assertion_ingredient_ids',
+        'assertion_ingredient_aliases',
       ]),
       componentLabel,
     );
@@ -268,12 +280,64 @@ function validateComponents(components, label) {
       component.assertion_ingredient_ids,
       `${componentLabel}.assertion_ingredient_ids`,
     );
+    const runtimeIngredientId = requireLocalId(
+      component.runtime_ingredient_id,
+      `${componentLabel}.runtime_ingredient_id`,
+    );
+    if (runtimeIngredientId !== ingredientIdForName(name)) {
+      throw new TypeError(
+        `${componentLabel}.runtime_ingredient_id must match the component name`,
+      );
+    }
+
+    const aliases = component.assertion_ingredient_aliases ?? [];
+    if (!Array.isArray(aliases)) {
+      throw new TypeError(`${componentLabel}.assertion_ingredient_aliases must be an array`);
+    }
+    const aliasIds = new Set();
+    for (let aliasIndex = 0; aliasIndex < aliases.length; aliasIndex += 1) {
+      const alias = aliases[aliasIndex];
+      const aliasLabel = `${componentLabel}.assertion_ingredient_aliases[${aliasIndex}]`;
+      requireObject(alias, aliasLabel);
+      requireExactKeys(
+        alias,
+        new Set(['ingredient_id', 'observed_name', 'source_field']),
+        aliasLabel,
+      );
+      const aliasId = requireLocalId(alias.ingredient_id, `${aliasLabel}.ingredient_id`);
+      if (aliasId === runtimeIngredientId || aliasIds.has(aliasId)) {
+        throw new TypeError(`${componentLabel}.assertion_ingredient_aliases must be unique`);
+      }
+      const observedName = requireString(alias.observed_name, `${aliasLabel}.observed_name`);
+      if (!ASSERTION_ALIAS_SOURCE_FIELDS.has(alias.source_field)) {
+        throw new TypeError(`${aliasLabel}.source_field is unsupported`);
+      }
+      const identity = createIngredientIdentity({ [alias.source_field]: observedName });
+      if (identity.ingredient_id !== aliasId) {
+        throw new TypeError(`${aliasLabel}.ingredient_id does not match its declared preimage`);
+      }
+      const normalizedAlias = componentAliasWords(observedName);
+      const normalizedComponent = componentAliasWords(name);
+      const normalizedCombinationAlias = `${componentAliasWords(runtimeDrug)} ${normalizedComponent}`;
+      if (normalizedAlias !== normalizedComponent
+          && normalizedAlias !== normalizedCombinationAlias) {
+        throw new TypeError(
+          `${aliasLabel}.observed_name must equal the component name or the exact `
+          + 'combination-prefixed component alias',
+        );
+      }
+      aliasIds.add(aliasId);
+    }
+
     const assertionIds = new Set();
     for (let idIndex = 0; idIndex < component.assertion_ingredient_ids.length; idIndex += 1) {
       const assertionId = requireLocalId(
         component.assertion_ingredient_ids[idIndex],
         `${componentLabel}.assertion_ingredient_ids[${idIndex}]`,
       );
+      if (assertionIds.has(assertionId)) {
+        throw new TypeError(`${componentLabel}.assertion_ingredient_ids must be unique`);
+      }
       assertionIds.add(assertionId);
       if (claimed.has(assertionId)) {
         throw new TypeError(
@@ -282,18 +346,11 @@ function validateComponents(components, label) {
       }
       claimed.add(assertionId);
     }
-    const runtimeIngredientId = requireLocalId(
-      component.runtime_ingredient_id,
-      `${componentLabel}.runtime_ingredient_id`,
-    );
-    if (!assertionIds.has(runtimeIngredientId)) {
+    const expectedAssertionIds = new Set([runtimeIngredientId, ...aliasIds]);
+    if (!sameSet(assertionIds, expectedAssertionIds)) {
       throw new TypeError(
-        `${componentLabel}.runtime_ingredient_id must be one of assertion_ingredient_ids`,
-      );
-    }
-    if (runtimeIngredientId !== ingredientIdForName(name)) {
-      throw new TypeError(
-        `${componentLabel}.runtime_ingredient_id must match the component name`,
+        `${componentLabel}.assertion_ingredient_ids must equal the runtime identity plus `
+        + 'declared aliases',
       );
     }
   }
@@ -562,7 +619,7 @@ function validateCombination(value, index) {
   if (canonicalDrug(runtimeDrug) !== runtimeDrug) {
     throw new TypeError(`${label}.runtime_drug must already be canonical`);
   }
-  const { rxcuis, claimed } = validateComponents(value.components, label);
+  const { rxcuis, claimed } = validateComponents(value.components, label, runtimeDrug);
   validateRxNorm(value.rxnorm, `${label}.rxnorm`, rxcuis);
   if (!COMPONENT_MATCH_MODES.has(value.component_match)) {
     throw new TypeError(`${label}.component_match must be exact_active_set`);
@@ -690,11 +747,14 @@ export function compileCombinationIdentityManifest(manifest, options = {}) {
   if (!COMPILED_KINDS.has(kind)) {
     throw new TypeError(`compiled kind must be one of: ${[...COMPILED_KINDS].join(', ')}`);
   }
-  let sourceManifest = manifest;
+  let sourceManifest = strictPlainDataSnapshot(
+    manifest,
+    'combination identity manifest',
+  );
   validateCombinationIdentityManifest(sourceManifest);
   if (kind === 'verified_manifest' && sourceManifest.combinations.length > 0) {
-    assertVerifiedCombinationManifestEvidence(verificationReport, sourceManifest);
-    sourceManifest = verifiedCombinationManifestSnapshot(verificationReport, sourceManifest);
+    assertVerifiedCombinationManifestEvidence(verificationReport, manifest);
+    sourceManifest = verifiedCombinationManifestSnapshot(verificationReport, manifest);
     validateCombinationIdentityManifest(sourceManifest);
   }
   const combinations = deepFreeze(structuredClone(sourceManifest.combinations));

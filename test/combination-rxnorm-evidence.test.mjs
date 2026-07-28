@@ -244,6 +244,15 @@ test('a capture cannot predate the RxNorm release it claims to verify', () => {
   assert.ok(codes(result).includes('capture_predates_rxnorm_release'));
 });
 
+test('an authoritative capture cannot claim a future capture time', () => {
+  const result = verifyCombinationRxNormEvidence(
+    combination(),
+    bundle({ capture: { captured_at: '2099-01-01T00:00:00.000Z' } }),
+  );
+  assert.equal(result.verified, false);
+  assert.ok(codes(result).includes('capture_timestamp_in_future'));
+});
+
 test('a non-authoritative fixture requires an explicit test-only option', () => {
   const evidence = bundle({
     classification: 'verifier_integration_fixture',
@@ -284,9 +293,13 @@ test('capture verification binds evidence to the exact RxNorm REST base URL', ()
 
 test('authoritative evidence requires an ISO UTC capture timestamp', () => {
   for (const captured_at of [undefined, '2026-07-28', 'not-a-date']) {
+    const evidence = bundle({ capture: {
+      ...(captured_at === undefined ? {} : { captured_at }),
+    } });
+    if (captured_at === undefined) delete evidence.capture.captured_at;
     const result = verifyCombinationRxNormEvidence(
       combination(),
-      bundle({ capture: { captured_at } }),
+      evidence,
     );
     assert.ok(codes(result).includes('invalid_capture_timestamp'));
   }
@@ -630,6 +643,31 @@ test('a branded report is invalidated if the bound manifest object is mutated', 
     () => assertVerifiedCombinationManifestEvidence(report, manifest),
     /changed since evidence verification/u,
   );
+});
+
+test('evidence bundles must be immutable plain-data snapshots before any hash or parse', () => {
+  const entry = combination();
+  const manifest = { combinations: [entry] };
+  const evidence = bundle();
+  const key = 'rxcui/198335/historystatus';
+  const authentic = evidence.responses[key];
+  let reads = 0;
+  Object.defineProperty(evidence.responses, key, {
+    enumerable: true,
+    configurable: true,
+    get() {
+      reads += 1;
+      return authentic;
+    },
+  });
+
+  assert.throws(
+    () => verifyCombinationManifestEvidence(manifest, {
+      [entry.combination_id]: evidence,
+    }),
+    /enumerable data property|accessors/u,
+  );
+  assert.equal(reads, 0);
 });
 
 test('a non-authoritative fixture can never produce a manifest-verification capability', () => {

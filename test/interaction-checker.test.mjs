@@ -93,6 +93,16 @@ const pack = ({ rules = [], declared_coverage = 'unknown' } = {}) => ({
   profile: 'production-open',
   licence: 'CC-BY-4.0',
   source_ids: ['aushadhi-open-clinician-rules'],
+  licence_notices: {
+    'aushadhi-open-clinician-rules': {
+      attribution: 'Aushadhi test contributors',
+      licence_notice: 'Creative Commons Attribution 4.0 International',
+      licence_id: 'CC-BY-4.0',
+      licence_url: 'https://creativecommons.org/licenses/by/4.0/legalcode',
+      source_url: 'https://example.test/aushadhi',
+      changes: 'Synthetic test rules.',
+    },
+  },
   declared_coverage,
   rules,
 });
@@ -499,6 +509,17 @@ test('empty and invalid rule packs fail closed and cannot claim complete coverag
   assert.throws(() => validateRulePack({}), /schema_version/i);
   assert.throws(() => validateRulePack(pack({ declared_coverage: 'invalid' })), /declared_coverage/i);
   assert.throws(() => validateRulePack(pack({ declared_coverage: 'complete' })), /empty.*complete/i);
+  assert.throws(
+    () => validateRulePack({ ...pack(), licence_notices: 'forged' }),
+    /licence_notices must be an object/i,
+  );
+  assert.throws(
+    () => validateRulePack({
+      ...pack(),
+      licence_notices: { source: { bogus: true } },
+    }),
+    /licence_notices\.source/u,
+  );
 
   const duplicateIds = [rule(), rule()];
   assert.throws(() => validateRulePack(pack({ rules: duplicateIds })), /duplicate rule_id/i);

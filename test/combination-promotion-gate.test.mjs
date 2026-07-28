@@ -24,11 +24,8 @@ const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
 
 // a fixture combination whose evidence bundle we control
 const FIXTURE = readJson(
-  'docs/interaction-review/audit-fixtures/2026-07-28-cotrimoxazole-audit-fixture-manifest.json',
+  'data-static/combination-identity-overrides.json',
 );
-for (const component of FIXTURE.combinations[0].components) {
-  [component.runtime_ingredient_id] = component.assertion_ingredient_ids;
-}
 
 function scratchRoot(manifest, bundles = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aushadhi-gate-'));

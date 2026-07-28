@@ -1,7 +1,12 @@
 import {
+  assertAuthenticReviewedCombinationMappedProduct,
   assertReviewedCombinationMappedProduct,
 } from './interaction-mapping.mjs';
-import { strictPlainDataSnapshot } from './strict-plain-data.mjs';
+import {
+  strictPlainDataSnapshot,
+  strictPlainDataSnapshotAllowShared,
+} from './strict-plain-data.mjs';
+import { types as utilTypes } from 'node:util';
 
 export const DISCLAIMER = 'No listed interaction does not establish safety. Verify with a pharmacist or clinician and current approved labeling.';
 
@@ -72,6 +77,43 @@ function assertStringArray(value, label, { minItems = 0, unique = false } = {}) 
     const item = requireString(value[index], `${label}[${index}]`);
     if (unique && seen.has(item)) throw new TypeError(`${label} must contain unique values`);
     seen.add(item);
+  }
+}
+
+function stableResolvedInputEnvelope(value, label) {
+  assertObject(value, label);
+  if (utilTypes.isProxy(value)) throw new TypeError(`${label} may not be a Proxy`);
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    throw new TypeError(`${label} must use a plain object prototype`);
+  }
+  const stable = Object.create(null);
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key !== 'string') throw new TypeError(`${label} may not contain symbol properties`);
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor || !('value' in descriptor) || descriptor.enumerable !== true) {
+      throw new TypeError(
+        `${label}.${key} must be an enumerable data property; accessors are forbidden`,
+      );
+    }
+    Object.defineProperty(stable, key, {
+      value: key === 'product'
+        ? descriptor.value
+        : strictPlainDataSnapshot(descriptor.value, `${label}.${key}`),
+      enumerable: true,
+      writable: false,
+      configurable: false,
+    });
+  }
+  return Object.freeze(stable);
+}
+
+function stableResolvedProduct(value, label) {
+  try {
+    assertAuthenticReviewedCombinationMappedProduct(value);
+    return value;
+  } catch {
+    return strictPlainDataSnapshotAllowShared(value, label);
   }
 }
 
@@ -307,6 +349,38 @@ function validateSupersessionFields(value, label) {
   assertCanonicalStringArray(value.supersedes_rule_ids, `${label}.supersedes_rule_ids`);
 }
 
+function validateLicenceNotices(value) {
+  assertObject(value, 'licence_notices');
+  const required = new Set([
+    'attribution',
+    'licence_notice',
+    'licence_id',
+    'licence_url',
+    'source_url',
+    'changes',
+  ]);
+  for (const [sourceId, notice] of Object.entries(value)) {
+    const label = `licence_notices.${sourceId}`;
+    assertObject(notice, label);
+    assertExactKeys(notice, required, label);
+    for (const field of ['attribution', 'licence_notice', 'licence_id', 'changes']) {
+      requireString(notice[field], `${label}.${field}`);
+    }
+    for (const field of ['licence_url', 'source_url']) {
+      const raw = requireString(notice[field], `${label}.${field}`);
+      let url;
+      try {
+        url = new URL(raw);
+      } catch {
+        throw new TypeError(`${label}.${field} must be a valid HTTPS URL`);
+      }
+      if (url.protocol !== 'https:') {
+        throw new TypeError(`${label}.${field} must be a valid HTTPS URL`);
+      }
+    }
+  }
+}
+
 function validateRule(value, index, schemaVersion) {
   const label = `rules[${index}]`;
   assertObject(value, label);
@@ -416,6 +490,7 @@ export function validateRulePack(rulePack) {
   }
   requireString(rulePack.licence, 'rule pack licence');
   assertStringArray(rulePack.source_ids, 'rule pack source_ids', { minItems: 1, unique: true });
+  validateLicenceNotices(rulePack.licence_notices);
   if (!COVERAGE_VALUES.has(rulePack.declared_coverage)) {
     throw new TypeError('rule pack declared_coverage is invalid');
   }
@@ -540,8 +615,8 @@ function mappingIssue(record, ingredient, ingredientIndex, status) {
   return issue;
 }
 
-function hasReviewedRuntimeSubject(record, ingredient) {
-  const presentation = record.product.presentation;
+function hasReviewedRuntimeSubject(product, ingredient) {
+  const presentation = product.presentation;
   const subject = ingredient?.runtime_subject;
   if (presentation?.status !== 'reviewed_override' || !isObject(subject)) return false;
   for (const field of ['drug', 'route', 'formulation']) {
@@ -553,12 +628,12 @@ function hasReviewedRuntimeSubject(record, ingredient) {
   return ingredient.runtime_drug === undefined || subject.drug === ingredient.runtime_drug;
 }
 
-function reviewedCombinationSubjectId(record, expectedProfile) {
-  const combination = record.product.combination;
-  const presentation = record.product.presentation;
+function reviewedCombinationSubjectId(product, expectedProfile) {
+  const combination = product.combination;
+  const presentation = product.presentation;
   if (!isObject(combination) || combination.status !== 'reviewed_override') return null;
   try {
-    assertReviewedCombinationMappedProduct(record.product, expectedProfile);
+    assertReviewedCombinationMappedProduct(product, expectedProfile);
   } catch {
     return null;
   }
@@ -596,9 +671,9 @@ function reviewedCombinationSubjectId(record, expectedProfile) {
   if (componentIds.size !== combination.components.length) return null;
 
   const mappedIngredientIds = new Set();
-  for (const ingredient of record.product.ingredients) {
+  for (const ingredient of product.ingredients) {
     if (!MAPPED_STATUSES.has(mappingStatus(ingredient))) continue;
-    if (!hasReviewedRuntimeSubject(record, ingredient)) continue;
+    if (!hasReviewedRuntimeSubject(product, ingredient)) continue;
     try {
       mappedIngredientIds.add(ingredientId(ingredient, 'combination component'));
     } catch {
@@ -868,14 +943,21 @@ export function checkResolvedProducts({
   let presentationOperationalError = false;
 
   for (let inputIndex = 0; inputIndex < resolvedInputs.length; inputIndex += 1) {
-    const record = resolvedInputs[inputIndex];
-    assertObject(record, `resolvedInputs[${inputIndex}]`);
+    let record = stableResolvedInputEnvelope(
+      resolvedInputs[inputIndex],
+      `resolvedInputs[${inputIndex}]`,
+    );
     requireString(record.status, `resolvedInputs[${inputIndex}].status`);
     if (record.status !== 'resolved') {
       unresolved.push(structuredClone(record));
       continue;
     }
     assertObject(record.product, `resolvedInputs[${inputIndex}].product`);
+    const product = stableResolvedProduct(
+      record.product,
+      `resolvedInputs[${inputIndex}].product`,
+    );
+    record = Object.freeze(Object.assign(Object.create(null), record, { product }));
     requireString(record.product.product_id, `resolvedInputs[${inputIndex}].product.product_id`);
     if (!Array.isArray(record.product.ingredients)) {
       throw new TypeError(`resolvedInputs[${inputIndex}].product.ingredients must be an array`);
@@ -913,7 +995,7 @@ export function checkResolvedProducts({
       }
       if (id !== null) {
         mappedIngredientCount += 1;
-        if (hasReviewedRuntimeSubject(record, ingredient)) {
+        if (hasReviewedRuntimeSubject(record.product, ingredient)) {
           mappedIngredients.push({ ingredient_id: id });
         } else {
           unresolved.push(mappingIssue(
@@ -930,7 +1012,7 @@ export function checkResolvedProducts({
         unresolved.push(mappingIssue(record, ingredient, ingredientIndex, issueStatus));
       }
     }
-    const combinationSubjectId = reviewedCombinationSubjectId(record, rulePack.profile);
+    const combinationSubjectId = reviewedCombinationSubjectId(record.product, rulePack.profile);
     if (combinationSubjectId !== null) {
       mappedIngredients.push({ ingredient_id: combinationSubjectId });
     }

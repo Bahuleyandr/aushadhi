@@ -10,6 +10,9 @@ import {
   verifyCombinationManifestEvidence,
 } from '../src/lib/combination-rxnorm-evidence.mjs';
 import {
+  verifyPmbjpCombinationEvidenceFiles,
+} from '../src/lib/pmbjp-combination-evidence.mjs';
+import {
   checkResolvedProducts,
 } from '../src/lib/interaction-checker.mjs';
 import {
@@ -23,6 +26,17 @@ import {
 } from '../src/lib/product-resolver.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const PMBJP_SOURCE = {
+  restrictedRoot: path.join(ROOT, 'data/interaction/internal-evaluation'),
+  pdfPath: path.join(
+    ROOT,
+    'data/interaction/internal-evaluation/pmbjp-product-list/pmbjp-product-list.pdf',
+  ),
+  tableTextPath: path.join(
+    ROOT,
+    'data/interaction/internal-evaluation/pmbjp-product-list/pmbjp-product-list.table.txt',
+  ),
+};
 const readJson = (relativePath) => JSON.parse(
   fs.readFileSync(path.join(ROOT, relativePath), 'utf8'),
 );
@@ -103,9 +117,21 @@ function loadCommittedManifestAndBundles() {
   return { manifest, bundles };
 }
 
+function verifyWithPmbjpSource(manifest, bundles) {
+  const pmbjpSourceReport = verifyPmbjpCombinationEvidenceFiles(manifest, PMBJP_SOURCE);
+  return {
+    pmbjpSourceReport,
+    report: verifyCombinationManifestEvidence(
+      manifest,
+      bundles,
+      { pmbjpSourceReport },
+    ),
+  };
+}
+
 function compileCommittedManifest() {
   const { manifest, bundles } = loadCommittedManifestAndBundles();
-  const verificationReport = verifyCombinationManifestEvidence(manifest, bundles);
+  const { report: verificationReport } = verifyWithPmbjpSource(manifest, bundles);
   return {
     manifest,
     compiled: compileCombinationIdentityManifest(manifest, {
@@ -246,6 +272,16 @@ test('an authentic mapped combination supplements its component subjects in the 
     profile: 'internal-evaluation',
     licence: 'CC-BY-4.0',
     source_ids: ['test-evidence'],
+    licence_notices: {
+      'test-evidence': {
+        attribution: 'Aushadhi test contributors',
+        licence_notice: 'Creative Commons Attribution 4.0 International',
+        licence_id: 'CC-BY-4.0',
+        licence_url: 'https://creativecommons.org/licenses/by/4.0/legalcode',
+        source_url: 'https://example.test/aushadhi',
+        changes: 'Synthetic combination checker fixture.',
+      },
+    },
     declared_coverage: 'unknown',
     rules: [
       reviewedRule(
@@ -460,6 +496,32 @@ test('an authentic mapped combination supplements its component subjects in the 
     rulePack: transplantPack,
   });
   assert.deepEqual(transplantResult.reviewed_findings, []);
+
+  let productReads = 0;
+  const statefulRecord = {
+    input: 'Stateful combination fixture',
+    status: 'resolved',
+  };
+  Object.defineProperty(statefulRecord, 'product', {
+    enumerable: true,
+    get() {
+      productReads += 1;
+      return productReads === 1
+        ? combinationProduct
+        : { ...combinationProduct, product_id: transplantedProductId };
+    },
+  });
+  assert.throws(
+    () => checkResolvedProducts({
+      resolvedInputs: [
+        { input: 'Warfarin fixture', status: 'resolved', product: otherProduct },
+        statefulRecord,
+      ],
+      rulePack: transplantPack,
+    }),
+    /product must be an enumerable data property|accessors/u,
+  );
+  assert.equal(productReads, 0);
 });
 
 test('the evidence gate binds each reviewed product assertion to its exact SCD and scope', () => {
@@ -483,7 +545,7 @@ test('the evidence gate binds each reviewed product assertion to its exact SCD a
   ]) {
     const { manifest, bundles } = loadCommittedManifestAndBundles();
     mutate(manifest);
-    const report = verifyCombinationManifestEvidence(manifest, bundles);
+    const { report } = verifyWithPmbjpSource(manifest, bundles);
     assert.equal(report.verified, false);
   }
 });
@@ -520,10 +582,83 @@ test('the evidence gate binds the runtime alias, structural id, and reviewed PMB
     const inputs = loadCommittedManifestAndBundles();
     mutate(inputs);
     assert.equal(
-      verifyCombinationManifestEvidence(inputs.manifest, inputs.bundles).verified,
+      verifyWithPmbjpSource(inputs.manifest, inputs.bundles).report.verified,
       false,
     );
   }
+});
+
+test('component names and brand fragments cannot be promoted as a combination runtime alias', () => {
+  for (const alias of [
+    'trimethoprim',
+    'sulphamethoxazole',
+    'co',
+    'tablets',
+    'ip',
+    'co-trimoxazole sulphamethoxazole',
+  ]) {
+    const { manifest, bundles } = loadCommittedManifestAndBundles();
+    const combination = manifest.combinations[0];
+    const oldId = combination.combination_id;
+    const newId = `combination:${alias.replaceAll(' ', '-')}:rxnorm-10831`;
+    combination.runtime_drug = alias;
+    combination.combination_id = newId;
+    bundles[newId] = { ...bundles[oldId], combination_id: newId };
+    delete bundles[oldId];
+    assert.equal(
+      verifyWithPmbjpSource(manifest, bundles).report.verified,
+      false,
+      `${alias} must not identify the whole fixed-dose combination`,
+    );
+  }
+});
+
+test('explicit product form and strength basis must agree with the reviewed tablet SCD', () => {
+  const mutations = [
+    (row) => {
+      row.form_raw = 'oral suspension';
+      row.pack_label = '100 ml';
+    },
+    (row) => {
+      row.ingredients[0].strength_raw = '800mg per 5ml';
+      row.ingredients[1].strength_raw = '160mg per 5ml';
+    },
+  ];
+
+  for (const mutate of mutations) {
+    const { manifest, bundles } = loadCommittedManifestAndBundles();
+    const row = structuredClone(PMBJP_89);
+    mutate(row);
+    const presentation = manifest.combinations[0].presentations[0];
+    presentation.product_id = productIdForRow(row);
+    presentation.product_assertion_sha256 = productAssertionHashForRow(row);
+    presentation.product_assertion = productAssertionForRow(row);
+    assert.equal(
+      verifyWithPmbjpSource(manifest, bundles).report.verified,
+      false,
+    );
+  }
+});
+
+test('editing PMBJP identifier text cannot relabel a reviewed tablet as drug code 88', () => {
+  const { manifest, bundles } = loadCommittedManifestAndBundles();
+  const combination = manifest.combinations[0];
+  combination.presentations[0].source_identity.code = '88';
+  combination.review.evidence.find(
+    (entry) => entry.evidence_ref === 'pmbjp-product-list',
+  ).identifier = 'pmbjp-product-list:88,90';
+  const sourceReport = verifyPmbjpCombinationEvidenceFiles(manifest, PMBJP_SOURCE);
+  assert.equal(sourceReport.verified, false);
+  const combined = verifyCombinationManifestEvidence(
+    manifest,
+    bundles,
+    { pmbjpSourceReport: sourceReport },
+  );
+  assert.equal(combined.verified, false);
+  assert.ok(sourceReport.findings.some(
+    (finding) => finding.code === 'pmbjp_source_product_mismatch'
+      || finding.code === 'pmbjp_review_identifier_mismatch',
+  ));
 });
 
 test('custom serialization cannot hide manifest mutation from the evidence capability', () => {

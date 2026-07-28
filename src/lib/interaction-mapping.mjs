@@ -849,16 +849,11 @@ export function mapResolvedProducts({
   });
 }
 
-export function assertReviewedCombinationMappedProduct(product, expectedProfile) {
+export function assertAuthenticReviewedCombinationMappedProduct(product) {
   if (!isObject(product) || !REVIEWED_COMBINATION_PRODUCTS.has(product)) {
     throw new TypeError('combination product is not an authentic reviewed mapping result');
   }
   const binding = REVIEWED_COMBINATION_PRODUCTS.get(product);
-  if (binding.profile !== expectedProfile) {
-    throw new TypeError(
-      `combination product profile ${binding.profile} does not match ${expectedProfile}`,
-    );
-  }
   if (product.combination !== binding.combination
       || product.presentation !== binding.presentation
       || product.product_id !== binding.product_id
@@ -871,6 +866,17 @@ export function assertReviewedCombinationMappedProduct(product, expectedProfile)
     throw new TypeError('combination product no longer matches its reviewed mapping result');
   }
   assertRuntimeCombinationResult(product.combination);
+  return product;
+}
+
+export function assertReviewedCombinationMappedProduct(product, expectedProfile) {
+  assertAuthenticReviewedCombinationMappedProduct(product);
+  const binding = REVIEWED_COMBINATION_PRODUCTS.get(product);
+  if (binding.profile !== expectedProfile) {
+    throw new TypeError(
+      `combination product profile ${binding.profile} does not match ${expectedProfile}`,
+    );
+  }
   return product;
 }
 

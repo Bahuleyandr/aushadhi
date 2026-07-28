@@ -11,6 +11,9 @@ import {
   verifyCombinationManifestEvidence,
 } from '../lib/combination-rxnorm-evidence.mjs';
 import {
+  verifyPmbjpCombinationEvidenceFiles,
+} from '../lib/pmbjp-combination-evidence.mjs';
+import {
   mappingAllowedForProfile,
   mapResolvedProducts,
   summarizeInteractionMappings,
@@ -54,6 +57,16 @@ const DEFAULT_COMBINATION_EVIDENCE = path.join(
   'data-static',
   'combination-rxnorm-evidence',
 );
+const PMBJP_RESTRICTED_ROOT = path.join(
+  ROOT,
+  'data',
+  'interaction',
+  'internal-evaluation',
+);
+const DEFAULT_PMBJP_SOURCE_DIR = path.join(
+  PMBJP_RESTRICTED_ROOT,
+  'pmbjp-product-list',
+);
 
 function requireValue(args, index, flag) {
   const value = args[index + 1];
@@ -72,6 +85,11 @@ export function parseArgs(args) {
     presentationMappingsPath: DEFAULT_PRESENTATION_MAPPINGS,
     combinationManifestPath: DEFAULT_COMBINATION_MANIFEST,
     combinationEvidenceDir: DEFAULT_COMBINATION_EVIDENCE,
+    pmbjpListPath: path.join(DEFAULT_PMBJP_SOURCE_DIR, 'pmbjp-product-list.pdf'),
+    pmbjpTablePath: path.join(
+      DEFAULT_PMBJP_SOURCE_DIR,
+      'pmbjp-product-list.table.txt',
+    ),
     queries: [],
   };
 
@@ -97,6 +115,12 @@ export function parseArgs(args) {
       index += 1;
     } else if (flag === '--combination-evidence-dir') {
       options.combinationEvidenceDir = path.resolve(ROOT, requireValue(args, index, flag));
+      index += 1;
+    } else if (flag === '--pmbjp-list') {
+      options.pmbjpListPath = path.resolve(ROOT, requireValue(args, index, flag));
+      index += 1;
+    } else if (flag === '--pmbjp-table') {
+      options.pmbjpTablePath = path.resolve(ROOT, requireValue(args, index, flag));
       index += 1;
     } else if (flag === '--drug') {
       options.queries.push(parseDrugQuery(requireValue(args, index, flag)));
@@ -314,12 +338,19 @@ export async function runInteractionCheck(options) {
     options.presentationMappingsPath,
     'product presentation overrides',
   );
-  const combinationManifest = await readJson(
+  const authoredCombinationManifest = await readJson(
     options.combinationManifestPath,
     'combination identity manifest',
   );
   validateIngredientMappingManifest(ingredientManifest);
   validateProductPresentationManifest(presentationManifest);
+  validateCombinationIdentityManifest(authoredCombinationManifest);
+  const combinationManifest = {
+    ...authoredCombinationManifest,
+    combinations: authoredCombinationManifest.combinations.filter(
+      (combination) => combination.allowed_profiles.includes(options.profile),
+    ),
+  };
   validateCombinationIdentityManifest(combinationManifest);
   assertMappingEvidenceSourcesAllowed(manifest, options.profile, [
     { manifest: ingredientManifest, allowedUses: ['identity'] },
@@ -336,6 +367,16 @@ export async function runInteractionCheck(options) {
   const combinationVerificationReport = verifyCombinationManifestEvidence(
     combinationManifest,
     combinationBundles,
+    {
+      pmbjpSourceReport: verifyPmbjpCombinationEvidenceFiles(
+        combinationManifest,
+        {
+          restrictedRoot: PMBJP_RESTRICTED_ROOT,
+          pdfPath: options.pmbjpListPath,
+          tableTextPath: options.pmbjpTablePath,
+        },
+      ),
+    },
   );
   assertCombinationEvidenceVerified(combinationVerificationReport);
   const compiledCombinationManifest = compileCombinationIdentityManifest(

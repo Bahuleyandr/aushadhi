@@ -27,6 +27,9 @@ import {
   productIdForRow,
 } from './product-resolver.mjs';
 import { strictPlainDataSnapshot } from './strict-plain-data.mjs';
+import {
+  assertVerifiedPmbjpCombinationEvidence,
+} from './pmbjp-combination-evidence.mjs';
 
 export const EVIDENCE_BUNDLE_SCHEMA_VERSION = 1;
 // which RxNorm ingredient notion a comparison used; recorded per presentation so a
@@ -73,6 +76,23 @@ const PRODUCT_ASSERTION_SOURCE_FIELDS = new Set(['observed_name', 'molecule_raw'
 const RXNORM_DOSE_FORM_SCOPES = new Map([
   ['Oral Tablet', Object.freeze({ route: 'oral', formulation: 'tablet' })],
 ]);
+const EXPLICIT_PRODUCT_FORMS = new Map([
+  ['tablet', 'tablet'],
+  ['tablets', 'tablet'],
+  ['oral tablet', 'tablet'],
+  ['oral tablets', 'tablet'],
+  ['capsule', 'capsule'],
+  ['capsules', 'capsule'],
+  ['oral capsule', 'capsule'],
+  ['oral capsules', 'capsule'],
+  ['suspension', 'suspension'],
+  ['oral suspension', 'suspension'],
+  ['solution', 'solution'],
+  ['oral solution', 'solution'],
+  ['injection', 'injection'],
+]);
+const PRODUCT_STRENGTH = /^(\d+(?:\.\d+)?)\s*(mg|mcg|g|iu)(?:\s*(?:\/|per)\s*(\d+(?:\.\d+)?)?\s*(ml|each))?$/iu;
+const MAX_CAPTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 function deepFreeze(value, seen = new Set()) {
   if (value === null || typeof value !== 'object' || seen.has(value)) return value;
@@ -225,6 +245,34 @@ function normalizedWords(value) {
     .trim();
 }
 
+function componentComparisonWords(value) {
+  return normalizedWords(value).replace(/\bsulph/gu, 'sulf');
+}
+
+function reviewedCombinationAlias(brandName) {
+  const openingParenthesis = String(brandName ?? '').indexOf('(');
+  if (openingParenthesis <= 0) return null;
+  const alias = normalizedWords(String(brandName).slice(0, openingParenthesis));
+  return alias || null;
+}
+
+function explicitProductFormulation(value) {
+  if (value === null) return null;
+  return EXPLICIT_PRODUCT_FORMS.get(normalizedWords(value)) ?? undefined;
+}
+
+function productStrengthBasis(value) {
+  if (typeof value !== 'string') return null;
+  const match = PRODUCT_STRENGTH.exec(value.trim());
+  if (!match) return null;
+  return {
+    numerator_value: match[1],
+    numerator_unit: match[2].toUpperCase(),
+    denominator_value: match[4] === undefined ? '1' : (match[3] ?? '1'),
+    denominator_unit: match[4] === undefined ? 'EACH' : match[4].toUpperCase(),
+  };
+}
+
 function presentationCodeEvidence(combination, code) {
   const evidenceByRef = new Map(
     (combination.review?.evidence ?? []).map((entry) => [entry.evidence_ref, entry]),
@@ -262,11 +310,35 @@ function verifyPresentationProductBinding(findings, combination, presentation) {
 
   const row = rowFromProductAssertion(findings, presentation, label);
   if (row === null) return findings;
-  const brandWords = normalizedWords(row.brand_name);
+  const explicitFormulation = explicitProductFormulation(
+    presentation.product_assertion.form_raw,
+  );
+  if (explicitFormulation === undefined) {
+    fail(findings, 'unsupported_explicit_product_form',
+      `${label} product_assertion.form_raw is not a reviewed explicit formulation`);
+  } else if (explicitFormulation !== null
+      && explicitFormulation !== presentation.formulation) {
+    fail(findings, 'explicit_product_form_mismatch',
+      `${label} explicitly records ${explicitFormulation} but the reviewed presentation is `
+      + `${presentation.formulation}`);
+  }
   const runtimeWords = normalizedWords(combination.runtime_drug);
-  if (!runtimeWords || !(` ${brandWords} `.includes(` ${runtimeWords} `))) {
+  const reviewedAlias = reviewedCombinationAlias(row.brand_name);
+  if (!runtimeWords || reviewedAlias === null || runtimeWords !== reviewedAlias) {
     fail(findings, 'runtime_drug_product_mismatch',
-      `${label} runtime drug "${combination.runtime_drug}" is not identified by the reviewed product`);
+      `${label} runtime drug "${combination.runtime_drug}" does not equal the reviewed `
+      + `combination alias ${reviewedAlias ?? '(missing)'}`);
+  }
+  const runtimeComponentWords = componentComparisonWords(combination.runtime_drug);
+  const componentNames = [
+    ...combination.components.map((component) => component.name),
+    ...presentation.product_assertion.ingredients.map(
+      (ingredient) => ingredient.observed_name,
+    ),
+  ].map(componentComparisonWords);
+  if (componentNames.includes(runtimeComponentWords)) {
+    fail(findings, 'runtime_drug_is_component',
+      `${label} runtime drug "${combination.runtime_drug}" names a component, not the combination`);
   }
 
   const assertionIds = row.ingredients.map(
@@ -286,13 +358,19 @@ function verifyPresentationProductBinding(findings, combination, presentation) {
   for (const [componentIndex, component] of combination.components.entries()) {
     const ingredient = row.ingredients[assignedSlots[componentIndex]];
     const scdEntry = scdEntries.get(component.rxcui);
+    const rawBasis = productStrengthBasis(ingredient.strength_raw);
     if (!scdEntry
+        || rawBasis === null
         || ingredient.strength_value === null
         || ingredient.strength_value === undefined
+        || Number(rawBasis.numerator_value) !== Number(ingredient.strength_value)
+        || rawBasis.numerator_unit !== String(ingredient.strength_unit ?? '').toUpperCase()
         || String(ingredient.strength_value) !== scdEntry.numerator_value
-        || String(ingredient.strength_unit ?? '').toUpperCase() !== scdEntry.numerator_unit) {
+        || String(ingredient.strength_unit ?? '').toUpperCase() !== scdEntry.numerator_unit
+        || Number(rawBasis.denominator_value) !== Number(scdEntry.denominator_value)
+        || rawBasis.denominator_unit !== scdEntry.denominator_unit) {
       fail(findings, 'product_scd_strength_mismatch',
-        `${label} product strength for ${component.name} does not equal its SCD strength`);
+        `${label} product strength and basis for ${component.name} do not equal its SCD strength`);
     }
   }
 
@@ -384,6 +462,12 @@ function verifyCapture(findings, bundle) {
     fail(findings, 'capture_predates_rxnorm_release',
       `capture.captured_at ${capture.captured_at} predates declared RxNorm release `
       + `${bundle.rxnorm_release}`);
+  }
+  if (bundle.classification === AUTHORITATIVE_CLASSIFICATION
+      && !Number.isNaN(capturedAt)
+      && capturedAt > Date.now() + MAX_CAPTURE_CLOCK_SKEW_MS) {
+    fail(findings, 'capture_timestamp_in_future',
+      `capture.captured_at ${capture.captured_at} is later than the verifier clock`);
   }
 
   const captures = [];
@@ -802,6 +886,17 @@ export function verifyCombinationRxNormEvidence(combination, bundle, options = u
       `${combination?.combination_id ?? 'combination'} has no evidence bundle`);
     return { combination_id: combination?.combination_id ?? null, verified: false, findings };
   }
+  try {
+    combination = strictPlainDataSnapshot(combination, 'combination identity');
+    bundle = strictPlainDataSnapshot(bundle, 'combination evidence bundle');
+  } catch (error) {
+    fail(findings, 'non_plain_evidence_input', error.message);
+    return {
+      combination_id: combination?.combination_id ?? null,
+      verified: false,
+      findings,
+    };
+  }
   if (bundle.schema_version !== EVIDENCE_BUNDLE_SCHEMA_VERSION) {
     fail(findings, 'unsupported_bundle_schema', 'evidence bundle schema_version is unsupported');
   }
@@ -820,16 +915,41 @@ export function verifyCombinationRxNormEvidence(combination, bundle, options = u
   };
 }
 
-export function verifyCombinationManifestEvidence(manifest, bundles) {
+export function verifyCombinationManifestEvidence(manifest, bundles, options = {}) {
+  const pmbjpSourceReport = options?.pmbjpSourceReport ?? null;
   const snapshot = strictPlainDataSnapshot(manifest, 'combination identity manifest');
+  const bundleSnapshot = strictPlainDataSnapshot(
+    bundles ?? {},
+    'combination evidence bundles',
+  );
+  const fullIdentityManifest = snapshot.schema_version === 1
+    && snapshot.identity_namespace === 'aushadhi:ingredient-identity:v1';
+  const hasPmbjpPresentations = snapshot.combinations.some((combination) => (
+    combination.presentations?.some(
+      (presentation) => presentation.source_identity?.namespace === 'presentation:pmbjp',
+    )
+  ));
+  let pmbjpSourceError = null;
+  if (fullIdentityManifest && hasPmbjpPresentations) {
+    try {
+      assertVerifiedPmbjpCombinationEvidence(pmbjpSourceReport, manifest);
+    } catch (error) {
+      pmbjpSourceError = error;
+    }
+  }
   const reports = snapshot.combinations.map((combination) => {
     const rxNormReport = verifyCombinationRxNormEvidence(
       combination,
-      bundles?.[combination.combination_id],
+      bundleSnapshot[combination.combination_id],
     );
     const findings = [...rxNormReport.findings];
     for (const presentation of combination.presentations ?? []) {
       verifyPresentationProductBinding(findings, combination, presentation);
+    }
+    if (pmbjpSourceError !== null && combination.presentations?.some(
+      (presentation) => presentation.source_identity?.namespace === 'presentation:pmbjp',
+    )) {
+      fail(findings, 'unverified_pmbjp_product_identity_source', pmbjpSourceError.message);
     }
     return {
       combination_id: combination.combination_id,
@@ -847,6 +967,7 @@ export function verifyCombinationManifestEvidence(manifest, bundles) {
       manifest,
       snapshot,
       fingerprint: sha256(JSON.stringify(snapshot)),
+      pmbjp_source_report: pmbjpSourceReport,
     });
   }
   return report;

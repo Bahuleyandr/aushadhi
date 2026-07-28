@@ -480,13 +480,16 @@
       "redistributable": false,
       "artifact_pack": "internal-restricted",
       "allowed_profiles": ["internal-evaluation"],
-      "allowed_uses": ["catalogue", "ingredient-index", "product-resolution"],
+      "allowed_uses": ["catalogue", "identity", "ingredient-index", "product-resolution"],
       "required_storage_zones": {
         "internal-evaluation": ["data/interaction/internal-evaluation"]
       },
       "read_only_input_zones": {
         "internal-evaluation": ["dist"]
       },
+      "allowed_origin_hosts": ["static.pib.gov.in"],
+      "allowed_origin_paths": ["/WriteReadData/specificdocs/documents/2026/feb/doc202626781701.pdf"],
+      "requires_evidence_payload_validation": true,
       "disabled_reasons": []
     },
     "kaggle-2025": {

@@ -17,6 +17,9 @@ import {
   verifyCombinationManifestEvidence,
 } from '../src/lib/combination-rxnorm-evidence.mjs';
 import {
+  verifyPmbjpCombinationEvidenceFiles,
+} from '../src/lib/pmbjp-combination-evidence.mjs';
+import {
   productAssertionForRow,
   productAssertionHashForRow,
   productIdForRow,
@@ -24,6 +27,17 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const COMBINATION_ID = 'combination:co-trimoxazole:rxnorm-10831';
+const PMBJP_SOURCE = {
+  restrictedRoot: path.join(ROOT, 'data/interaction/internal-evaluation'),
+  pdfPath: path.join(
+    ROOT,
+    'data/interaction/internal-evaluation/pmbjp-product-list/pmbjp-product-list.pdf',
+  ),
+  tableTextPath: path.join(
+    ROOT,
+    'data/interaction/internal-evaluation/pmbjp-product-list/pmbjp-product-list.table.txt',
+  ),
+};
 
 function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relativePath), 'utf8'));
@@ -65,9 +79,15 @@ function evidenceBundles(manifest) {
 }
 
 function attachAuthenticReport(source) {
+  const pmbjpSourceReport = verifyPmbjpCombinationEvidenceFiles(
+    source.combinationManifest,
+    PMBJP_SOURCE,
+  );
+  assert.equal(pmbjpSourceReport.verified, true);
   source.combinationEvidenceReport = verifyCombinationManifestEvidence(
     source.combinationManifest,
     evidenceBundles(source.combinationManifest),
+    { pmbjpSourceReport },
   );
   assert.equal(source.combinationEvidenceReport.verified, true);
   return source;
@@ -403,10 +423,17 @@ test('combination promotion rejects forged, wrong-object and mutation-stale evid
 
   const wrongObject = combinationInputs();
   const otherManifest = structuredClone(wrongObject.combinationManifest);
+  const otherPmbjpSourceReport = verifyPmbjpCombinationEvidenceFiles(
+    otherManifest,
+    PMBJP_SOURCE,
+  );
+  assert.equal(otherPmbjpSourceReport.verified, true);
   wrongObject.combinationEvidenceReport = verifyCombinationManifestEvidence(
     otherManifest,
     evidenceBundles(otherManifest),
+    { pmbjpSourceReport: otherPmbjpSourceReport },
   );
+  assert.equal(wrongObject.combinationEvidenceReport.verified, true);
   assert.throws(
     () => compileInteractionRuntimePack(wrongObject),
     /not bound to this exact manifest object/u,
@@ -441,9 +468,15 @@ test('combination promotion rejects unreviewed identity and profile widening', (
 test('combination promotion binds runtime drug, presentation scope and explicit products', () => {
   const wrongDrug = combinationInputs();
   wrongDrug.combinationManifest.combinations[0].runtime_drug = 'sulfamethoxazole';
+  const wrongDrugPmbjpSourceReport = verifyPmbjpCombinationEvidenceFiles(
+    wrongDrug.combinationManifest,
+    PMBJP_SOURCE,
+  );
+  assert.equal(wrongDrugPmbjpSourceReport.verified, true);
   wrongDrug.combinationEvidenceReport = verifyCombinationManifestEvidence(
     wrongDrug.combinationManifest,
     evidenceBundles(wrongDrug.combinationManifest),
+    { pmbjpSourceReport: wrongDrugPmbjpSourceReport },
   );
   assert.equal(wrongDrug.combinationEvidenceReport.verified, false);
 
@@ -453,9 +486,15 @@ test('combination promotion binds runtime drug, presentation scope and explicit 
   for (const presentation of combination.presentations) {
     presentation.formulation = 'capsule';
   }
+  const wrongScopePmbjpSourceReport = verifyPmbjpCombinationEvidenceFiles(
+    wrongScope.combinationManifest,
+    PMBJP_SOURCE,
+  );
+  assert.equal(wrongScopePmbjpSourceReport.verified, true);
   wrongScope.combinationEvidenceReport = verifyCombinationManifestEvidence(
     wrongScope.combinationManifest,
     evidenceBundles(wrongScope.combinationManifest),
+    { pmbjpSourceReport: wrongScopePmbjpSourceReport },
   );
   assert.equal(wrongScope.combinationEvidenceReport.verified, false);
 
@@ -468,12 +507,12 @@ test('combination promotion binds runtime drug, presentation scope and explicit 
   );
 });
 
-test('a later reviewed combination presentation cannot widen an existing approval', () => {
+test('an unauthoritative later presentation cannot widen an existing approval', () => {
   const source = combinationInputs();
   const combination = source.combinationManifest.combinations[0];
   const additional = structuredClone(combination.presentations[0]);
   const additionalRow = {
-    brand_name: 'Co-trimoxazole 800mg/160mg Alternate Tablets IP',
+    brand_name: 'Co-trimoxazole (Sulphamethoxazole 800mg and Trimethoprim 160mg) Alternate Tablets IP',
     manufacturer: 'PMBJP (Jan Aushadhi)',
     pack_label: "20's",
     form_raw: null,
@@ -500,14 +539,27 @@ test('a later reviewed combination presentation cannot widen an existing approva
   combination.review.evidence.find(
     (evidence) => evidence.evidence_ref === 'pmbjp-product-list',
   ).identifier = 'pmbjp-product-list:89,90,9999';
-  attachAuthenticReport(source);
-
-  const compiled = compileInteractionRuntimePack(source);
-  assert.deepEqual(compiled.rules[0].product_pairs, expectedProductPairs(source));
-  assert.equal(compiled.rules[0].product_pairs.length, 6);
-  assert.ok(compiled.rules[0].product_pairs.every(
-    (pair) => !pair.includes(additional.product_id),
+  const pmbjpSourceReport = verifyPmbjpCombinationEvidenceFiles(
+    source.combinationManifest,
+    PMBJP_SOURCE,
+  );
+  assert.equal(pmbjpSourceReport.verified, false);
+  assert.ok(pmbjpSourceReport.findings.some(
+    (finding) => finding.code === 'pmbjp_source_code_absent',
   ));
+  source.combinationEvidenceReport = verifyCombinationManifestEvidence(
+    source.combinationManifest,
+    evidenceBundles(source.combinationManifest),
+    { pmbjpSourceReport },
+  );
+  assert.equal(source.combinationEvidenceReport.verified, false);
+  assert.ok(source.combinationEvidenceReport.reports[0].findings.some(
+    (finding) => finding.code === 'unverified_pmbjp_product_identity_source',
+  ));
+  assert.throws(
+    () => compileInteractionRuntimePack(source),
+    /combination evidence report is not an authentic verifier result/u,
+  );
 });
 
 test('combination promotion rejects a Cartesian product count mismatch', () => {

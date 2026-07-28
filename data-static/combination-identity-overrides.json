@@ -37,6 +37,13 @@
           "assertion_ingredient_ids": [
             "sha256:5b15ba7515bffc9682ddd1092973725241a66fd6bba12fda69d7fd8c8712a2bf",
             "sha256:f68344038f9f9bb5eb6194c285d27716c812b8f670ba1a156b89051f68eeaeaa"
+          ],
+          "assertion_ingredient_aliases": [
+            {
+              "ingredient_id": "sha256:f68344038f9f9bb5eb6194c285d27716c812b8f670ba1a156b89051f68eeaeaa",
+              "observed_name": "co-trimoxazole sulphamethoxazole",
+              "source_field": "molecule"
+            }
           ]
         },
         {

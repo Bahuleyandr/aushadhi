@@ -5,6 +5,9 @@ import {
   assertVerifiedCombinationManifestEvidence,
   verifyCombinationManifestEvidence,
 } from '../lib/combination-rxnorm-evidence.mjs';
+import {
+  verifyPmbjpCombinationEvidenceFiles,
+} from '../lib/pmbjp-combination-evidence.mjs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -56,8 +59,8 @@ function deepFreeze(value, seen = new Set()) {
   return Object.freeze(value);
 }
 
-export function buildCommittedRuntimePack() {
-  const { manifest, report } = assertCombinationEvidenceVerified();
+export function buildCommittedRuntimePack(pmbjpSource = defaultPmbjpSource(ROOT)) {
+  const { manifest, report } = assertCombinationEvidenceVerified(ROOT, pmbjpSource);
   return compileInteractionRuntimePack({
     promotionManifest: readJson(PATHS.promotion),
     draftPackBytes: fs.readFileSync(PATHS.draft),
@@ -96,7 +99,19 @@ function replaceAtomically(targetPath, text) {
 // Machine-enforced coupling: the manifest must exist, and any recorded combinations
 // may not be compiled or promoted until their RxNorm evidence verifies. The returned
 // manifest/report pair preserves the verifier capability for downstream compilation.
-export function assertCombinationEvidenceVerified(root = ROOT) {
+function defaultPmbjpSource(root) {
+  const restrictedRoot = path.join(root, 'data', 'interaction', 'internal-evaluation');
+  const sourceDir = path.join(restrictedRoot, 'pmbjp-product-list');
+  return {
+    pdfPath: path.join(sourceDir, 'pmbjp-product-list.pdf'),
+    tableTextPath: path.join(sourceDir, 'pmbjp-product-list.table.txt'),
+  };
+}
+
+export function assertCombinationEvidenceVerified(
+  root = ROOT,
+  pmbjpSource = defaultPmbjpSource(root),
+) {
   const manifestPath = path.join(root, 'data-static', 'combination-identity-overrides.json');
   if (!fs.existsSync(manifestPath)) {
     throw new Error(`combination identity manifest is missing: ${manifestPath}`);
@@ -116,7 +131,12 @@ export function assertCombinationEvidenceVerified(root = ROOT) {
       bundles[combination.combination_id] = JSON.parse(fs.readFileSync(file, 'utf8'));
     }
   }
-  const report = verifyCombinationManifestEvidence(manifest, bundles);
+  const pmbjpSourceReport = verifyPmbjpCombinationEvidenceFiles(manifest, pmbjpSource);
+  const report = verifyCombinationManifestEvidence(
+    manifest,
+    bundles,
+    { pmbjpSourceReport },
+  );
   if (!report.verified) {
     const detail = report.reports
       .filter((entry) => !entry.verified)
@@ -133,10 +153,23 @@ export function assertCombinationEvidenceVerified(root = ROOT) {
 
 function main() {
   const args = process.argv.slice(2);
-  if (args.some((arg) => arg !== '--check') || args.filter((arg) => arg === '--check').length > 1) {
-    throw new TypeError('usage: node src/cli/build-interaction-runtime-pack.mjs [--check]');
+  const allowed = args.every((arg) => (
+    arg === '--check'
+    || arg.startsWith('--pmbjp-list=')
+    || arg.startsWith('--pmbjp-table=')
+  ));
+  if (!allowed || args.filter((arg) => arg === '--check').length > 1) {
+    throw new TypeError(
+      'usage: node src/cli/build-interaction-runtime-pack.mjs [--check] '
+      + '[--pmbjp-list=<pdf>] [--pmbjp-table=<table-text>]',
+    );
   }
-  const serialized = serializeInteractionRuntimePack(buildCommittedRuntimePack());
+  const source = defaultPmbjpSource(ROOT);
+  const pdfArg = args.find((arg) => arg.startsWith('--pmbjp-list='));
+  const tableArg = args.find((arg) => arg.startsWith('--pmbjp-table='));
+  if (pdfArg) source.pdfPath = path.resolve(ROOT, pdfArg.slice('--pmbjp-list='.length));
+  if (tableArg) source.tableTextPath = path.resolve(ROOT, tableArg.slice('--pmbjp-table='.length));
+  const serialized = serializeInteractionRuntimePack(buildCommittedRuntimePack(source));
   if (args.includes('--check')) {
     if (!fs.existsSync(PATHS.output) || fs.readFileSync(PATHS.output, 'utf8') !== serialized) {
       throw new Error(
