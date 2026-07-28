@@ -21,8 +21,13 @@ branch:         main
 review_range:   863a4b5abd9839e068e6afb8bb246718b3716feb
                 ..
                 e90332def83337c5b8b81e619006bd9eb4f64415
-head_commit:    e90332def83337c5b8b81e619006bd9eb4f64415
-                (also recorded in docs/interaction-review/HEAD_COMMIT.txt)
+code_head:      e90332def83337c5b8b81e619006bd9eb4f64415
+                the reviewable code state. A packet cannot name the SHA of the
+                commit that contains it, so any commit after this one touches
+                DOCUMENTATION ONLY. Verify with:
+                  git diff --stat e90332def83337c5b8b81e619006bd9eb4f64415..HEAD
+                which must list only docs/interaction-review/ paths.
+                The current value is in docs/interaction-review/HEAD_COMMIT.txt.
 git rev-parse HEAD        == git rev-parse origin/main
 git status --porcelain    == empty
 node:           v26.5.0
