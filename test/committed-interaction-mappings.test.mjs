@@ -599,6 +599,7 @@ test('committed product presentation mappings contain only the eighteen approved
   assert.deepEqual(
     presentationManifest.mappings.map((mapping) => ({
       mapping_id: mapping.mapping_id,
+      source_identity: mapping.source_identity,
       product_id: mapping.product_id,
       product_assertion_sha256: mapping.product_assertion_sha256,
       allowed_profiles: mapping.allowed_profiles,
@@ -614,6 +615,12 @@ test('committed product presentation mappings contain only the eighteen approved
     })),
     approvedProducts.map((entry) => ({
       mapping_id: entry.mapping_id,
+      // D2: every approved PMBJP mapping is source-bound, and its code was verified
+      // against the catalogue row's own sources[].source_id before migration
+      source_identity: {
+        namespace: 'presentation:pmbjp',
+        code: entry.mapping_id.split(':')[2],
+      },
       product_id: entry.product_id,
       product_assertion_sha256: entry.product_assertion_sha256,
       allowed_profiles: ['internal-evaluation'],
@@ -641,6 +648,10 @@ test('committed product presentation mappings contain only the eighteen approved
       presentation: {
         status: 'reviewed_override',
         mapping_id: entry.mapping_id,
+        source_identity: {
+          namespace: 'presentation:pmbjp',
+          code: entry.mapping_id.split(':')[2],
+        },
         product_assertion_sha256: entry.product_assertion_sha256,
         route: 'oral',
         formulation: 'tablet',
