@@ -192,3 +192,67 @@ Skips name `pigz` as the missing prerequisite.
   requirement that the version response be captured immediately before and after the concept
   captures and both must agree.
 - **Resolver wiring**, pending D1 deduplication tests.
+
+---
+
+## Addendum — 2026-07-28, verifier integration fixture
+
+**Code head advanced to `3443e34e157653ed492d685af91be4ba84a5d793`.** The invariant
+above still holds: later commits touch documentation only.
+
+Your suggested integration fixture found a real defect on its first run, so it is
+worth recording plainly.
+
+**The SCD verification path was verifying nothing.** Its parsing had been written
+against a response shape invented for the unit fixtures — a bespoke endpoint
+returning `ingredients[]` with snake_case strengths. RxNav returns no such thing.
+Against real responses the verifier found nothing to compare and reported success.
+
+Captured read-only from `https://rxnav.nlm.nih.gov/REST`, version response taken
+immediately before **and** after the concept requests and confirmed identical, per
+your requirement:
+
+```text
+rxnorm_release   06-Jul-2026
+api_version      3.1.354
+responses        13, committed under
+                 data-static/combination-rxnorm-evidence/integration-fixture/
+                 sha256 5ba9dc630eec53b295cc370732b16e2be1a4fcef6b1b226003a62bc97fda203c
+classification   verifier_integration_fixture · promotion_authority none
+```
+
+What was already correct, now confirmed against live data:
+
+```text
+rxcui/<id>/properties                  -> properties.tty / .name
+rxcui/<id>/related?rela=has_part       -> relatedGroup.conceptGroup[].conceptProperties[]
+rxcui/<id>/historystatus               -> rxcuiStatusHistory.metaData.status / .isCurrent
+```
+
+What was wrong and is now corrected:
+
+```text
+SCD ingredients, strengths, dose form
+  -> rxcuiStatusHistory.definitionalFeatures.ingredientAndStrength[]
+       { baseRxcui, bossRxcui, activeIngredientRxcui, moietyRxcui,
+         numeratorValue, numeratorUnit, denominatorValue, denominatorUnit }
+     ...definitionalFeatures.doseFormConcept[].doseFormName
+SCD term type
+  -> its own properties endpoint, not the history-status response
+```
+
+So `rxnorm_scd` now pins **three** hashes — properties, history-status and
+`has_ingredients` — rather than one invented one. `moietyRxcui` was added to the
+ingredient-field allowlist (RxNav returns it); the plain `rxcui` field was removed,
+since ingredient-and-strength rows do not carry one. Denominator comparison was added
+because real rows carry `1 EACH` for a tablet.
+
+Live data confirms: all five concepts `Active` / `isCurrent YES`; MIN `10831`
+`has_part` → `{10180 IN, 10829 IN}`; both SCDs `has_ingredients` → `10831`.
+
+```text
+799 tests / 794 passed / 5 explicitly skipped / 0 failed   (exit 0)
+```
+
+Manifest still empty · resolver still unwired · `warfarin__cotrimoxazole` still
+blocked · production-open still 0.
