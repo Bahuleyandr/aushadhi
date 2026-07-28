@@ -844,6 +844,72 @@ function isUnresolvedFinding(finding) {
     && finding.clinical_action_status.startsWith('unresolved_pending_');
 }
 
+// D1 supersession (2026-07-28). A fixed-dose combination subject SUPPLEMENTS its
+// component subjects, so a co-trimoxazole product can raise co-trimoxazole,
+// sulfamethoxazole and trimethoprim subjects at once. Duplicate CLINICAL ALERTS are
+// removed here, at rule level, and only where a reviewer declared the overlap:
+//
+//   1. an exact reviewed combination outranks a component rule, which outranks a
+//      broad class rule;
+//   2. the two findings must concern the SAME victim and the SAME interaction
+//      family -- an unrelated component interaction such as
+//      methotrexate + trimethoprim is never touched;
+//   3. the overlap must be declared in supersedes_rule_ids. Nothing is inferred
+//      from alert text, severity or drug names;
+//   4. what was superseded stays visible in the audit trace.
+export const SUBJECT_SPECIFICITY_RANK = {
+  class: 1,
+  exact_member: 2,
+  exact_fixed_dose_combination: 3,
+};
+
+function findingVictim(finding) {
+  return finding.subject_roles?.object?.drug ?? null;
+}
+
+function canSupersede(suppressor, candidate, rulesById) {
+  const suppressorRule = rulesById[suppressor.rule_id];
+  const candidateRule = rulesById[candidate.rule_id];
+  if (!suppressorRule || !candidateRule) return false;
+  if (suppressor === candidate) return false;
+
+  // explicitly declared overlap only -- never inferred
+  const declared = suppressorRule.supersedes_rule_ids;
+  if (!Array.isArray(declared) || !declared.includes(candidate.rule_id)) return false;
+
+  // same clinical interaction family, both declared
+  const family = suppressorRule.interaction_family_id;
+  if (typeof family !== 'string' || family !== candidateRule.interaction_family_id) return false;
+
+  // same victim: two alerts about different victims are not duplicates
+  const victim = findingVictim(suppressor);
+  if (victim === null || victim !== findingVictim(candidate)) return false;
+
+  // strictly more specific
+  const suppressorRank = SUBJECT_SPECIFICITY_RANK[suppressorRule.subject_specificity] ?? 0;
+  const candidateRank = SUBJECT_SPECIFICITY_RANK[candidateRule.subject_specificity] ?? 0;
+  if (suppressorRank <= candidateRank) return false;
+
+  return suppressor.runtime_enabled === candidate.runtime_enabled
+    && !isUnresolvedFinding(suppressor)
+    && !isUnresolvedFinding(candidate);
+}
+
+function applySupersession(findings, rulesById) {
+  const superseded = [];
+  const surviving = findings.filter((candidate) => {
+    const suppressor = findings.find((entry) => canSupersede(entry, candidate, rulesById));
+    if (!suppressor) return true;
+    superseded.push({
+      ...candidate,
+      superseded_by: suppressor.rule_id,
+      superseded_reason: 'more_specific_rule_in_the_same_interaction_family',
+    });
+    return false;
+  });
+  return { surviving, superseded };
+}
+
 function canExplicitlySuppress(suppressor, candidate, rulesById) {
   const suppresses = rulesById[suppressor.rule_id]?.suppresses;
   return Array.isArray(suppresses)
@@ -944,6 +1010,45 @@ function validateRuntimeActionOwnership(rule) {
 
 function validateSuppressionGraph(rules, byId) {
   for (const rule of rules) {
+    if (rule.supersedes_rule_ids !== undefined) {
+      if (!Array.isArray(rule.supersedes_rule_ids)) {
+        throw new TypeError(
+          `interaction rule "${rule.rule_id}" supersedes_rule_ids must be an array`,
+        );
+      }
+      if (typeof rule.interaction_family_id !== 'string' || !rule.interaction_family_id.trim()) {
+        throw new TypeError(
+          `interaction rule "${rule.rule_id}" supersedes_rule_ids requires an `
+          + 'interaction_family_id',
+        );
+      }
+      if (SUBJECT_SPECIFICITY_RANK[rule.subject_specificity] === undefined) {
+        throw new TypeError(
+          `interaction rule "${rule.rule_id}" supersedes_rule_ids requires a subject_specificity `
+          + `of ${Object.keys(SUBJECT_SPECIFICITY_RANK).join(', ')}`,
+        );
+      }
+      const seenTargets = new Set();
+      for (const targetId of rule.supersedes_rule_ids) {
+        if (typeof targetId !== 'string' || !targetId.trim()) {
+          throw new TypeError(
+            `interaction rule "${rule.rule_id}" supersedes_rule_ids must contain rule IDs`,
+          );
+        }
+        if (targetId === rule.rule_id) {
+          throw new TypeError(`interaction rule "${rule.rule_id}" must not supersede itself`);
+        }
+        if (seenTargets.has(targetId)) {
+          throw new TypeError(
+            `interaction rule "${rule.rule_id}" supersedes duplicate target "${targetId}"`,
+          );
+        }
+        seenTargets.add(targetId);
+      }
+    } else if (rule.subject_specificity !== undefined
+        && SUBJECT_SPECIFICITY_RANK[rule.subject_specificity] === undefined) {
+      throw new TypeError(`interaction rule "${rule.rule_id}" subject_specificity is invalid`);
+    }
     if (rule.suppresses === undefined) continue;
     if (!Array.isArray(rule.suppresses)) {
       throw new TypeError(`interaction rule "${rule.rule_id}" suppresses must be an array`);
@@ -1499,12 +1604,24 @@ export function checkInteractions({
     }
     return true;
   };
-  const survivingFindings = findings.filter((candidate) => {
+  const afterCollisionSuppression = findings.filter((candidate) => {
     return !findings.some((suppressor) => {
       return canExplicitlySuppress(suppressor, candidate, rulesById)
         && subjectSubset(candidate.subjects, suppressor.subjects);
     });
   });
+  // D1: a combination subject supplements its component subjects, so duplicate
+  // CLINICAL ALERTS are removed here -- at rule level, on declared overlaps only.
+  const annotate = (finding) => {
+    const family = rulesById[finding.rule_id]?.interaction_family_id;
+    return family === undefined ? finding : { ...finding, interaction_family_id: family };
+  };
+  const { surviving, superseded } = applySupersession(
+    afterCollisionSuppression.map(annotate),
+    rulesById,
+  );
+  const survivingFindings = surviving;
+  const supersededFindings = superseded;
   const referenced = new Set();
   const member_gaps = [];
   for (const rule of evaluatedRules) {
@@ -1515,6 +1632,8 @@ export function checkInteractions({
   const classes_missing_members = [...new Set(member_gaps.map((gap) => gap.class))].sort();
   return {
     findings: survivingFindings,
+    // what supersession removed, kept visible rather than silently dropped
+    superseded_findings: supersededFindings,
     pairs_checked,
     coverage: {
       rules_total: evaluatedRules.length,
