@@ -23,6 +23,7 @@ import {
   writeJanAushadhiProvenance,
 } from '../src/adapters/janaushadhi.mjs';
 import { pdfToText } from '../src/lib/pdftotext.mjs';
+import { namesAgree } from '../src/cli/verify-pmbjp-mapping-codes.mjs';
 
 function tempDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'pmbjp-provenance-'));
@@ -183,5 +184,37 @@ test('pdfToText exposes table mode and rejects an unknown mode', async () => {
   await assert.rejects(
     () => pdfToText('x.pdf', 'x.txt', { mode: 'bbox' }),
     /mode must be "layout" or "table"/u,
+  );
+});
+
+// ── name agreement must not be satisfied by the molecule alone ───────────────
+//
+// Audit finding, 2026-07-28. namesAgree() compared the leading molecule token and
+// every numeric strength, but short-circuited to TRUE whenever EITHER side carried
+// no parseable strength. A mapping named without a strength would then confirm
+// against any row sharing its first token -- including a different dosage form, so
+// an oral-tablet mapping could confirm against an injection. That is the presentation
+// inference the standing prohibitions forbid.
+//
+// Not exploitable by the committed 18 (all carry strengths on both sides, verified
+// against the official list), and tightening keeps all 18 confirmed. Fixed rather
+// than left as headroom.
+test('name agreement rejects a strengthless match across dosage forms', () => {
+  // the case that motivated the fix
+  assert.equal(namesAgree('Warfarin Tablets IP', 'Warfarin Sodium Injection 5mg'), false);
+  assert.equal(namesAgree('Warfarin Tablets IP 1mg', 'Warfarin Injection'), false);
+});
+
+test('name agreement still accepts a genuine match and rejects real mismatches', () => {
+  assert.equal(namesAgree('Warfarin Tablets IP 1mg', 'Warfarin Tablets IP 1mg'), true);
+  // spacing and case differences are normalised away
+  assert.equal(namesAgree('Warfarin Tablets IP 5 mg', 'warfarin tablets ip 5mg'), true);
+  // same molecule, different strength -- the subtle code-swap case
+  assert.equal(namesAgree('Warfarin Tablets IP 1mg', 'Warfarin Tablets IP 2mg'), false);
+  assert.equal(namesAgree('Amiodarone Tablets IP 100 mg', 'Amiodarone Tablets IP 200 mg'), false);
+  // different molecule at the same strength
+  assert.equal(
+    namesAgree('Clarithromycin Tablets IP 250 mg', 'Azithromycin Tablets IP 250 mg'),
+    false,
   );
 });

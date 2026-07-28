@@ -55,14 +55,20 @@ function productSignature(value) {
 function signaturesAgree(a, b) {
   if (!a.head || !b.head) return false;
   if (a.head !== b.head) return false;
-  if (a.strengths.length === 0 || b.strengths.length === 0) return true;
+  // Both sides must carry a strength. This branch used to return true when EITHER
+  // side had none, which meant agreement rested on the leading molecule token alone
+  // -- so an oral-tablet mapping could confirm against an injection row of the same
+  // molecule. That is exactly the presentation inference the standing prohibitions
+  // forbid. All 18 committed mappings carry strengths on both sides, so tightening
+  // costs nothing and removes the headroom.
+  if (a.strengths.length === 0 || b.strengths.length === 0) return false;
   return a.strengths.join(',') === b.strengths.join(',');
 }
 
 // -layout extraction sometimes appends the following row's text to a row, so an
 // otherwise-exact match can carry trailing junk. A source entry that *begins with*
 // the mapped product name is the same product; a differing leading molecule is not.
-function namesAgree(mappedName, sourceName) {
+export function namesAgree(mappedName, sourceName) {
   const mapped = normaliseName(mappedName);
   const source = normaliseName(sourceName);
   if (!mapped || !source) return false;
