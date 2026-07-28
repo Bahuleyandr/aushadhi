@@ -16,6 +16,10 @@ import {
   canonicalDrug,
   normalizeRuntimeInteractionSubject,
 } from './interaction-engine.mjs';
+import {
+  compileCombinationIdentityManifest,
+  resolveCombinationIdentity,
+} from './interaction-combination-identity.mjs';
 
 export const INTERACTION_MAPPING_SCHEMA_VERSION = 1;
 export const INGREDIENT_OCCURRENCE_NAMESPACE = 'aushadhi:ingredient-occurrence:v1';
@@ -675,9 +679,23 @@ export function mapResolvedProducts({
   records,
   ingredientManifest,
   presentationManifest,
+  combinationManifest = null,
   profile = null,
 }) {
   if (!Array.isArray(records)) throw new TypeError('records must be an array');
+  // D1: a fixed-dose combination subject SUPPLEMENTS the per-ingredient subjects; it
+  // never replaces them. Components keep their own interactions (methotrexate +
+  // trimethoprim is the standing example), and duplicate CLINICAL ALERTS are removed
+  // downstream by rule-family supersession, not here at subject level.
+  //
+  // Combination resolution requires an explicit release profile and a verified
+  // compiled manifest, so an audit fixture can never reach this path.
+  const compiledCombinations = combinationManifest === null
+    ? null
+    : compileCombinationIdentityManifest(combinationManifest, {
+      kind: 'verified_manifest',
+      evidenceVerified: combinationManifest.combinations.length === 0,
+    });
   const indexes = buildMappingIndexes(ingredientManifest, presentationManifest, profile);
   // a source identity must be unique across the catalogue: two rows claiming one
   // reviewed identity is an ambiguity, never something to guess between
@@ -717,6 +735,13 @@ export function mapResolvedProducts({
       seenOccurrences.add(mapped.ingredient_occurrence_id);
       return mapped;
     });
+    const combination = compiledCombinations === null || profile === null
+      ? null
+      : resolveCombinationIdentity({
+        product: record.product,
+        manifest: compiledCombinations,
+        profile,
+      });
     return {
       ...structuredClone(record),
       product: {
@@ -724,6 +749,7 @@ export function mapResolvedProducts({
         product_assertion_sha256: productAssertionHashForRow(record.product),
         presentation,
         ingredients,
+        ...(combination === null ? {} : { combination }),
       },
     };
   });

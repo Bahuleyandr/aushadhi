@@ -222,3 +222,44 @@ test('all eighteen committed mappings are now source-bound', () => {
   const codes = manifest.mappings.map((m) => m.source_identity.code);
   assert.equal(new Set(codes).size, 18);
 });
+
+// ── D1: the combination resolver is wired, and supplements rather than replaces ──
+
+test('the combination resolver is wired and inert with the committed empty manifest', () => {
+  const combinationManifest = readJson('data-static/combination-identity-overrides.json');
+  assert.deepEqual(combinationManifest.combinations, []);
+  const mapped = mapResolvedProducts({
+    records: [{
+      status: 'resolved',
+      product: { ...REVIEWED, product_id: productIdForRow(REVIEWED) },
+    }],
+    ingredientManifest: ingredientManifest(),
+    presentationManifest: presentationManifest(),
+    combinationManifest,
+    profile: 'internal-evaluation',
+  })[0].product;
+
+  // the combination path ran and found nothing, while the per-ingredient subjects
+  // are untouched: a combination SUPPLEMENTS components, it never replaces them
+  assert.equal(mapped.combination.status, 'no_combination');
+  assert.equal(mapped.combination.runtime_subject, null);
+  assert.deepEqual(mapped.ingredients[0].runtime_subject, {
+    drug: 'warfarin', route: 'oral', formulation: 'tablet',
+  });
+});
+
+test('omitting the combination manifest leaves resolution exactly as before', () => {
+  const mapped = mapResolvedProducts({
+    records: [{
+      status: 'resolved',
+      product: { ...REVIEWED, product_id: productIdForRow(REVIEWED) },
+    }],
+    ingredientManifest: ingredientManifest(),
+    presentationManifest: presentationManifest(),
+    profile: 'internal-evaluation',
+  })[0].product;
+  assert.equal(mapped.combination, undefined);
+  assert.deepEqual(mapped.ingredients[0].runtime_subject, {
+    drug: 'warfarin', route: 'oral', formulation: 'tablet',
+  });
+});
