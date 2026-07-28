@@ -319,6 +319,14 @@ function validateRxNorm(value, label, componentRxcuis) {
   requireSha256(relation.response_sha256, `${relationLabel}.response_sha256`);
 }
 
+// RxNorm exposes several ingredient notions per ingredient-and-strength row
+// (base ingredient, basis-of-strength substance, active ingredient). A MIN may mix
+// IN and PIN components, so the field to compare is selected PER ENTRY, never once
+// for the whole SCD.
+export const INGREDIENT_RXCUI_FIELDS = new Set([
+  'rxcui', 'baseRxcui', 'bossRxcui', 'activeIngredientRxcui',
+]);
+
 function validateScd(value, label, componentRxcuis) {
   requireObject(value, label);
   requireExactKeys(value, new Set([
@@ -336,15 +344,32 @@ function validateScd(value, label, componentRxcuis) {
     requireObject(entry, entryLabel);
     requireExactKeys(
       entry,
-      new Set(['ingredient_rxcui', 'numerator_value', 'numerator_unit']),
+      new Set([
+        'component_rxcui', 'ingredient_rxcui_field',
+        'numerator_value', 'numerator_unit', 'denominator_value', 'denominator_unit',
+      ]),
       entryLabel,
     );
-    present.add(requireRxcui(entry.ingredient_rxcui, `${entryLabel}.ingredient_rxcui`));
+    present.add(requireRxcui(entry.component_rxcui, `${entryLabel}.component_rxcui`));
+    if (!INGREDIENT_RXCUI_FIELDS.has(entry.ingredient_rxcui_field)) {
+      throw new TypeError(
+        `${entryLabel}.ingredient_rxcui_field must name a supported RxNorm ingredient field`,
+      );
+    }
     const numerator = requireString(entry.numerator_value, `${entryLabel}.numerator_value`);
     if (!NUMERIC.test(numerator)) {
       throw new TypeError(`${entryLabel}.numerator_value must be numeric`);
     }
     requireString(entry.numerator_unit, `${entryLabel}.numerator_unit`);
+    if (entry.denominator_value !== null) {
+      const denominator = requireString(entry.denominator_value, `${entryLabel}.denominator_value`);
+      if (!NUMERIC.test(denominator)) {
+        throw new TypeError(`${entryLabel}.denominator_value must be numeric`);
+      }
+    }
+    if (entry.denominator_unit !== null) {
+      requireString(entry.denominator_unit, `${entryLabel}.denominator_unit`);
+    }
   }
   if (!sameSet(present, componentRxcuis)) {
     throw new TypeError(`${label} rxnorm_scd ingredients must equal the declared component rxcuis`);
@@ -618,9 +643,28 @@ function deepFreeze(value) {
 // alias arrays or reviewed presentations. The reviewed-product index is exposed
 // through a lookup function rather than a live Map, which would otherwise be
 // mutable regardless of the wrapper's frozen state.
-export function compileCombinationIdentityManifest(manifest) {
+export const COMPILED_KINDS = new Set(['verified_manifest', 'audit_fixture']);
+
+// `kind` is a TYPE BOUNDARY, not a label. An audit fixture compiles to a form the
+// runtime resolver refuses outright, so synthetic evidence cannot produce a
+// runtime-acceptable result however the fixture happens to be documented. A
+// non-empty manifest may only compile as `verified_manifest` when its RxNorm
+// evidence has been verified, which the caller asserts with `evidenceVerified`.
+export function compileCombinationIdentityManifest(manifest, options = {}) {
+  const { kind = 'verified_manifest', evidenceVerified = false } = options;
+  if (!COMPILED_KINDS.has(kind)) {
+    throw new TypeError(`compiled kind must be one of: ${[...COMPILED_KINDS].join(', ')}`);
+  }
   validateCombinationIdentityManifest(manifest);
+  if (kind === 'verified_manifest' && manifest.combinations.length > 0 && !evidenceVerified) {
+    throw new TypeError(
+      'a non-empty combination manifest may only compile as verified_manifest once its RxNorm '
+      + 'evidence has been verified; compile it as audit_fixture, or verify the evidence first',
+    );
+  }
   const combinations = deepFreeze(structuredClone(manifest.combinations));
+  // module-private: never reachable from the returned object. Object.freeze does not
+  // freeze a Map's or a Set's entries, so no collection instance is exposed at all.
   const reviewedProducts = new Map();
   for (const combination of combinations) {
     for (const presentation of combination.presentations) {
@@ -628,16 +672,27 @@ export function compileCombinationIdentityManifest(manifest) {
       reviewedProducts.set(key, Object.freeze({ combination, presentation }));
     }
   }
-  return Object.freeze({
+  // null prototype so no inherited key (__proto__, constructor) is reachable
+  const lookup = Object.freeze(Object.assign(Object.create(null), {
+    get: (key) => reviewedProducts.get(key) ?? null,
+  }));
+  return Object.freeze(Object.assign(Object.create(null), {
     compiled: true,
+    compiled_kind: kind,
     combinations,
-    reviewed_products: Object.freeze({ get: (key) => reviewedProducts.get(key) ?? null }),
-  });
+    reviewed_products: lookup,
+  }));
 }
 
-function requireCompiled(manifest) {
+function requireCompiled(manifest, allowedKinds) {
   if (!isObject(manifest) || manifest.compiled !== true) {
     throw new TypeError('manifest must be compiled with compileCombinationIdentityManifest first');
+  }
+  if (!allowedKinds.has(manifest.compiled_kind)) {
+    throw new TypeError(
+      `a ${manifest.compiled_kind} manifest may not be used here; `
+      + `expected one of: ${[...allowedKinds].join(', ')}`,
+    );
   }
   return manifest;
 }
@@ -711,7 +766,12 @@ function reviewedEntryFor(compiledManifest, product) {
   return null;
 }
 
-function resolveInternal(product, compiledManifest, profile, { auditOnly = false } = {}) {
+function resolveInternal(
+  product,
+  compiledManifest,
+  profile,
+  { auditOnly = false, compiledKind } = {},
+) {
   requireObject(product, 'product');
   const allowed = (combination) => auditOnly || combination.allowed_profiles.includes(profile);
 
@@ -778,6 +838,7 @@ function resolveInternal(product, compiledManifest, profile, { auditOnly = false
         ...match,
         status: 'audit_match',
         audit_only: true,
+        compiled_kind: compiledKind ?? null,
         authored_profiles: [...combination.allowed_profiles],
         candidate_subject: subject,
         runtime_subject: null,
@@ -796,7 +857,7 @@ function resolveInternal(product, compiledManifest, profile, { auditOnly = false
 }
 
 export function resolveCombinationIdentity({ product, manifest, profile }) {
-  const compiledManifest = requireCompiled(manifest);
+  const compiledManifest = requireCompiled(manifest, new Set(['verified_manifest']));
   const releaseProfile = requireReleaseProfile(profile);
   return resolveInternal(product, compiledManifest, releaseProfile);
 }
@@ -807,6 +868,9 @@ export function assertRuntimeCombinationResult(result) {
   if (isObject(result) && (result.audit_only === true || result.status === 'audit_match')) {
     throw new TypeError('an audit result may not be used on a runtime path');
   }
+  if (isObject(result) && result.compiled_kind === 'audit_fixture') {
+    throw new TypeError('a result derived from an audit fixture may not be used on a runtime path');
+  }
   return result;
 }
 
@@ -814,6 +878,9 @@ export function assertRuntimeCombinationResult(result) {
 // production resolution path: it disregards release profiles and reports which
 // profiles a match was authored for.
 export function auditCombinationIdentityAcrossProfiles({ product, manifest }) {
-  const compiledManifest = requireCompiled(manifest);
-  return resolveInternal(product, compiledManifest, null, { auditOnly: true });
+  const compiledManifest = requireCompiled(manifest, COMPILED_KINDS);
+  return resolveInternal(product, compiledManifest, null, {
+    auditOnly: true,
+    compiledKind: compiledManifest.compiled_kind,
+  });
 }
