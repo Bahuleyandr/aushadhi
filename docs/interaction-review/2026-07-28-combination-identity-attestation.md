@@ -256,3 +256,62 @@ Live data confirms: all five concepts `Active` / `isCurrent YES`; MIN `10831`
 
 Manifest still empty · resolver still unwired · `warfarin__cotrimoxazole` still
 blocked · production-open still 0.
+
+---
+
+## Addendum — D2 complete
+
+**Code head `45764a2a91993b821460e7a2276532c304af7551`.** All 18 single-ingredient
+PMBJP presentation mappings are now source-bound. This clears the item you recorded
+as blocking presentation-based production promotion.
+
+**Ground truth was established before anything was bound.** Binding a code without
+first checking it would have cemented whatever was there — the F5 failure mode. Every
+mapping's code was checked against the catalogue row's own `sources[].source_id`
+across all 255,894 rows:
+
+```text
+code agrees with the catalogue row     18 / 18
+assertion drift                         0
+duplicate PMBJP source identities       0   (whole catalogue)
+```
+
+So this is a pure re-attestation with no corrections. `productAssertionHashForRow()`
+was **not** changed to absorb `sources[]`, as you directed.
+
+Resolution is source-identity-first and never falls back to content-only:
+
+```text
+source identity matches + content matches   -> reviewed_override
+source identity matches + content changed   -> stale
+source identity differs                     -> unmapped, source_identity_mismatch
+no source identity, content matches         -> unmapped, reviewed_source_identity_absent
+same source identity on two catalogue rows  -> throws
+```
+
+Mappings without a `source_identity` keep content-only behaviour, so non-PMBJP
+presentation mappings are untouched.
+
+All six of your regression cases are pinned, including the two that content-only
+resolution would have got wrong: identical content under a different code, and a wrong
+PMBJP code on a matching product id.
+
+`verify:pmbjp-mapping-codes` now checks the **resolver binding**, not list membership:
+it locates each mapping by source identity, compares the current product id and
+assertion hash, sweeps the whole catalogue so a source identity claimed by two rows is
+an error rather than whichever row was read first, and only then checks the official
+list. Still **18/18 confirmed**.
+
+**Honest limit:** the new CLI statuses (`source_identity_absent_from_catalogue`,
+`source_identity_claimed_by_several_rows`, `bound_product_id_changed`,
+`bound_product_assertion_changed`) are exercised through the library-level tests, not
+through the CLI itself, because the CLI reads the committed manifest from a fixed path.
+
+```text
+809 tests / 804 passed / 5 explicitly skipped / 0 failed   (exit 0)
+```
+
+Production-open still 0 rules · combination manifest still empty · resolver still
+unwired · `warfarin__cotrimoxazole` still blocked.
+
+**Remaining:** D1 resolver wiring, pending combination/component deduplication tests.
