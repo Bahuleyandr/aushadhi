@@ -131,7 +131,8 @@ const scd = (rxcui, name, smxStrength, tmpStrength) => ({
   ],
   dose_form: 'Oral Tablet',
   version: '06-Jul-2026',
-  response_sha256: SHA,
+  properties_response_sha256: SHA,
+  historystatus_response_sha256: SHA,
   min_relation_response_sha256: SHA,
 });
 
@@ -537,7 +538,8 @@ const pairCombination = (id, drug, [rxcuiA, aliasesA], [rxcuiB, aliasesB], row) 
       ],
       dose_form: 'Oral Tablet',
       version: '06-Jul-2026',
-      response_sha256: SHA,
+      properties_response_sha256: SHA,
+      historystatus_response_sha256: SHA,
       min_relation_response_sha256: SHA,
     },
   }],
@@ -587,7 +589,7 @@ test('HARDENING: a Hall-deficient three-component pair does NOT overlap', () => 
           denominator_value: null, denominator_unit: null,
         })),
         dose_form: 'Oral Tablet', version: '06-Jul-2026',
-        response_sha256: SHA, min_relation_response_sha256: SHA,
+        properties_response_sha256: SHA, historystatus_response_sha256: SHA, min_relation_response_sha256: SHA,
       },
     }],
   });

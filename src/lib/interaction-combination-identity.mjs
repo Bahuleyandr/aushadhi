@@ -324,14 +324,15 @@ function validateRxNorm(value, label, componentRxcuis) {
 // IN and PIN components, so the field to compare is selected PER ENTRY, never once
 // for the whole SCD.
 export const INGREDIENT_RXCUI_FIELDS = new Set([
-  'rxcui', 'baseRxcui', 'bossRxcui', 'activeIngredientRxcui',
+  'baseRxcui', 'bossRxcui', 'activeIngredientRxcui', 'moietyRxcui',
 ]);
 
 function validateScd(value, label, componentRxcuis) {
   requireObject(value, label);
   requireExactKeys(value, new Set([
     'rxcui', 'tty', 'name', 'ingredients_and_strengths', 'dose_form', 'version',
-    'response_sha256', 'min_relation_response_sha256',
+    'properties_response_sha256', 'historystatus_response_sha256',
+    'min_relation_response_sha256',
   ]), label);
   requireRxcui(value.rxcui, `${label}.rxcui`);
   if (value.tty !== 'SCD') throw new TypeError(`${label}.tty must be SCD`);
@@ -376,9 +377,11 @@ function validateScd(value, label, componentRxcuis) {
   }
   requireString(value.dose_form, `${label}.dose_form`);
   requireString(value.version, `${label}.version`);
-  requireSha256(value.response_sha256, `${label}.response_sha256`);
-  // an SCD relates to its MIN through has_ingredients; the evidence gate checks that
-  // link points back at THIS combination, so the hash must be pinned here
+  // three distinct RxNav endpoints carry the three facts, so three hashes are pinned:
+  // properties -> term type; historystatus -> ingredients, strengths and dose form;
+  // related?rela=has_ingredients -> the link back to THIS combination's MIN
+  requireSha256(value.properties_response_sha256, `${label}.properties_response_sha256`);
+  requireSha256(value.historystatus_response_sha256, `${label}.historystatus_response_sha256`);
   requireSha256(value.min_relation_response_sha256, `${label}.min_relation_response_sha256`);
 }
 
