@@ -197,6 +197,30 @@ function verifyPresentation(findings, combination, presentation, bundle) {
     fail(findings, 'scd_component_mismatch',
       `${label} SCD ingredients do not equal the combination's declared components`);
   }
+
+  // An SCD reaches its MIN through has_ingredients. Checking that link closes the
+  // gap where an SCD carries the right ingredient set but belongs to a different
+  // multiple-ingredient concept.
+  const minKey = `rxcui/${scd.rxcui}/related?rela=has_ingredients`;
+  verifyHash(findings, bundle, minKey, scd.min_relation_response_sha256,
+    `${label} rxnorm_scd.min_relation_response_sha256`);
+  const minRelation = parseBundle(bundle, minKey);
+  if (!minRelation) {
+    fail(findings, 'unreadable_scd_min_relation',
+      `${label} has_ingredients response is missing or unparseable`);
+    return findings;
+  }
+  const relatedMins = new Set();
+  for (const group of minRelation.relatedGroup?.conceptGroup ?? []) {
+    for (const concept of group.conceptProperties ?? []) {
+      if (concept.tty === 'MIN') relatedMins.add(String(concept.rxcui));
+    }
+  }
+  if (!relatedMins.has(combination.rxnorm.rxcui)) {
+    fail(findings, 'scd_min_relation_mismatch',
+      `${label} SCD ${scd.rxcui} does not relate to MIN ${combination.rxnorm.rxcui} `
+      + `(has_ingredients returned ${[...relatedMins].sort().join(', ') || '(no MIN)'})`);
+  }
   return findings;
 }
 

@@ -123,6 +123,7 @@ const scd = (rxcui, name, smxStrength, tmpStrength) => ({
   dose_form: 'Oral Tablet',
   version: '06-Jul-2026',
   response_sha256: SHA,
+  min_relation_response_sha256: SHA,
 });
 
 const presentationFor = (row, route, formulation, code, scdObject) => ({
@@ -496,6 +497,7 @@ const pairCombination = (id, drug, [rxcuiA, aliasesA], [rxcuiB, aliasesB], row) 
       dose_form: 'Oral Tablet',
       version: '06-Jul-2026',
       response_sha256: SHA,
+      min_relation_response_sha256: SHA,
     },
   }],
 });

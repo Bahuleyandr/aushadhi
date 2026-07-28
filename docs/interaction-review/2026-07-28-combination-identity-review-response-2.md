@@ -61,7 +61,13 @@ capture responses -> commit immutable raw bundle -> offline semantic verificatio
 It recomputes every hash from the committed raw response and fails on: a synthetic
 fixture hash on the production path, a hash/response mismatch, missing raw evidence, a
 `has_part` set RxNorm did not return, a concept that is not a `MIN`, a presentation that
-is not an `SCD`, changed strength or dose form, and release or API-version disagreement.
+is not an `SCD`, an SCD whose `has_ingredients` link does not reach the declared `MIN`,
+changed strength or dose form, and release or API-version disagreement.
+
+The `has_ingredients` check closes your required item "the SCD has the expected MIN or
+exact component relationship" on its stronger branch: an SCD can carry exactly the right
+ingredient set and still belong to a different multiple-ingredient concept, and only the
+link catches that. `min_relation_response_sha256` is a required field per presentation.
 
 Two points from your note are handled explicitly:
 
@@ -137,7 +143,7 @@ uses a fixture, and both fixture and script are now committed so it can be repro
 classification    AUDIT FIXTURE SWEEP -- carries no promotion authority
 fixture manifest  docs/interaction-review/audit-fixtures/
                   2026-07-28-cotrimoxazole-audit-fixture-manifest.json
-                  sha256 ab6fa710d35f61c7f59c23c760b5d53c5fb3eff0cebd013b917082c865e13dfe
+                  sha256 3de7a42e3591f22e8f202352aa7455439d1ae571202e9e1bd32eb97f30e0113e
 sweep script      docs/interaction-review/audit-fixtures/2026-07-28-catalogue-sweep.mjs
                   sha256 3eaa1f9ea4ea70d9c934ebb95f6301a87fb8065b826962cb9dabcfbb0b9ebda0
 catalogue         sha256 a7b76e3aca27df3f1d2b3251b4bb616020d2877416133495dd877b63980ab913
@@ -158,7 +164,7 @@ fail-closed behaviour only**. It validates no RxNorm evidence and authorises not
 ## Gate
 
 ```text
-774 tests / 769 passed / 5 explicitly skipped / 0 failed   (exit 0)
+775 tests / 770 passed / 5 explicitly skipped / 0 failed   (exit 0)
 ```
 
 Skips name `pigz` as the missing prerequisite. Your point about a CI lane installing

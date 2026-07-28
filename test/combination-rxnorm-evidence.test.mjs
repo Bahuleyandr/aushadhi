@@ -39,6 +39,17 @@ const SCD_198335 = JSON.stringify({
   ],
 });
 
+const SCD_MIN_RELATION = JSON.stringify({
+  relatedGroup: {
+    conceptGroup: [{
+      tty: 'MIN',
+      conceptProperties: [
+        { rxcui: '10831', name: 'sulfamethoxazole / trimethoprim', tty: 'MIN' },
+      ],
+    }],
+  },
+});
+
 const bundle = (overrides = {}) => ({
   schema_version: EVIDENCE_BUNDLE_SCHEMA_VERSION,
   rxnorm_release: '06-Jul-2026',
@@ -47,6 +58,7 @@ const bundle = (overrides = {}) => ({
     'rxcui/10831/properties': PROPERTIES,
     'rxcui/10831/related?rela=has_part': HAS_PART,
     'rxcui/198335/allhistoricalndcs-or-properties': SCD_198335,
+    'rxcui/198335/related?rela=has_ingredients': SCD_MIN_RELATION,
   },
   ...overrides,
 });
@@ -85,6 +97,7 @@ const combination = (overrides = {}) => ({
       dose_form: 'Oral Tablet',
       version: '06-Jul-2026',
       response_sha256: sha256(SCD_198335),
+      min_relation_response_sha256: sha256(SCD_MIN_RELATION),
     },
   }],
   ...overrides,
@@ -183,6 +196,25 @@ test('a changed SCD strength or dose form is refused', () => {
   const result = verifyCombinationRxNormEvidence(entry, evidence);
   assert.ok(codes(result).includes('scd_strength_mismatch'));
   assert.ok(codes(result).includes('scd_dose_form_mismatch'));
+});
+
+test('an SCD that does not relate to the declared MIN is refused', () => {
+  // right ingredient set, wrong multiple-ingredient concept: only the
+  // has_ingredients link catches this
+  const relation = JSON.stringify({
+    relatedGroup: {
+      conceptGroup: [{
+        tty: 'MIN',
+        conceptProperties: [{ rxcui: '99999', name: 'some other combination', tty: 'MIN' }],
+      }],
+    },
+  });
+  const entry = combination();
+  const evidence = bundle();
+  evidence.responses['rxcui/198335/related?rela=has_ingredients'] = relation;
+  entry.presentations[0].rxnorm_scd.min_relation_response_sha256 = sha256(relation);
+  const result = verifyCombinationRxNormEvidence(entry, evidence);
+  assert.ok(codes(result).includes('scd_min_relation_mismatch'));
 });
 
 test('a release or API version disagreement is refused', () => {
