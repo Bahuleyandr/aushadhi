@@ -24,8 +24,10 @@ import { createHash } from 'node:crypto';
 export const EVIDENCE_BUNDLE_SCHEMA_VERSION = 1;
 // which RxNorm ingredient notion a comparison used; recorded per presentation so a
 // PIN-based product cannot silently be compared on a different field
+// RxNav's history-status response supplies these separately for every
+// ingredient-and-strength row, so which one a comparison used must be recorded.
 export const INGREDIENT_RXCUI_FIELDS = new Set([
-  'rxcui', 'baseRxcui', 'bossRxcui', 'activeIngredientRxcui',
+  'baseRxcui', 'bossRxcui', 'activeIngredientRxcui', 'moietyRxcui',
 ]);
 // Term type alone is not enough: an obsolete or remapped concept is still
 // recognisably an SCD. Every concept in the relationship graph must be active and
@@ -205,75 +207,95 @@ function verifyPresentation(findings, combination, presentation, bundle) {
   const scd = presentation.rxnorm_scd;
   const label = `${combination.combination_id} presentation `
     + `${presentation.source_identity.namespace}:${presentation.source_identity.code}`;
-  const key = `rxcui/${scd.rxcui}/allhistoricalndcs-or-properties`;
-  verifyHash(findings, bundle, key, scd.response_sha256, `${label} rxnorm_scd.response_sha256`);
 
-  const observed = parseBundle(bundle, key);
-  if (!observed) {
-    fail(findings, 'unreadable_scd_response', `${label} SCD response is missing or unparseable`);
+  verifyConceptStatus(findings, scd.rxcui, 'presentation SCD', bundle);
+
+  // --- term type comes from the properties endpoint -------------------------
+  const propertiesKey = `rxcui/${scd.rxcui}/properties`;
+  verifyHash(findings, bundle, propertiesKey, scd.properties_response_sha256,
+    `${label} rxnorm_scd.properties_response_sha256`);
+  const properties = parseBundle(bundle, propertiesKey)?.properties;
+  if (!properties) {
+    fail(findings, 'unreadable_scd_properties', `${label} properties response is unparseable`);
+  } else {
+    if (String(properties.rxcui) !== scd.rxcui) {
+      fail(findings, 'scd_rxcui_mismatch',
+        `${label} declares SCD ${scd.rxcui} but the response is for ${properties.rxcui}`);
+    }
+    if (properties.tty !== 'SCD') {
+      fail(findings, 'scd_tty_mismatch', `${label} rxcui ${scd.rxcui} is ${properties.tty}, not SCD`);
+    }
+    if (properties.name !== scd.name) {
+      fail(findings, 'scd_name_mismatch',
+        `${label} declares name "${scd.name}" but RxNorm returned "${properties.name}"`);
+    }
+  }
+
+  // --- ingredients, strengths and dose form come from history-status --------
+  const historyKey = `rxcui/${scd.rxcui}/historystatus`;
+  verifyHash(findings, bundle, historyKey, scd.historystatus_response_sha256,
+    `${label} rxnorm_scd.historystatus_response_sha256`);
+  const features = parseBundle(bundle, historyKey)?.rxcuiStatusHistory?.definitionalFeatures;
+  if (!features) {
+    fail(findings, 'unreadable_scd_definitional_features',
+      `${label} history-status response carries no definitionalFeatures`);
     return findings;
   }
-  if (String(observed.rxcui ?? '') !== scd.rxcui) {
-    fail(findings, 'scd_rxcui_mismatch',
-      `${label} declares SCD ${scd.rxcui} but the response is for ${observed.rxcui}`);
-  }
-  if (observed.tty !== 'SCD') {
-    fail(findings, 'scd_tty_mismatch', `${label} rxcui ${scd.rxcui} is ${observed.tty}, not SCD`);
-  }
-  if (observed.dose_form !== scd.dose_form) {
+
+  const doseForms = (features.doseFormConcept ?? []).map((entry) => entry.doseFormName);
+  if (!doseForms.includes(scd.dose_form)) {
     fail(findings, 'scd_dose_form_mismatch',
-      `${label} declares dose form "${scd.dose_form}" but RxNorm returned "${observed.dose_form}"`);
+      `${label} declares dose form "${scd.dose_form}" but RxNorm returned `
+      + `${doseForms.map((form) => `"${form}"`).join(', ') || '(none)'}`);
   }
 
-  // the compared field is selected PER ENTRY: a MIN may mix IN and PIN components,
-  // and RxNorm exposes base / basis-of-strength / active ingredient separately
-  const declaredIngredients = new Map();
-  const fieldByComponent = new Map();
+  const observedRows = features.ingredientAndStrength ?? [];
+  const declared = new Map();
   for (const entry of scd.ingredients_and_strengths) {
     if (!INGREDIENT_RXCUI_FIELDS.has(entry.ingredient_rxcui_field)) {
       fail(findings, 'unsupported_ingredient_field',
         `${label} compares an unsupported field ${entry.ingredient_rxcui_field}`);
       return findings;
     }
-    declaredIngredients.set(entry.component_rxcui, `${entry.numerator_value}${entry.numerator_unit}`);
-    fieldByComponent.set(entry.component_rxcui, entry.ingredient_rxcui_field);
+    declared.set(entry.component_rxcui, entry);
   }
-  const observedIngredients = new Map();
-  for (const entry of observed.ingredients ?? []) {
-    // match on whichever field the corresponding declared entry nominated
-    for (const [componentRxcui, field] of fieldByComponent) {
-      if (String(entry[field] ?? '') === componentRxcui) {
-        observedIngredients.set(componentRxcui, `${entry.numerator_value}${entry.numerator_unit}`);
-      }
-    }
-    if (![...fieldByComponent.values()].some((field) => (
-      declaredIngredients.has(String(entry[field] ?? ''))
-    ))) {
-      observedIngredients.set(`unmatched:${entry.rxcui ?? entry.baseRxcui ?? '?'}`, 'unmatched');
-    }
-  }
-  if (!sameSet(new Set(declaredIngredients.keys()), new Set(observedIngredients.keys()))) {
-    fail(findings, 'scd_ingredient_mismatch',
-      `${label} declares ingredients ${[...declaredIngredients.keys()].sort().join(', ')} `
-      + `but RxNorm returned ${[...observedIngredients.keys()].sort().join(', ') || '(none)'}`);
-  }
-  for (const [rxcui, strength] of declaredIngredients) {
-    const observedStrength = observedIngredients.get(rxcui);
-    if (observedStrength !== undefined && observedStrength !== strength) {
+
+  // match each declared entry on the field it nominated, so a MIN may mix IN and PIN
+  const matchedComponents = new Set();
+  for (const [componentRxcui, entry] of declared) {
+    const row = observedRows.find((observed) => (
+      String(observed[entry.ingredient_rxcui_field] ?? '') === componentRxcui
+    ));
+    if (!row) continue;
+    matchedComponents.add(componentRxcui);
+    if (String(row.numeratorValue) !== entry.numerator_value
+        || String(row.numeratorUnit) !== entry.numerator_unit) {
       fail(findings, 'scd_strength_mismatch',
-        `${label} declares ${rxcui} at ${strength} but RxNorm returned ${observedStrength}`);
+        `${label} declares ${componentRxcui} at ${entry.numerator_value}${entry.numerator_unit} `
+        + `but RxNorm returned ${row.numeratorValue}${row.numeratorUnit}`);
+    }
+    if (entry.denominator_value !== null
+        && (String(row.denominatorValue) !== entry.denominator_value
+          || String(row.denominatorUnit) !== entry.denominator_unit)) {
+      fail(findings, 'scd_denominator_mismatch',
+        `${label} declares ${componentRxcui} per ${entry.denominator_value}${entry.denominator_unit} `
+        + `but RxNorm returned ${row.denominatorValue}${row.denominatorUnit}`);
     }
   }
-  verifyConceptStatus(findings, scd.rxcui, 'presentation SCD', bundle);
+  // exact equality in BOTH directions: an extra returned row fails like a missing one
+  if (!sameSet(matchedComponents, new Set(declared.keys()))
+      || observedRows.length !== declared.size) {
+    fail(findings, 'scd_ingredient_mismatch',
+      `${label} declares ${[...declared.keys()].sort().join(', ')} but RxNorm returned `
+      + `${observedRows.length} ingredient rows of which ${matchedComponents.size} matched`);
+  }
   const componentRxcuis = new Set(combination.components.map((component) => component.rxcui));
-  if (!sameSet(new Set(declaredIngredients.keys()), componentRxcuis)) {
+  if (!sameSet(new Set(declared.keys()), componentRxcuis)) {
     fail(findings, 'scd_component_mismatch',
       `${label} SCD ingredients do not equal the combination's declared components`);
   }
 
-  // An SCD reaches its MIN through has_ingredients. Checking that link closes the
-  // gap where an SCD carries the right ingredient set but belongs to a different
-  // multiple-ingredient concept.
+  // --- the SCD must reach THIS combination's MIN ---------------------------
   const minKey = `rxcui/${scd.rxcui}/related?rela=has_ingredients`;
   verifyHash(findings, bundle, minKey, scd.min_relation_response_sha256,
     `${label} rxnorm_scd.min_relation_response_sha256`);

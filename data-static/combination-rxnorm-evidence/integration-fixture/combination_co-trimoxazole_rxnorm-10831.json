@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "classification": "verifier_integration_fixture",
+  "promotion_authority": "none",
+  "audit_only": true,
+  "notice": "Real RxNorm responses captured read-only on 2026-07-28 from https://rxnav.nlm.nih.gov/REST. NOT part of the combination manifest and carries no promotion authority. Present so the verifier is exercised against genuine API shapes.",
+  "capture": {
+    "base_url": "https://rxnav.nlm.nih.gov/REST",
+    "version_before_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd",
+    "version_after_sha256": "ec49ea5916116a33b6a443dcb80a7980d8049271e8dc96b4a2600efeb26811dd",
+    "version_stable": true,
+    "version_response": "{\"version\":\"06-Jul-2026\",\"apiVersion\":\"3.1.354\"}"
+  },
+  "rxnorm_release": "06-Jul-2026",
+  "api_version": "3.1.354",
+  "responses": {
+    "rxcui/10831/properties": "{\"properties\":{\"rxcui\":\"10831\",\"name\":\"sulfamethoxazole / trimethoprim\",\"synonym\":\"\",\"tty\":\"MIN\",\"language\":\"ENG\",\"suppress\":\"N\",\"umlscui\":\"\"}}",
+    "rxcui/10831/related?rela=has_part": "{\"relatedGroup\":{\"rxcui\":null,\"conceptGroup\":[{\"tty\":\"IN\",\"conceptProperties\":[{\"rxcui\":\"10180\",\"name\":\"sulfamethoxazole\",\"synonym\":\"\",\"tty\":\"IN\",\"language\":\"ENG\",\"suppress\":\"N\",\"umlscui\":\"\"},{\"rxcui\":\"10829\",\"name\":\"trimethoprim\",\"synonym\":\"\",\"tty\":\"IN\",\"language\":\"ENG\",\"suppress\":\"N\",\"umlscui\":\"\"}]}]}}",
+    "rxcui/10831/historystatus": "{\"rxcuiStatusHistory\":{\"metaData\":{\"status\":\"Active\",\"source\":\"RXNORM\",\"releaseStartDate\":\"042005\",\"releaseEndDate\":\"\",\"isCurrent\":\"YES\",\"activeStartDate\":\"092010\",\"activeEndDate\":\"\",\"remappedDate\":\"\"},\"attributes\":{\"rxcui\":\"10831\",\"name\":\"sulfamethoxazole / trimethoprim\",\"tty\":\"MIN\",\"isMultipleIngredient\":\"YES\",\"isBranded\":\"NO\"},\"definitionalFeatures\":{},\"pack\":{},\"derivedConcepts\":{\"ingredientConcept\":[{\"ingredientRxcui\":\"10180\",\"ingredientName\":\"sulfamethoxazole\"},{\"ingredientRxcui\":\"10829\",\"ingredientName\":\"trimethoprim\"}]}}}",
+    "rxcui/10180/properties": "{\"properties\":{\"rxcui\":\"10180\",\"name\":\"sulfamethoxazole\",\"synonym\":\"\",\"tty\":\"IN\",\"language\":\"ENG\",\"suppress\":\"N\",\"umlscui\":\"\"}}",
+    "rxcui/10180/historystatus": "{\"rxcuiStatusHistory\":{\"metaData\":{\"status\":\"Active\",\"source\":\"RXNORM\",\"releaseStartDate\":\"042005\",\"releaseEndDate\":\"\",\"isCurrent\":\"YES\",\"activeStartDate\":\"042005\",\"activeEndDate\":\"\",\"remappedDate\":\"\"},\"attributes\":{\"rxcui\":\"10180\",\"name\":\"sulfamethoxazole\",\"tty\":\"IN\",\"isMultipleIngredient\":\"NO\",\"isBranded\":\"NO\"},\"definitionalFeatures\":{},\"pack\":{},\"derivedConcepts\":{}}}",
+    "rxcui/10829/properties": "{\"properties\":{\"rxcui\":\"10829\",\"name\":\"trimethoprim\",\"synonym\":\"\",\"tty\":\"IN\",\"language\":\"ENG\",\"suppress\":\"N\",\"umlscui\":\"\"}}",
+    "rxcui/10829/historystatus": "{\"rxcuiStatusHistory\":{\"metaData\":{\"status\":\"Active\",\"source\":\"RXNORM\",\"releaseStartDate\":\"042005\",\"releaseEndDate\":\"\",\"isCurrent\":\"YES\",\"activeStartDate\":\"042005\",\"activeEndDate\":\"\",\"remappedDate\":\"\"},\"attributes\":{\"rxcui\":\"10829\",\"name\":\"trimethoprim\",\"tty\":\"IN\",\"isMultipleIngredient\":\"NO\",\"isBranded\":\"NO\"},\"definitionalFeatures\":{},\"pack\":{},\"derivedConcepts\":{}}}",
+    "rxcui/198335/properties": "{\"properties\":{\"rxcui\":\"198335\",\"name\":\"sulfamethoxazole 800 MG / trimethoprim 160 MG Oral Tablet\",\"synonym\":\"SMX 800 MG / TMP 160 MG Oral Tablet\",\"tty\":\"SCD\",\"language\":\"ENG\",\"suppress\":\"N\",\"umlscui\":\"\"}}",
+    "rxcui/198335/historystatus": "{\"rxcuiStatusHistory\":{\"metaData\":{\"status\":\"Active\",\"source\":\"RXNORM\",\"releaseStartDate\":\"042005\",\"releaseEndDate\":\"\",\"isCurrent\":\"YES\",\"activeStartDate\":\"042005\",\"activeEndDate\":\"\",\"remappedDate\":\"\"},\"attributes\":{\"rxcui\":\"198335\",\"name\":\"sulfamethoxazole 800 MG / trimethoprim 160 MG Oral Tablet\",\"tty\":\"SCD\",\"isMultipleIngredient\":\"YES\",\"isBranded\":\"NO\"},\"definitionalFeatures\":{\"ingredientAndStrength\":[{\"baseRxcui\":\"10180\",\"baseName\":\"sulfamethoxazole\",\"bossRxcui\":\"10180\",\"bossName\":\"sulfamethoxazole\",\"activeIngredientRxcui\":\"10180\",\"activeIngredientName\":\"sulfamethoxazole\",\"moietyRxcui\":\"10180\",\"moietyName\":\"sulfamethoxazole\",\"numeratorValue\":\"800\",\"numeratorUnit\":\"MG\",\"denominatorValue\":\"1\",\"denominatorUnit\":\"EACH\"},{\"baseRxcui\":\"10829\",\"baseName\":\"trimethoprim\",\"bossRxcui\":\"10829\",\"bossName\":\"trimethoprim\",\"activeIngredientRxcui\":\"10829\",\"activeIngredientName\":\"trimethoprim\",\"moietyRxcui\":\"10829\",\"moietyName\":\"trimethoprim\",\"numeratorValue\":\"160\",\"numeratorUnit\":\"MG\",\"denominatorValue\":\"1\",\"denominatorUnit\":\"EACH\"}],\"doseFormConcept\":[{\"doseFormRxcui\":\"317541\",\"doseFormName\":\"Oral Tablet\"}],\"doseFormGroupConcept\":[{\"doseFormGroupRxcui\":\"1151131\",\"doseFormGroupName\":\"Oral Product\"},{\"doseFormGroupRxcui\":\"1151133\",\"doseFormGroupName\":\"Pill\"}]},\"pack\":{},\"derivedConcepts\":{\"ingredientConcept\":[{\"ingredientRxcui\":\"10180\",\"ingredientName\":\"sulfamethoxazole\"},{\"ingredientRxcui\":\"10829\",\"ingredientName\":\"trimethoprim\"}]}}}",
+    "rxcui/198335/related?rela=has_ingredients": "{\"relatedGroup\":{\"rxcui\":null,\"conceptGroup\":[{\"tty\":\"MIN\",\"conceptProperties\":[{\"rxcui\":\"10831\",\"name\":\"sulfamethoxazole / trimethoprim\",\"synonym\":\"\",\"tty\":\"MIN\",\"language\":\"ENG\",\"suppress\":\"N\",\"umlscui\":\"\"}]}]}}",
+    "rxcui/142118/properties": "{\"properties\":{\"rxcui\":\"142118\",\"name\":\"sulfamethoxazole 100 MG / trimethoprim 20 MG Oral Tablet\",\"synonym\":\"SMX 100 MG / TMP 20 MG Oral Tablet\",\"tty\":\"SCD\",\"language\":\"ENG\",\"suppress\":\"N\",\"umlscui\":\"\"}}",
+    "rxcui/142118/historystatus": "{\"rxcuiStatusHistory\":{\"metaData\":{\"status\":\"Active\",\"source\":\"RXNORM\",\"releaseStartDate\":\"042005\",\"releaseEndDate\":\"\",\"isCurrent\":\"YES\",\"activeStartDate\":\"042005\",\"activeEndDate\":\"\",\"remappedDate\":\"\"},\"attributes\":{\"rxcui\":\"142118\",\"name\":\"sulfamethoxazole 100 MG / trimethoprim 20 MG Oral Tablet\",\"tty\":\"SCD\",\"isMultipleIngredient\":\"YES\",\"isBranded\":\"NO\"},\"definitionalFeatures\":{\"ingredientAndStrength\":[{\"baseRxcui\":\"10180\",\"baseName\":\"sulfamethoxazole\",\"bossRxcui\":\"10180\",\"bossName\":\"sulfamethoxazole\",\"activeIngredientRxcui\":\"10180\",\"activeIngredientName\":\"sulfamethoxazole\",\"moietyRxcui\":\"10180\",\"moietyName\":\"sulfamethoxazole\",\"numeratorValue\":\"100\",\"numeratorUnit\":\"MG\",\"denominatorValue\":\"1\",\"denominatorUnit\":\"EACH\"},{\"baseRxcui\":\"10829\",\"baseName\":\"trimethoprim\",\"bossRxcui\":\"10829\",\"bossName\":\"trimethoprim\",\"activeIngredientRxcui\":\"10829\",\"activeIngredientName\":\"trimethoprim\",\"moietyRxcui\":\"10829\",\"moietyName\":\"trimethoprim\",\"numeratorValue\":\"20\",\"numeratorUnit\":\"MG\",\"denominatorValue\":\"1\",\"denominatorUnit\":\"EACH\"}],\"doseFormConcept\":[{\"doseFormRxcui\":\"317541\",\"doseFormName\":\"Oral Tablet\"}],\"doseFormGroupConcept\":[{\"doseFormGroupRxcui\":\"1151131\",\"doseFormGroupName\":\"Oral Product\"},{\"doseFormGroupRxcui\":\"1151133\",\"doseFormGroupName\":\"Pill\"}]},\"pack\":{},\"derivedConcepts\":{\"ingredientConcept\":[{\"ingredientRxcui\":\"10180\",\"ingredientName\":\"sulfamethoxazole\"},{\"ingredientRxcui\":\"10829\",\"ingredientName\":\"trimethoprim\"}]}}}",
+    "rxcui/142118/related?rela=has_ingredients": "{\"relatedGroup\":{\"rxcui\":null,\"conceptGroup\":[{\"tty\":\"MIN\",\"conceptProperties\":[{\"rxcui\":\"10831\",\"name\":\"sulfamethoxazole / trimethoprim\",\"synonym\":\"\",\"tty\":\"MIN\",\"language\":\"ENG\",\"suppress\":\"N\",\"umlscui\":\"\"}]}]}}"
+  },
+  "response_hashes": {
+    "rxcui/10831/properties": "ca8397e42314f7dd9e01793c3b53ab29a64f1fd2dd8ff83adf02669c3eafcd42",
+    "rxcui/10831/related?rela=has_part": "31786a93009b4b401e437d276ba499fd71e4272ac6612b384766ed64cf95fb43",
+    "rxcui/10831/historystatus": "2c59928713d59d8602184c758021be205d4ab43c4000703ccd1e47cfc83f27df",
+    "rxcui/10180/properties": "0e9343e3541fc2b2142c77bd03e3b106adcd76d5017b7536aa51d340afffe274",
+    "rxcui/10180/historystatus": "b98ce6889b5d00dfcf4744f75535d0c3aa9e320d2a8ea25ce566f2bc5763d6b0",
+    "rxcui/10829/properties": "ac9bfe5c0415ccda9ee1199e75d1443e07a0fefc68b4e21151adff0dce96cdda",
+    "rxcui/10829/historystatus": "0d893ca591134ca8ab80fdd24b3e1de181fb1314168e8e4a729ed3ec1a50b2d4",
+    "rxcui/198335/properties": "09ae86fb5593e15ebbf28c822f514e5b98692111e39898006ea31bfa91a55924",
+    "rxcui/198335/historystatus": "6d52a381d21d1c9c8d630d6c211de920f0b40d46aec8bd53b23ed903793f764d",
+    "rxcui/198335/related?rela=has_ingredients": "f4ae08ebd8a18f7463733f818e4dacd1c8e87e4b15854a8e01c3ae2ff294c64d",
+    "rxcui/142118/properties": "7883c6b4b3c8dc1784446b917371547ad4db271bd5f2f1e0f8031a294ab7cab8",
+    "rxcui/142118/historystatus": "45a379e7836bcc4a238b3f46e04d7155effa72c5b71dd88c20654b5825855481",
+    "rxcui/142118/related?rela=has_ingredients": "f4ae08ebd8a18f7463733f818e4dacd1c8e87e4b15854a8e01c3ae2ff294c64d"
+  }
+}
