@@ -2,7 +2,7 @@
 
 Generated from `docs/interaction-review/batch-01-v2/sections/F.verified.jsonl`.
 
-- Frozen Section F SHA-256: `c8d3ace2dc86768aba5509423e3df84a59fc7e86985189b0e05723ce6fc7d7a8`
+- Frozen Section F SHA-256: `73a68362fda43c9ff266940199f322339aad50ee3a11e440806af5b2efe31037`
 - Rules: 16
 - Evidence records: 17
 - Exact fragments: 42
@@ -256,7 +256,8 @@ Does not by itself support:
 - Licensed API source: https://api.fda.gov/drug/label.json?search=set_id%3A%22f59d0c04-9c66-4d53-a0e1-cb55570deb62%22&limit=100
 - DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=f59d0c04-9c66-4d53-a0e1-cb55570deb62
 - Document: `f59d0c04-9c66-4d53-a0e1-cb55570deb62` version `18`; effective time `20241230`
-- Payload SHA-256: `d525d3de3660b3dd3f63512afcd30445bdd2831b3eac89c1adf9db9e624cf60a`
+- Payload SHA-256: `f9757c9b56b5e32938b0c9976f669d8539247d0230b471e348d1aa998f583d18`
+- Currentness checked, accessed, and retrieved: `2026-07-28`
 - Proposition: The BACTRIM label recommends avoiding concurrent angiotensin-converting-enzyme inhibitor use and reports hyperkalaemia cases with the combination.
 - Source effect: `["hyperkalemia_reported_with_concomitant_ace_inhibitor"]`
 - Label action: `["avoid_concurrent_use"]`
@@ -288,7 +289,8 @@ Does not by itself support:
 - Licensed API source: https://api.fda.gov/drug/label.json?search=set_id%3A%22f59d0c04-9c66-4d53-a0e1-cb55570deb62%22&limit=100
 - DailyMed reference: https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=f59d0c04-9c66-4d53-a0e1-cb55570deb62
 - Document: `f59d0c04-9c66-4d53-a0e1-cb55570deb62` version `18`; effective time `20241230`
-- Payload SHA-256: `d525d3de3660b3dd3f63512afcd30445bdd2831b3eac89c1adf9db9e624cf60a`
+- Payload SHA-256: `f9757c9b56b5e32938b0c9976f669d8539247d0230b471e348d1aa998f583d18`
+- Currentness checked, accessed, and retrieved: `2026-07-28`
 - Proposition: The BACTRIM label states that recommended-dose trimethoprim may cause hyperkalaemia when drugs known to induce hyperkalaemia are coadministered and directs close serum-potassium monitoring.
 - Source effect: `["hyperkalemia"]`
 - Label action: `["monitor_serum_potassium_closely"]`

@@ -2,10 +2,229 @@
   "schema_version": 1,
   "identity_namespace": "aushadhi:ingredient-identity:v1",
   "notices": [
-    "Fixed-dose combination identities. Deliberately EMPTY.",
-    "Clinician decision C1 (2026-07-27) approved combination support with an architectural condition: combinations use this separate path, and the single-ingredient IN/PIN model in ingredient-mapping-overrides.json is unchanged. A MIN term type is admissible only here, only on identity_kind fixed_dose_combination, and only alongside a verified component list.",
-    "No combination may be recorded until the schema, validator, positive and negative tests and provenance requirements are independently approved. warfarin__cotrimoxazole is clinically approved in principle but remains blocked from promotion pending that approval.",
-    "Matching either component of a combination on its own is prohibited. A combination is matched at product level against the whole active-ingredient set."
+    "Fixed-dose combinations use a separate, product-level identity path. MIN remains prohibited in the single-ingredient IN/PIN mapping manifest.",
+    "This manifest is internal-evaluation only. It has no production-open authority and does not authorize an interaction rule.",
+    "Every combination and presentation requires a committed, authoritative RxNorm evidence bundle that passes the mandatory offline semantic gate.",
+    "Combination subjects supplement exact component subjects. Clinical-alert deduplication remains rule-level and must never discard unrelated component interactions."
   ],
-  "combinations": []
+  "combinations": [
+    {
+      "combination_id": "combination:co-trimoxazole:rxnorm-10831",
+      "identity_kind": "fixed_dose_combination",
+      "runtime_drug": "co-trimoxazole",
+      "rxnorm": {
+        "rxcui": "10831",
+        "name": "sulfamethoxazole / trimethoprim",
+        "tty": "MIN",
+        "version": "06-Jul-2026",
+        "api_version": "3.1.354",
+        "properties_response_sha256": "ca8397e42314f7dd9e01793c3b53ab29a64f1fd2dd8ff83adf02669c3eafcd42",
+        "component_relation": {
+          "relationship": "has_part",
+          "component_rxcuis": [
+            "10180",
+            "10829"
+          ],
+          "response_sha256": "31786a93009b4b401e437d276ba499fd71e4272ac6612b384766ed64cf95fb43"
+        }
+      },
+      "components": [
+        {
+          "name": "sulfamethoxazole",
+          "rxcui": "10180",
+          "tty": "IN",
+          "runtime_ingredient_id": "sha256:5b15ba7515bffc9682ddd1092973725241a66fd6bba12fda69d7fd8c8712a2bf",
+          "assertion_ingredient_ids": [
+            "sha256:5b15ba7515bffc9682ddd1092973725241a66fd6bba12fda69d7fd8c8712a2bf",
+            "sha256:f68344038f9f9bb5eb6194c285d27716c812b8f670ba1a156b89051f68eeaeaa"
+          ],
+          "assertion_ingredient_aliases": [
+            {
+              "ingredient_id": "sha256:f68344038f9f9bb5eb6194c285d27716c812b8f670ba1a156b89051f68eeaeaa",
+              "observed_name": "co-trimoxazole sulphamethoxazole",
+              "source_field": "molecule"
+            }
+          ]
+        },
+        {
+          "name": "trimethoprim",
+          "rxcui": "10829",
+          "tty": "IN",
+          "runtime_ingredient_id": "sha256:ec4b38e63e65a622534beabc5d428b52dacbc2f805a000615cc4c90b27d41fa9",
+          "assertion_ingredient_ids": [
+            "sha256:ec4b38e63e65a622534beabc5d428b52dacbc2f805a000615cc4c90b27d41fa9"
+          ]
+        }
+      ],
+      "component_match": "exact_active_set",
+      "exposure_scope": "systemic",
+      "presentation_scopes": [
+        {
+          "route": "oral",
+          "formulation": "tablet"
+        }
+      ],
+      "presentations": [
+        {
+          "source_identity": {
+            "namespace": "presentation:pmbjp",
+            "code": "89"
+          },
+          "product_id": "sha256:f3835b624129e57ede72edc56a6106782aa9df2e6f5491ebd09bd0ac9656e03a",
+          "product_assertion_sha256": "91dea78c9c4194164d7dcd131472f801478c0a2268557aae03662fcbb64b7446",
+          "product_assertion": {
+            "brand_name": "Co-trimoxazole (Sulphamethoxazole 800mg and Trimethoprim 160mg) Tablets IP",
+            "manufacturer": "PMBJP (Jan Aushadhi)",
+            "pack_label": "10's",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "co-trimoxazole sulphamethoxazole",
+                "source_field": "molecule",
+                "strength_raw": "800mg",
+                "strength_value": 800,
+                "strength_unit": "mg"
+              },
+              {
+                "observed_name": "trimethoprim",
+                "source_field": "molecule",
+                "strength_raw": "160mg",
+                "strength_value": 160,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "route": "oral",
+          "formulation": "tablet",
+          "rxnorm_scd": {
+            "rxcui": "198335",
+            "tty": "SCD",
+            "name": "sulfamethoxazole 800 MG / trimethoprim 160 MG Oral Tablet",
+            "ingredients_and_strengths": [
+              {
+                "component_rxcui": "10180",
+                "ingredient_rxcui_field": "baseRxcui",
+                "numerator_value": "800",
+                "numerator_unit": "MG",
+                "denominator_value": "1",
+                "denominator_unit": "EACH"
+              },
+              {
+                "component_rxcui": "10829",
+                "ingredient_rxcui_field": "baseRxcui",
+                "numerator_value": "160",
+                "numerator_unit": "MG",
+                "denominator_value": "1",
+                "denominator_unit": "EACH"
+              }
+            ],
+            "dose_form": "Oral Tablet",
+            "version": "06-Jul-2026",
+            "properties_response_sha256": "09ae86fb5593e15ebbf28c822f514e5b98692111e39898006ea31bfa91a55924",
+            "historystatus_response_sha256": "6d52a381d21d1c9c8d630d6c211de920f0b40d46aec8bd53b23ed903793f764d",
+            "min_relation_response_sha256": "f4ae08ebd8a18f7463733f818e4dacd1c8e87e4b15854a8e01c3ae2ff294c64d"
+          }
+        },
+        {
+          "source_identity": {
+            "namespace": "presentation:pmbjp",
+            "code": "90"
+          },
+          "product_id": "sha256:1b8857c5423094122e608d865db146fa2ffc7e434df540a2b0cf8bd821d33521",
+          "product_assertion_sha256": "9f5eb20bf581a8e78decb7adcaa66e532e2098748ba8bc27a63a3483f90b0547",
+          "product_assertion": {
+            "brand_name": "Co-trimoxazole (Sulphamethoxazole 100mg and Trimethoprim 20mg) Tablets IP",
+            "manufacturer": "PMBJP (Jan Aushadhi)",
+            "pack_label": "10's",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "co-trimoxazole sulphamethoxazole",
+                "source_field": "molecule",
+                "strength_raw": "100mg",
+                "strength_value": 100,
+                "strength_unit": "mg"
+              },
+              {
+                "observed_name": "trimethoprim",
+                "source_field": "molecule",
+                "strength_raw": "20mg",
+                "strength_value": 20,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "route": "oral",
+          "formulation": "tablet",
+          "rxnorm_scd": {
+            "rxcui": "142118",
+            "tty": "SCD",
+            "name": "sulfamethoxazole 100 MG / trimethoprim 20 MG Oral Tablet",
+            "ingredients_and_strengths": [
+              {
+                "component_rxcui": "10180",
+                "ingredient_rxcui_field": "baseRxcui",
+                "numerator_value": "100",
+                "numerator_unit": "MG",
+                "denominator_value": "1",
+                "denominator_unit": "EACH"
+              },
+              {
+                "component_rxcui": "10829",
+                "ingredient_rxcui_field": "baseRxcui",
+                "numerator_value": "20",
+                "numerator_unit": "MG",
+                "denominator_value": "1",
+                "denominator_unit": "EACH"
+              }
+            ],
+            "dose_form": "Oral Tablet",
+            "version": "06-Jul-2026",
+            "properties_response_sha256": "7883c6b4b3c8dc1784446b917371547ad4db271bd5f2f1e0f8031a294ab7cab8",
+            "historystatus_response_sha256": "45a379e7836bcc4a238b3f46e04d7155effa72c5b71dd88c20654b5825855481",
+            "min_relation_response_sha256": "f4ae08ebd8a18f7463733f818e4dacd1c8e87e4b15854a8e01c3ae2ff294c64d"
+          }
+        }
+      ],
+      "provenance": {
+        "identity_sources": [
+          {
+            "kind": "official_product_list",
+            "evidence_ref": "pmbjp-product-list"
+          }
+        ],
+        "tender_check": {
+          "status": "not_present",
+          "document_id": "RC-222/2025",
+          "evidence_ref": "pmbjp-tender-rc222-absence"
+        }
+      },
+      "allowed_profiles": [
+        "internal-evaluation"
+      ],
+      "review": {
+        "status": "reviewed",
+        "reviewer_id": "clinician:subas",
+        "reviewed_at": "2026-07-27",
+        "evidence": [
+          {
+            "evidence_ref": "pmbjp-product-list",
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-product-list:89,90",
+            "source_url": "https://static.pib.gov.in/WriteReadData/specificdocs/documents/2026/feb/doc202626781701.pdf",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "f54a140d9dc82880dcbb7672c18942417e8c9fe904376c742b6319665cdf9a08"
+          },
+          {
+            "evidence_ref": "pmbjp-tender-rc222-absence",
+            "source_id": "janaushadhi",
+            "identifier": "pmbjp-tender:RC-222/2025:co-trimoxazole:not-present",
+            "source_url": "https://www.pmbi.co.in/tender/Proc%20Tender-222_30042025.pdf",
+            "retrieved_at": "2026-07-27",
+            "evidence_sha256": "47670d2b6f7daaa96afcca49c955a19fb1d3901f51f69c676624dd5b596f53ff"
+          }
+        ]
+      }
+    }
+  ]
 }

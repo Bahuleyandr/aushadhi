@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { validateCombinationIdentityManifest } from '../lib/interaction-combination-identity.mjs';
-import { verifyCombinationManifestEvidence } from '../lib/combination-rxnorm-evidence.mjs';
+import {
+  assertVerifiedCombinationManifestEvidence,
+  verifyCombinationManifestEvidence,
+} from '../lib/combination-rxnorm-evidence.mjs';
+import {
+  verifyPmbjpCombinationEvidenceFiles,
+} from '../lib/pmbjp-combination-evidence.mjs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -46,7 +52,15 @@ function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
-export function buildCommittedRuntimePack() {
+function deepFreeze(value, seen = new Set()) {
+  if (value === null || typeof value !== 'object' || seen.has(value)) return value;
+  seen.add(value);
+  for (const child of Object.values(value)) deepFreeze(child, seen);
+  return Object.freeze(value);
+}
+
+export function buildCommittedRuntimePack(pmbjpSource = defaultPmbjpSource(ROOT)) {
+  const { manifest, report } = assertCombinationEvidenceVerified(ROOT, pmbjpSource);
   return compileInteractionRuntimePack({
     promotionManifest: readJson(PATHS.promotion),
     draftPackBytes: fs.readFileSync(PATHS.draft),
@@ -54,6 +68,8 @@ export function buildCommittedRuntimePack() {
     memberSetsBytes: fs.readFileSync(PATHS.memberSets),
     ingredientManifest: readJson(PATHS.ingredients),
     presentationManifest: readJson(PATHS.presentations),
+    combinationManifest: manifest,
+    combinationEvidenceReport: report,
   });
 }
 
@@ -80,15 +96,29 @@ function replaceAtomically(targetPath, text) {
   }
 }
 
-// Machine-enforced coupling: a non-empty combination manifest may not be compiled or
-// promoted until its RxNorm evidence verifies. This is not a separately documented
-// command a developer can forget -- the promotion gate runs it.
-export function assertCombinationEvidenceVerified(root = ROOT) {
+// Machine-enforced coupling: the manifest must exist, and any recorded combinations
+// may not be compiled or promoted until their RxNorm evidence verifies. The returned
+// manifest/report pair preserves the verifier capability for downstream compilation.
+function defaultPmbjpSource(root) {
+  const restrictedRoot = path.join(root, 'data', 'interaction', 'internal-evaluation');
+  const sourceDir = path.join(restrictedRoot, 'pmbjp-product-list');
+  return {
+    pdfPath: path.join(sourceDir, 'pmbjp-product-list.pdf'),
+    tableTextPath: path.join(sourceDir, 'pmbjp-product-list.table.txt'),
+  };
+}
+
+export function assertCombinationEvidenceVerified(
+  root = ROOT,
+  pmbjpSource = defaultPmbjpSource(root),
+) {
   const manifestPath = path.join(root, 'data-static', 'combination-identity-overrides.json');
-  if (!fs.existsSync(manifestPath)) return { combinations: 0, verified: true };
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`combination identity manifest is missing: ${manifestPath}`);
+  }
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
   validateCombinationIdentityManifest(manifest);
-  if (manifest.combinations.length === 0) return { combinations: 0, verified: true };
+  deepFreeze(manifest);
 
   const bundleDir = path.join(root, 'data-static', 'combination-rxnorm-evidence');
   const bundles = {};
@@ -101,7 +131,12 @@ export function assertCombinationEvidenceVerified(root = ROOT) {
       bundles[combination.combination_id] = JSON.parse(fs.readFileSync(file, 'utf8'));
     }
   }
-  const report = verifyCombinationManifestEvidence(manifest, bundles);
+  const pmbjpSourceReport = verifyPmbjpCombinationEvidenceFiles(manifest, pmbjpSource);
+  const report = verifyCombinationManifestEvidence(
+    manifest,
+    bundles,
+    { pmbjpSourceReport },
+  );
   if (!report.verified) {
     const detail = report.reports
       .filter((entry) => !entry.verified)
@@ -112,19 +147,29 @@ export function assertCombinationEvidenceVerified(root = ROOT) {
       + `checked: ${detail}`,
     );
   }
-  return { combinations: report.combinations_checked, verified: true };
+  assertVerifiedCombinationManifestEvidence(report, manifest);
+  return Object.freeze({ manifest, report });
 }
 
 function main() {
   const args = process.argv.slice(2);
-  if (args.some((arg) => arg !== '--check') || args.filter((arg) => arg === '--check').length > 1) {
-    throw new TypeError('usage: node src/cli/build-interaction-runtime-pack.mjs [--check]');
+  const allowed = args.every((arg) => (
+    arg === '--check'
+    || arg.startsWith('--pmbjp-list=')
+    || arg.startsWith('--pmbjp-table=')
+  ));
+  if (!allowed || args.filter((arg) => arg === '--check').length > 1) {
+    throw new TypeError(
+      'usage: node src/cli/build-interaction-runtime-pack.mjs [--check] '
+      + '[--pmbjp-list=<pdf>] [--pmbjp-table=<table-text>]',
+    );
   }
-  // Machine-enforced coupling: a non-empty combination manifest may not compile or
-  // promote until its RxNorm evidence verifies. This is not a separately documented
-  // command a developer can forget -- the promotion gate runs it.
-  assertCombinationEvidenceVerified();
-  const serialized = serializeInteractionRuntimePack(buildCommittedRuntimePack());
+  const source = defaultPmbjpSource(ROOT);
+  const pdfArg = args.find((arg) => arg.startsWith('--pmbjp-list='));
+  const tableArg = args.find((arg) => arg.startsWith('--pmbjp-table='));
+  if (pdfArg) source.pdfPath = path.resolve(ROOT, pdfArg.slice('--pmbjp-list='.length));
+  if (tableArg) source.tableTextPath = path.resolve(ROOT, tableArg.slice('--pmbjp-table='.length));
+  const serialized = serializeInteractionRuntimePack(buildCommittedRuntimePack(source));
   if (args.includes('--check')) {
     if (!fs.existsSync(PATHS.output) || fs.readFileSync(PATHS.output, 'utf8') !== serialized) {
       throw new Error(

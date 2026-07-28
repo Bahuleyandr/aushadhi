@@ -4,6 +4,16 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { checkResolvedProducts, validateRulePack } from '../lib/interaction-checker.mjs';
 import {
+  compileCombinationIdentityManifest,
+  validateCombinationIdentityManifest,
+} from '../lib/interaction-combination-identity.mjs';
+import {
+  verifyCombinationManifestEvidence,
+} from '../lib/combination-rxnorm-evidence.mjs';
+import {
+  verifyPmbjpCombinationEvidenceFiles,
+} from '../lib/pmbjp-combination-evidence.mjs';
+import {
   mappingAllowedForProfile,
   mapResolvedProducts,
   summarizeInteractionMappings,
@@ -37,6 +47,26 @@ const DEFAULT_PRESENTATION_MAPPINGS = path.join(
   'data-static',
   'product-presentation-overrides.json',
 );
+const DEFAULT_COMBINATION_MANIFEST = path.join(
+  ROOT,
+  'data-static',
+  'combination-identity-overrides.json',
+);
+const DEFAULT_COMBINATION_EVIDENCE = path.join(
+  ROOT,
+  'data-static',
+  'combination-rxnorm-evidence',
+);
+const PMBJP_RESTRICTED_ROOT = path.join(
+  ROOT,
+  'data',
+  'interaction',
+  'internal-evaluation',
+);
+const DEFAULT_PMBJP_SOURCE_DIR = path.join(
+  PMBJP_RESTRICTED_ROOT,
+  'pmbjp-product-list',
+);
 
 function requireValue(args, index, flag) {
   const value = args[index + 1];
@@ -53,6 +83,13 @@ export function parseArgs(args) {
     rulesPath: null,
     ingredientMappingsPath: DEFAULT_INGREDIENT_MAPPINGS,
     presentationMappingsPath: DEFAULT_PRESENTATION_MAPPINGS,
+    combinationManifestPath: DEFAULT_COMBINATION_MANIFEST,
+    combinationEvidenceDir: DEFAULT_COMBINATION_EVIDENCE,
+    pmbjpListPath: path.join(DEFAULT_PMBJP_SOURCE_DIR, 'pmbjp-product-list.pdf'),
+    pmbjpTablePath: path.join(
+      DEFAULT_PMBJP_SOURCE_DIR,
+      'pmbjp-product-list.table.txt',
+    ),
     queries: [],
   };
 
@@ -72,6 +109,18 @@ export function parseArgs(args) {
       index += 1;
     } else if (flag === '--presentation-mappings') {
       options.presentationMappingsPath = path.resolve(ROOT, requireValue(args, index, flag));
+      index += 1;
+    } else if (flag === '--combination-manifest') {
+      options.combinationManifestPath = path.resolve(ROOT, requireValue(args, index, flag));
+      index += 1;
+    } else if (flag === '--combination-evidence-dir') {
+      options.combinationEvidenceDir = path.resolve(ROOT, requireValue(args, index, flag));
+      index += 1;
+    } else if (flag === '--pmbjp-list') {
+      options.pmbjpListPath = path.resolve(ROOT, requireValue(args, index, flag));
+      index += 1;
+    } else if (flag === '--pmbjp-table') {
+      options.pmbjpTablePath = path.resolve(ROOT, requireValue(args, index, flag));
       index += 1;
     } else if (flag === '--drug') {
       options.queries.push(parseDrugQuery(requireValue(args, index, flag)));
@@ -192,6 +241,67 @@ function assertMappingEvidenceSourcesAllowed(sourceManifest, profile, mappingMan
   }
 }
 
+function assertEvidenceSourceAllowed(sourceManifest, {
+  sourceId,
+  profile,
+  allowedUses,
+  label,
+}) {
+  const source = sourceManifest.sources?.[sourceId];
+  if (!source) throw new Error(`${label} uses unknown source ${sourceId}`);
+  const use = allowedUses.find((candidate) => source.allowed_uses?.includes(candidate));
+  if (!use) throw new Error(`${label} source ${sourceId} is not allowed for this evidence type`);
+  const storagePathForPolicy = source.required_storage_zones?.[profile]?.[0] ?? 'data-static';
+  assertSourceAllowed(sourceManifest, {
+    sourceId,
+    profile,
+    use,
+    storagePath: storagePathForPolicy,
+  });
+}
+
+function assertCombinationEvidenceSourcesAllowed(sourceManifest, profile, combinationManifest) {
+  for (const combination of combinationManifest.combinations) {
+    if (!combination.allowed_profiles.includes(profile)) continue;
+    for (const evidence of combination.review.evidence) {
+      assertEvidenceSourceAllowed(sourceManifest, {
+        sourceId: evidence.source_id,
+        profile,
+        allowedUses: ['product-resolution', 'identity', 'interaction-evidence'],
+        label: `combination ${combination.combination_id} review evidence`,
+      });
+    }
+    assertEvidenceSourceAllowed(sourceManifest, {
+      sourceId: 'rxnorm',
+      profile,
+      allowedUses: ['identity'],
+      label: `combination ${combination.combination_id} RxNorm evidence`,
+    });
+  }
+}
+
+async function loadCombinationEvidenceBundles(dir, combinationManifest) {
+  const bundles = Object.create(null);
+  for (const combination of combinationManifest.combinations) {
+    const filename = `${combination.combination_id.replaceAll(/[^a-zA-Z0-9._-]/gu, '_')}.json`;
+    bundles[combination.combination_id] = await readJson(
+      path.join(dir, filename),
+      `combination RxNorm evidence bundle for ${combination.combination_id}`,
+    );
+  }
+  return bundles;
+}
+
+function assertCombinationEvidenceVerified(report) {
+  if (report.verified) return;
+  const detail = report.reports
+    .map((entry) => (
+      `${entry.combination_id}: ${entry.findings.map((finding) => finding.code).join(', ')}`
+    ))
+    .join('; ');
+  throw new Error(`combination RxNorm evidence is unverified${detail ? `: ${detail}` : ''}`);
+}
+
 function assertRulePackProfile(runtimeProfile, rulePack) {
   if (runtimeProfile === 'production-open' && rulePack.profile !== 'production-open') {
     throw new Error('production-open cannot load an internal-evaluation rule pack');
@@ -228,8 +338,20 @@ export async function runInteractionCheck(options) {
     options.presentationMappingsPath,
     'product presentation overrides',
   );
+  const authoredCombinationManifest = await readJson(
+    options.combinationManifestPath,
+    'combination identity manifest',
+  );
   validateIngredientMappingManifest(ingredientManifest);
   validateProductPresentationManifest(presentationManifest);
+  validateCombinationIdentityManifest(authoredCombinationManifest);
+  const combinationManifest = {
+    ...authoredCombinationManifest,
+    combinations: authoredCombinationManifest.combinations.filter(
+      (combination) => combination.allowed_profiles.includes(options.profile),
+    ),
+  };
+  validateCombinationIdentityManifest(combinationManifest);
   assertMappingEvidenceSourcesAllowed(manifest, options.profile, [
     { manifest: ingredientManifest, allowedUses: ['identity'] },
     {
@@ -237,6 +359,33 @@ export async function runInteractionCheck(options) {
       allowedUses: ['product-resolution', 'identity', 'interaction-evidence'],
     },
   ]);
+  assertCombinationEvidenceSourcesAllowed(manifest, options.profile, combinationManifest);
+  const combinationBundles = await loadCombinationEvidenceBundles(
+    options.combinationEvidenceDir,
+    combinationManifest,
+  );
+  const combinationVerificationReport = verifyCombinationManifestEvidence(
+    combinationManifest,
+    combinationBundles,
+    {
+      pmbjpSourceReport: verifyPmbjpCombinationEvidenceFiles(
+        combinationManifest,
+        {
+          restrictedRoot: PMBJP_RESTRICTED_ROOT,
+          pdfPath: options.pmbjpListPath,
+          tableTextPath: options.pmbjpTablePath,
+        },
+      ),
+    },
+  );
+  assertCombinationEvidenceVerified(combinationVerificationReport);
+  const compiledCombinationManifest = compileCombinationIdentityManifest(
+    combinationManifest,
+    {
+      kind: 'verified_manifest',
+      verificationReport: combinationVerificationReport,
+    },
+  );
 
   const scan = await scanProductQueries({
     artifactPath: options.artifactPath,
@@ -253,6 +402,7 @@ export async function runInteractionCheck(options) {
     records: scan.results,
     ingredientManifest,
     presentationManifest,
+    combinationManifest: compiledCombinationManifest,
     profile: options.profile,
   });
   return {

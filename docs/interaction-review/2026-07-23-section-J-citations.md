@@ -2,7 +2,7 @@
 
 Machine evidence: **21** records across **12** rules.
 
-- JSONL SHA-256: `f38886d7052f3029395360b18a90ff9aae4573994af527830194e33053576b5e`
+- JSONL SHA-256: `8a00848ed4985907a350042861f3933a8fdbe352a4460ed1dc7929d7723e628f`
 - Schema validation: `validateDraftRules` passes; evidence and member
   allowlists remain frozen and every rule remains `promotion_eligible:false`.
 
@@ -20,6 +20,7 @@ Excluded or rights-unclear sources are not linked, quoted, summarized, or repres
 - runtime_enabled: `false`
 - machine_evidence: `1`
 - evidence `J-US02`: policy=`openfda-labels`; use=`interaction-evidence`; licence=`CC0-1.0`; document=`f0e73842-6002-43c2-97fc-0cadc1bf6346@12`; origin=https://api.fda.gov/drug/label.json?search=set_id%3A%22f0e73842-6002-43c2-97fc-0cadc1bf6346%22&limit=100
+- 2026-07-28 current payload SHA-256: `254015707829f4bb483857f676250dd424877fad067b55d76fcf5f2b84dd1cbd`; the retained fragment remains exact.
 - gap: Open-evidence gap: only glipizide and glyburide are source-named runtime victims.
 
 ## sulfonylurea__gemfibrozil

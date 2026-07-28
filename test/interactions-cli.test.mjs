@@ -142,6 +142,75 @@ function makeFixture({
   return dir;
 }
 
+function makeCombinationFixture() {
+  const root = path.join(ROOT, 'dist');
+  fs.mkdirSync(root, { recursive: true });
+  const dir = fs.mkdtempSync(path.join(root, '.tmp-cli-combination-'));
+  const rows = [
+    {
+      brand_name: 'Co-trimoxazole (Sulphamethoxazole 800mg and Trimethoprim 160mg) Tablets IP',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "10's",
+      form_raw: null,
+      ingredients: [
+        {
+          molecule: 'co-trimoxazole sulphamethoxazole',
+          strength_raw: '800mg',
+          strength_value: 800,
+          strength_unit: 'mg',
+        },
+        {
+          molecule: 'trimethoprim',
+          strength_raw: '160mg',
+          strength_value: 160,
+          strength_unit: 'mg',
+        },
+      ],
+      sources: [{ source: 'janaushadhi', source_id: '89', seen_at: '2026-07-07' }],
+    },
+    {
+      brand_name: 'Co-trimoxazole (Sulphamethoxazole 100mg and Trimethoprim 20mg) Tablets IP',
+      manufacturer: 'PMBJP (Jan Aushadhi)',
+      pack_label: "10's",
+      form_raw: null,
+      ingredients: [
+        {
+          molecule: 'co-trimoxazole sulphamethoxazole',
+          strength_raw: '100mg',
+          strength_value: 100,
+          strength_unit: 'mg',
+        },
+        {
+          molecule: 'trimethoprim',
+          strength_raw: '20mg',
+          strength_value: 20,
+          strength_unit: 'mg',
+        },
+      ],
+      sources: [{ source: 'janaushadhi', source_id: '90', seen_at: '2026-07-07' }],
+    },
+  ];
+  fs.writeFileSync(path.join(dir, 'drugs.jsonl'), `${rows.map(JSON.stringify).join('\n')}\n`);
+  fs.writeFileSync(path.join(dir, 'summary.json'), JSON.stringify({
+    date: '2026-07-28',
+    total_rows: rows.length,
+    sources: { janaushadhi: rows.length },
+  }));
+  fs.writeFileSync(path.join(dir, 'ingredient-mappings.json'), JSON.stringify({
+    schema_version: 1,
+    identity_namespace: 'aushadhi:ingredient-identity:v1',
+    notices: ['Empty CLI combination fixture.'],
+    mappings: [],
+  }));
+  fs.writeFileSync(path.join(dir, 'presentation-mappings.json'), JSON.stringify({
+    schema_version: 1,
+    product_id_namespace: 'aushadhi:product:v1',
+    product_assertion_namespace: 'aushadhi:product-assertion:v1',
+    mappings: [],
+  }));
+  return dir;
+}
+
 function runCli(args, { attachMappings = true } = {}) {
   const invocation = [...args];
   const artifactIndex = invocation.indexOf('--artifact');
@@ -186,6 +255,32 @@ test('CLI selects the rule pack for the explicit release profile by default', ()
   assert.equal(
     path.basename(internal.rulesPath),
     'interaction-rules.internal-evaluation.json',
+  );
+  assert.equal(
+    path.basename(internal.combinationManifestPath),
+    'combination-identity-overrides.json',
+  );
+  assert.equal(
+    path.basename(internal.combinationEvidenceDir),
+    'combination-rxnorm-evidence',
+  );
+});
+
+test('CLI accepts explicit combination manifest and evidence directory paths', () => {
+  const options = parseArgs([
+    '--profile', 'internal-evaluation',
+    '--combination-manifest', 'fixtures/combination.json',
+    '--combination-evidence-dir', 'fixtures/combination-evidence',
+    '--drug', 'First',
+    '--drug', 'Second',
+  ]);
+  assert.equal(
+    options.combinationManifestPath,
+    path.join(ROOT, 'fixtures', 'combination.json'),
+  );
+  assert.equal(
+    options.combinationEvidenceDir,
+    path.join(ROOT, 'fixtures', 'combination-evidence'),
   );
 });
 
@@ -240,6 +335,118 @@ test('CLI resolves exact products, expands FDCs and reports unknown open-rule co
       runtime_subjects: 3,
     });
     assert.match(output.disclaimer, /does not establish safety/i);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('internal CLI verifies and maps both reviewed PMBJP combination presentations', () => {
+  const dir = makeCombinationFixture();
+  try {
+    const result = runCli([
+      '--profile', 'internal-evaluation',
+      '--artifact', path.join(dir, 'drugs.jsonl'),
+      '--drug', 'Co-trimoxazole (Sulphamethoxazole 800mg and Trimethoprim 160mg) Tablets IP',
+      '--drug', 'Co-trimoxazole (Sulphamethoxazole 100mg and Trimethoprim 20mg) Tablets IP',
+    ]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stderr, '');
+    const output = JSON.parse(result.stdout);
+    assert.equal(output.resolved_inputs.length, 2);
+    for (const entry of output.resolved_inputs) {
+      assert.equal(entry.product.combination.status, 'reviewed_override');
+      assert.equal(entry.product.presentation.mapping_scope, 'reviewed_combination_product');
+      assert.ok(entry.product.ingredients.every((ingredient) => (
+        ingredient.mapping_scope === 'reviewed_combination_product'
+        && ingredient.mapping_status === 'reviewed_override'
+      )));
+    }
+    const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
+    assert.ok(output.checked_pairs.some((entry) => entry.pair.includes(combinationSubjectId)));
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('CLI fails closed on missing, tampered, and audit-only combination evidence inputs', () => {
+  const fixtureDir = makeCombinationFixture();
+  const manifestPath = path.join(ROOT, 'data-static', 'combination-identity-overrides.json');
+  const combinationId = 'combination:co-trimoxazole:rxnorm-10831';
+  const filename = `${combinationId.replaceAll(/[^a-zA-Z0-9._-]/gu, '_')}.json`;
+  const sourceBundle = path.join(
+    ROOT,
+    'data-static',
+    'combination-rxnorm-evidence',
+    filename,
+  );
+  const integrationBundle = path.join(
+    ROOT,
+    'data-static',
+    'combination-rxnorm-evidence',
+    'integration-fixture',
+    filename,
+  );
+  try {
+    const base = [
+      '--profile', 'internal-evaluation',
+      '--artifact', path.join(fixtureDir, 'drugs.jsonl'),
+      '--drug', 'Co-trimoxazole (Sulphamethoxazole 800mg and Trimethoprim 160mg) Tablets IP',
+      '--drug', 'Co-trimoxazole (Sulphamethoxazole 100mg and Trimethoprim 20mg) Tablets IP',
+    ];
+    const missing = runCli([
+      ...base,
+      '--combination-manifest', path.join(fixtureDir, 'missing-combinations.json'),
+    ]);
+    assert.notEqual(missing.status, 0);
+    assert.match(missing.stderr, /cannot read combination identity manifest|ENOENT/u);
+    assert.equal(missing.stdout, '');
+
+    for (const [caseName, source, mutate] of [
+      ['tampered', sourceBundle, (bundle) => {
+        bundle.responses['rxcui/10831/properties'] += ' ';
+      }],
+      ['audit-only', integrationBundle, () => {}],
+    ]) {
+      const evidenceDir = path.join(fixtureDir, `${caseName}-evidence`);
+      fs.mkdirSync(evidenceDir);
+      const bundle = JSON.parse(fs.readFileSync(source, 'utf8'));
+      mutate(bundle);
+      fs.writeFileSync(path.join(evidenceDir, filename), JSON.stringify(bundle));
+      const result = runCli([
+        ...base,
+        '--combination-manifest', manifestPath,
+        '--combination-evidence-dir', evidenceDir,
+      ]);
+      assert.notEqual(result.status, 0, caseName);
+      assert.match(
+        result.stderr,
+        /combination.*evidence.*unverified|bundle_hash_mismatch|classification|audit/iu,
+        caseName,
+      );
+      assert.equal(result.stdout, '', caseName);
+    }
+  } finally {
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+});
+
+test('production-open output never exposes an internal reviewed combination', () => {
+  const dir = makeFixture();
+  try {
+    const result = runCli([
+      '--profile', 'production-open',
+      '--artifact', path.join(dir, 'drugs.jsonl'),
+      '--rules', RULES,
+      '--drug', 'Combo A Tablet',
+      '--drug', 'Single B Tablet',
+    ]);
+    assert.equal(result.status, 0, result.stderr);
+    const output = JSON.parse(result.stdout);
+    assert.ok(output.resolved_inputs.every((entry) => (
+      entry.product.combination.status === 'no_combination'
+      && entry.product.combination.combination_id === null
+      && entry.product.combination.runtime_subject === null
+    )));
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

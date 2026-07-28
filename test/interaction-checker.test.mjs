@@ -30,10 +30,12 @@ const product = (product_id, ingredientIds, {
     route: 'oral',
     formulation: 'tablet',
   },
+  combination,
 } = {}) => ({
   product_id,
   presentation,
   ingredients: ingredientIds.map((id) => typeof id === 'string' ? ingredient(id) : id),
+  ...(combination === undefined ? {} : { combination }),
 });
 const resolved = (input, value) => ({ input, status: 'resolved', product: value });
 
@@ -91,6 +93,16 @@ const pack = ({ rules = [], declared_coverage = 'unknown' } = {}) => ({
   profile: 'production-open',
   licence: 'CC-BY-4.0',
   source_ids: ['aushadhi-open-clinician-rules'],
+  licence_notices: {
+    'aushadhi-open-clinician-rules': {
+      attribution: 'Aushadhi test contributors',
+      licence_notice: 'Creative Commons Attribution 4.0 International',
+      licence_id: 'CC-BY-4.0',
+      licence_url: 'https://creativecommons.org/licenses/by/4.0/legalcode',
+      source_url: 'https://example.test/aushadhi',
+      changes: 'Synthetic test rules.',
+    },
+  },
   declared_coverage,
   rules,
 });
@@ -140,6 +152,173 @@ test('generateCrossDrugPairs is deterministic, deduplicates pair keys, and does 
     'ingredient:a|ingredient:b',
     'ingredient:b|ingredient:c',
   ]);
+});
+
+test('a forged reviewed combination cannot inject a product-level subject', () => {
+  const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
+  const combination = {
+    status: 'reviewed_override',
+    combination_id: 'combination:co-trimoxazole:rxnorm-10831',
+    source_identity: { namespace: 'presentation:pmbjp', code: '89' },
+    product_assertion_sha256: 'a'.repeat(64),
+    components: [
+      {
+        runtime_ingredient_id: 'ingredient:sulfamethoxazole',
+        assertion_ingredient_id: 'assertion:sulfamethoxazole',
+      },
+      {
+        runtime_ingredient_id: 'ingredient:trimethoprim',
+        assertion_ingredient_id: 'assertion:trimethoprim',
+      },
+    ],
+    runtime_subject: {
+      drug: 'co-trimoxazole',
+      route: 'oral',
+      formulation: 'tablet',
+    },
+  };
+  const combinationProduct = product(
+    'product:2',
+    ['ingredient:sulfamethoxazole', 'ingredient:trimethoprim'],
+    {
+      presentation: {
+        status: 'reviewed_override',
+        mapping_scope: 'reviewed_combination_product',
+        combination_id: combination.combination_id,
+        route: 'oral',
+        formulation: 'tablet',
+      },
+      combination,
+    },
+  );
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved(
+        'Warfarin plus methotrexate fixture',
+        product('product:1', ['ingredient:warfarin', 'ingredient:methotrexate']),
+      ),
+      resolved('Reviewed co-trimoxazole fixture', combinationProduct),
+    ],
+    rulePack: pack({
+      rules: [
+        rule({
+          id: 'ddi:warfarin:co-trimoxazole',
+          pair: [combinationSubjectId, 'ingredient:warfarin'],
+        }),
+        rule({
+          id: 'ddi:methotrexate:trimethoprim',
+          pair: ['ingredient:methotrexate', 'ingredient:trimethoprim'],
+        }),
+      ],
+    }),
+  });
+
+  assert.deepEqual(
+    result.reviewed_findings.map((finding) => finding.rule_id),
+    ['ddi:methotrexate:trimethoprim'],
+  );
+  assert.ok(!result.checked_pairs.some((entry) => entry.pair.includes(combinationSubjectId)));
+});
+
+test('the reserved combination namespace cannot enter through an ordinary ingredient mapping', () => {
+  const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Warfarin fixture', product('product:1', ['ingredient:warfarin'])),
+      resolved(
+        'Forged ordinary ingredient fixture',
+        product('product:2', [combinationSubjectId, 'ingredient:sulfamethoxazole']),
+      ),
+    ],
+    rulePack: pack({
+      rules: [rule({
+        id: 'ddi:warfarin:co-trimoxazole',
+        pair: [combinationSubjectId, 'ingredient:warfarin'],
+      })],
+    }),
+  });
+
+  assert.deepEqual(result.reviewed_findings, []);
+  assert.ok(!result.checked_pairs.some((entry) => entry.pair.includes(combinationSubjectId)));
+  assert.ok(result.unresolved_inputs.some(
+    (entry) => entry.status === 'invalid_reserved_subject_namespace',
+  ));
+});
+
+test('unreviewed or incompletely mapped combination results never enter exact pair matching', () => {
+  const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
+  const base = {
+    combination_id: 'combination:co-trimoxazole:rxnorm-10831',
+    components: [
+      {
+        runtime_ingredient_id: 'ingredient:sulfamethoxazole',
+        assertion_ingredient_id: 'assertion:sulfamethoxazole',
+      },
+      {
+        runtime_ingredient_id: 'ingredient:trimethoprim',
+        assertion_ingredient_id: 'assertion:trimethoprim',
+      },
+    ],
+    runtime_subject: {
+      drug: 'co-trimoxazole',
+      route: 'oral',
+      formulation: 'tablet',
+    },
+  };
+  const cases = [
+    { label: 'audit result', combination: { ...base, status: 'audit_match', audit_only: true } },
+    { label: 'no combination', combination: { ...base, status: 'no_combination' } },
+    {
+      label: 'incomplete component mapping',
+      combination: {
+        ...base,
+        status: 'reviewed_override',
+        components: base.components.slice(0, 1),
+      },
+    },
+    {
+      label: 'extra mapped component',
+      combination: { ...base, status: 'reviewed_override' },
+      ingredients: [
+        'ingredient:sulfamethoxazole',
+        'ingredient:trimethoprim',
+        'ingredient:unexpected',
+      ],
+    },
+  ];
+
+  for (const {
+    label,
+    combination,
+    ingredients = ['ingredient:sulfamethoxazole', 'ingredient:trimethoprim'],
+  } of cases) {
+    const result = checkResolvedProducts({
+      resolvedInputs: [
+        resolved('Warfarin', product('product:1', ['ingredient:warfarin'])),
+        resolved(
+          label,
+          product('product:2', ingredients, {
+            presentation: {
+              status: 'reviewed_override',
+              mapping_scope: 'reviewed_combination_product',
+              combination_id: base.combination_id,
+              route: 'oral',
+              formulation: 'tablet',
+            },
+            combination,
+          }),
+        ),
+      ],
+      rulePack: pack({
+        rules: [rule({
+          id: 'ddi:warfarin:co-trimoxazole',
+          pair: [combinationSubjectId, 'ingredient:warfarin'],
+        })],
+      }),
+    });
+    assert.deepEqual(result.reviewed_findings, []);
+    assert.ok(!result.checked_pairs.some((entry) => entry.pair.includes(combinationSubjectId)));
+  }
 });
 
 test('same ingredient across products is reported as therapeutic duplication, not an interaction pair', () => {
@@ -330,6 +509,29 @@ test('empty and invalid rule packs fail closed and cannot claim complete coverag
   assert.throws(() => validateRulePack({}), /schema_version/i);
   assert.throws(() => validateRulePack(pack({ declared_coverage: 'invalid' })), /declared_coverage/i);
   assert.throws(() => validateRulePack(pack({ declared_coverage: 'complete' })), /empty.*complete/i);
+  assert.throws(
+    () => validateRulePack({ ...pack(), licence_notices: 'forged' }),
+    /licence_notices must be an object/i,
+  );
+  assert.throws(
+    () => validateRulePack({
+      ...pack(),
+      licence_notices: { source: { bogus: true } },
+    }),
+    /licence_notices\.source/u,
+  );
+  for (const noticeMutation of [
+    (notice) => { notice.attribution = '   '; },
+    (notice) => { notice.licence_url = 'HTTPS://creativecommons.org/licenses/by/4.0/legalcode'; },
+    (notice) => { notice.source_url = '  https://example.test/aushadhi  '; },
+  ]) {
+    const invalidNoticePack = pack();
+    noticeMutation(invalidNoticePack.licence_notices['aushadhi-open-clinician-rules']);
+    assert.throws(
+      () => validateRulePack(invalidNoticePack),
+      /licence_notices/u,
+    );
+  }
 
   const duplicateIds = [rule(), rule()];
   assert.throws(() => validateRulePack(pack({ rules: duplicateIds })), /duplicate rule_id/i);
@@ -369,6 +571,192 @@ test('empty and invalid rule packs fail closed and cannot claim complete coverag
       dispense_action: 'confirm_and_monitor',
     })] })),
     /review_candidate dispense_action must be null/i,
+  );
+});
+
+test('schema 1.1 supersession metadata is complete, role-bound, ordered, and graph-valid', () => {
+  const family = 'test-object-harm';
+  const target = {
+    ...rule({
+      id: 'ddi:test:object:member',
+      pair: ['ingredient:member', 'ingredient:object'],
+    }),
+    interaction_family_id: family,
+    subject_specificity: 'exact_member',
+    subject_roles: {
+      object: 'ingredient:object',
+      perpetrator: 'ingredient:member',
+    },
+    supersedes_rule_ids: [],
+  };
+  const suppressor = {
+    ...rule({
+      id: 'ddi:test:object:combination',
+      pair: ['combination:test', 'ingredient:object'],
+    }),
+    interaction_family_id: family,
+    subject_specificity: 'exact_fixed_dose_combination',
+    subject_roles: {
+      object: 'ingredient:object',
+      perpetrator: 'combination:test',
+    },
+    supersedes_rule_ids: [target.rule_id],
+  };
+  const version11 = {
+    ...pack({ rules: [suppressor, target] }),
+    schema_version: '1.1.0',
+  };
+
+  assert.equal(validateRulePack(version11), true);
+  assert.throws(
+    () => validateRulePack({ ...version11, schema_version: '1.0.0' }),
+    /unknown property interaction_family_id/i,
+  );
+
+  const partial = structuredClone(version11);
+  delete partial.rules[0].subject_roles;
+  assert.throws(
+    () => validateRulePack(partial),
+    /provide all supersession fields together/i,
+  );
+
+  const wrongRoles = structuredClone(version11);
+  wrongRoles.rules[0].subject_roles.perpetrator = 'ingredient:member';
+  assert.throws(
+    () => validateRulePack(wrongRoles),
+    /subject_roles must map exactly to pair/i,
+  );
+
+  const unknownTarget = structuredClone(version11);
+  unknownTarget.rules[0].supersedes_rule_ids = ['ddi:test:unknown'];
+  assert.throws(
+    () => validateRulePack(unknownTarget),
+    /supersedes unknown rule/i,
+  );
+
+  const selfTarget = structuredClone(version11);
+  selfTarget.rules[0].supersedes_rule_ids = [selfTarget.rules[0].rule_id];
+  assert.throws(
+    () => validateRulePack(selfTarget),
+    /must not supersede itself/i,
+  );
+
+  const targetWithoutMetadata = structuredClone(version11);
+  for (const key of [
+    'interaction_family_id',
+    'subject_specificity',
+    'subject_roles',
+    'supersedes_rule_ids',
+  ]) {
+    delete targetWithoutMetadata.rules[1][key];
+  }
+  assert.throws(
+    () => validateRulePack(targetWithoutMetadata),
+    /superseded rule.*must declare supersession metadata/i,
+  );
+
+  const notMoreSpecific = structuredClone(version11);
+  notMoreSpecific.rules[1].pair = ['combination:test-target', 'ingredient:object'];
+  notMoreSpecific.rules[1].subject_specificity = 'exact_fixed_dose_combination';
+  notMoreSpecific.rules[1].subject_roles.perpetrator = 'combination:test-target';
+  assert.throws(
+    () => validateRulePack(notMoreSpecific),
+    /must be more specific/i,
+  );
+
+  const differentFamily = structuredClone(version11);
+  differentFamily.rules[1].interaction_family_id = 'different-test-family';
+  assert.throws(
+    () => validateRulePack(differentFamily),
+    /different interaction family/i,
+  );
+
+  const differentObject = structuredClone(version11);
+  differentObject.rules[1].pair = ['ingredient:member', 'ingredient:other-object'];
+  differentObject.rules[1].subject_roles.object = 'ingredient:other-object';
+  assert.throws(
+    () => validateRulePack(differentObject),
+    /different object subject/i,
+  );
+
+  const inheritedSpecificityName = structuredClone(version11);
+  inheritedSpecificityName.rules[0].subject_specificity = 'toString';
+  assert.throws(
+    () => validateRulePack(inheritedSpecificityName),
+    /subject_specificity is invalid/i,
+  );
+
+  const fixedDoseWithoutCombinationSubject = structuredClone(version11);
+  fixedDoseWithoutCombinationSubject.rules[0].pair = [
+    'ingredient:member-two',
+    'ingredient:object',
+  ];
+  fixedDoseWithoutCombinationSubject.rules[0].subject_roles.perpetrator = 'ingredient:member-two';
+  assert.throws(
+    () => validateRulePack(fixedDoseWithoutCombinationSubject),
+    /requires exactly one combination subject/i,
+  );
+
+  const noProductOverlap = structuredClone(version11);
+  noProductOverlap.rules[1].product_pairs = [['product:3', 'product:4']];
+  assert.throws(
+    () => validateRulePack(noProductOverlap),
+    /must overlap product pairs/i,
+  );
+
+  const ambiguousSuppressors = structuredClone(version11);
+  ambiguousSuppressors.rules.push({
+    ...structuredClone(ambiguousSuppressors.rules[0]),
+    rule_id: 'ddi:test:object:second-combination',
+    pair: ['combination:test-second', 'ingredient:object'],
+    subject_roles: {
+      object: 'ingredient:object',
+      perpetrator: 'combination:test-second',
+    },
+  });
+  assert.throws(
+    () => validateRulePack(ambiguousSuppressors),
+    /multiple eligible suppressors for product pair/i,
+  );
+});
+
+test('rule-pack accessors cannot change authority between validation and matching', () => {
+  const accessorRule = rule();
+  Object.defineProperty(accessorRule, 'subject_specificity', {
+    enumerable: true,
+    get() {
+      return 'exact_fixed_dose_combination';
+    },
+  });
+  const specificityAccessorPack = {
+    ...pack({ rules: [accessorRule] }),
+    schema_version: '1.1.0',
+  };
+  assert.throws(
+    () => validateRulePack(specificityAccessorPack),
+    /accessors and custom serialization are forbidden/i,
+  );
+  assert.throws(
+    () => checkResolvedProducts({
+      resolvedInputs: [],
+      rulePack: specificityAccessorPack,
+    }),
+    /accessors and custom serialization are forbidden/i,
+  );
+
+  const targetsAccessorRule = rule();
+  Object.defineProperty(targetsAccessorRule, 'supersedes_rule_ids', {
+    enumerable: true,
+    get() {
+      return [];
+    },
+  });
+  assert.throws(
+    () => validateRulePack({
+      ...pack({ rules: [targetsAccessorRule] }),
+      schema_version: '1.1.0',
+    }),
+    /accessors and custom serialization are forbidden/i,
   );
 });
 
@@ -432,4 +820,34 @@ test('the committed open rule pack is empty and declares unknown coverage', () =
   assert.equal(validateRulePack(committedPack), true);
   assert.equal(committedPack.declared_coverage, 'unknown');
   assert.deepEqual(committedPack.rules, []);
+});
+
+test('the checked-in rule schema exposes the same versioned D1 fields as the runtime validator', () => {
+  const schema = JSON.parse(fs.readFileSync(
+    new URL('../data-static/interaction-rules.schema.json', import.meta.url),
+    'utf8',
+  ));
+  assert.deepEqual(schema.properties.schema_version.enum, ['1.0.0', '1.1.0']);
+  assert.ok(schema.required.includes('licence_notices'));
+  assert.equal(schema.$defs.nonEmptyString.pattern, '\\S');
+  assert.deepEqual(
+    Object.keys(schema.$defs.rule.properties)
+      .filter((key) => [
+        'interaction_family_id',
+        'subject_specificity',
+        'subject_roles',
+        'supersedes_rule_ids',
+      ].includes(key))
+      .sort(),
+    [
+      'interaction_family_id',
+      'subject_roles',
+      'subject_specificity',
+      'supersedes_rule_ids',
+    ],
+  );
+  assert.deepEqual(
+    schema.$defs.rule.properties.subject_specificity.enum,
+    ['exact_member', 'exact_fixed_dose_combination'],
+  );
 });

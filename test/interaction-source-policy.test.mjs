@@ -134,7 +134,7 @@ function allowed(manifest, sourceId, overrides = {}) {
 test('loads and validates the committed source manifest', () => {
   const manifest = loadSourceManifest();
   assert.equal(manifest.schema_version, 1);
-  assert.equal(manifest.policy_reviewed_at, '2026-07-24');
+  assert.equal(manifest.policy_reviewed_at, '2026-07-28');
   assert.deepEqual(Object.keys(manifest.profiles).sort(), [
     'internal-evaluation',
     'production-open',
@@ -1073,6 +1073,19 @@ test('requires restricted internal sources to stay in their storage zone', () =>
 
 test('enforces source-specific allowed uses', () => {
   const manifest = loadSourceManifest();
+  assert.doesNotThrow(() => allowed(manifest, 'janaushadhi', {
+    profile: 'internal-evaluation',
+    use: 'identity',
+    storagePath: 'data/interaction/internal-evaluation/pmbjp-product-list/source.pdf',
+  }));
+  assert.throws(
+    () => allowed(manifest, 'janaushadhi', {
+      profile: 'production-open',
+      use: 'identity',
+      storagePath: 'data/interaction/production-open/source.pdf',
+    }),
+    /janaushadhi.*production-open/i,
+  );
   assert.doesNotThrow(() => allowed(manifest, 'drugcentral', {
     use: 'identity',
     storagePath: 'data/interaction/production-open/drugcentral-sharealike/mappings.jsonl',

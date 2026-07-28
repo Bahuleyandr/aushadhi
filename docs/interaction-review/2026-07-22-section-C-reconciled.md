@@ -5,7 +5,7 @@ Engineering-reconciled local worktree packet. Every rule remains
 
 - Source slice: `batch-01-v2/sections/C.verified.jsonl`
 - Worktree state: `worktree-uncommitted`
-- JSONL SHA-256: `d5ef02f6b4d2e3295bc138bedaede16d69b6cfb44e0f01d6eb09f7a2c609ffef`
+- JSONL SHA-256: `d57bbdd579696481a0e2cdd846d917cf10f32043bdf7588632dd1e9cf77a1702`
 - Rules: 21
 - Runtime-enabled: 0
 - Diagnostic-only: 21
@@ -26,6 +26,10 @@ Engineering-reconciled local worktree packet. Every rule remains
   3 to 4. Its current label now directly supports the serious respiratory
   depression, monitoring, and low-starting-dose statements retained in the
   draft; the rule remains runtime-disabled and clinician-unapproved.
+- The 2026-07-28 live recheck refreshed the canonical payload hashes and
+  retrieval dates for the AUVELITY and gabapentin evidence records without
+  changing their versions, effective times, exact fragments, propositions,
+  clinical scope, or runtime status.
 - Every rule is now jurisdiction-bounded to `US`, the only jurisdiction
   supported by the retained machine evidence. No UK or India scope is inferred
   from a US label.

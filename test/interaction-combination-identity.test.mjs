@@ -13,7 +13,8 @@
 //   6. (gate greenness -- see test/cache-retention.test.mjs)
 //   7. production-open may not be self-declared in a source manifest
 //
-// Every combination below is a TEST fixture. The committed manifest is empty.
+// Most combinations below are TEST fixtures. The committed manifest contains only
+// the independently reviewable, internal-evaluation co-trimoxazole identity.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,11 +29,38 @@ import {
   resolveCombinationIdentity,
   validateCombinationIdentityManifest,
 } from '../src/lib/interaction-combination-identity.mjs';
+import {
+  verifyCombinationManifestEvidence,
+} from '../src/lib/combination-rxnorm-evidence.mjs';
+import {
+  verifyPmbjpCombinationEvidenceFiles,
+} from '../src/lib/pmbjp-combination-evidence.mjs';
+import { ingredientIdForName } from '../src/lib/ingredient-identity.mjs';
 import { validateIngredientMappingManifest } from '../src/lib/interaction-mapping.mjs';
-import { productAssertionHashForRow, productIdForRow } from '../src/lib/product-resolver.mjs';
+import {
+  productAssertionForRow,
+  productAssertionHashForRow,
+  productIdForRow,
+} from '../src/lib/product-resolver.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const PMBJP_SOURCE = {
+  restrictedRoot: path.join(ROOT, 'data/interaction/internal-evaluation'),
+  pdfPath: path.join(
+    ROOT,
+    'data/interaction/internal-evaluation/pmbjp-product-list/pmbjp-product-list.pdf',
+  ),
+  tableTextPath: path.join(
+    ROOT,
+    'data/interaction/internal-evaluation/pmbjp-product-list/pmbjp-product-list.table.txt',
+  ),
+};
 const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
+const INTEGRATION_BUNDLE = readJson(
+  'data-static/combination-rxnorm-evidence/integration-fixture/'
+  + 'combination_co-trimoxazole_rxnorm-10831.json',
+);
+const RX_HASHES = INTEGRATION_BUNDLE.response_hashes;
 
 const SMX_ID = 'sha256:5b15ba7515bffc9682ddd1092973725241a66fd6bba12fda69d7fd8c8712a2bf';
 const SMX_PMBJP_ID = 'sha256:f68344038f9f9bb5eb6194c285d27716c812b8f670ba1a156b89051f68eeaeaa';
@@ -121,25 +149,26 @@ const scd = (rxcui, name, smxStrength, tmpStrength) => ({
     {
       component_rxcui: '10180', ingredient_rxcui_field: 'baseRxcui',
       numerator_value: smxStrength, numerator_unit: 'MG',
-      denominator_value: null, denominator_unit: null,
+      denominator_value: '1', denominator_unit: 'EACH',
     },
     {
       component_rxcui: '10829', ingredient_rxcui_field: 'baseRxcui',
       numerator_value: tmpStrength, numerator_unit: 'MG',
-      denominator_value: null, denominator_unit: null,
+      denominator_value: '1', denominator_unit: 'EACH',
     },
   ],
   dose_form: 'Oral Tablet',
   version: '06-Jul-2026',
-  properties_response_sha256: SHA,
-  historystatus_response_sha256: SHA,
-  min_relation_response_sha256: SHA,
+  properties_response_sha256: RX_HASHES[`rxcui/${rxcui}/properties`],
+  historystatus_response_sha256: RX_HASHES[`rxcui/${rxcui}/historystatus`],
+  min_relation_response_sha256: RX_HASHES[`rxcui/${rxcui}/related?rela=has_ingredients`],
 });
 
 const presentationFor = (row, route, formulation, code, scdObject) => ({
   source_identity: { namespace: 'presentation:pmbjp', code },
   product_id: productIdForRow(row),
   product_assertion_sha256: productAssertionHashForRow(row),
+  product_assertion: productAssertionForRow(row),
   route,
   formulation,
   rxnorm_scd: scdObject,
@@ -148,10 +177,14 @@ const presentationFor = (row, route, formulation, code, scdObject) => ({
 const evidence = (id) => ({
   evidence_ref: id,
   source_id: 'janaushadhi',
-  identifier: `pmbjp-product-list:${id}`,
-  source_url: 'https://static.pib.gov.in/example.pdf',
+  identifier: id === 'list-89' ? 'pmbjp-product-list:89,90' : `pmbjp-product-list:${id}`,
+  source_url: id === 'list-89'
+    ? 'https://static.pib.gov.in/WriteReadData/specificdocs/documents/2026/feb/doc202626781701.pdf'
+    : 'https://static.pib.gov.in/example.pdf',
   retrieved_at: '2026-07-27',
-  evidence_sha256: SHA,
+  evidence_sha256: id === 'list-89'
+    ? 'f54a140d9dc82880dcbb7672c18942417e8c9fe904376c742b6319665cdf9a08'
+    : SHA,
 });
 
 const cotrimoxazole = (overrides = {}) => ({
@@ -164,16 +197,33 @@ const cotrimoxazole = (overrides = {}) => ({
     tty: 'MIN',
     version: '06-Jul-2026',
     api_version: '3.1.354',
-    properties_response_sha256: SHA,
+    properties_response_sha256: RX_HASHES['rxcui/10831/properties'],
     component_relation: {
       relationship: 'has_part',
       component_rxcuis: ['10180', '10829'],
-      response_sha256: SHA,
+      response_sha256: RX_HASHES['rxcui/10831/related?rela=has_part'],
     },
   },
   components: [
-    { name: 'sulfamethoxazole', rxcui: '10180', tty: 'IN', assertion_ingredient_ids: [SMX_ID, SMX_PMBJP_ID] },
-    { name: 'trimethoprim', rxcui: '10829', tty: 'IN', assertion_ingredient_ids: [TMP_ID] },
+    {
+      name: 'sulfamethoxazole',
+      rxcui: '10180',
+      tty: 'IN',
+      runtime_ingredient_id: SMX_ID,
+      assertion_ingredient_ids: [SMX_ID, SMX_PMBJP_ID],
+      assertion_ingredient_aliases: [{
+        ingredient_id: SMX_PMBJP_ID,
+        observed_name: 'co-trimoxazole sulphamethoxazole',
+        source_field: 'molecule',
+      }],
+    },
+    {
+      name: 'trimethoprim',
+      rxcui: '10829',
+      tty: 'IN',
+      runtime_ingredient_id: TMP_ID,
+      assertion_ingredient_ids: [TMP_ID],
+    },
   ],
   component_match: 'exact_active_set',
   exposure_scope: 'systemic',
@@ -205,9 +255,39 @@ const manifestOf = (...combinations) => ({
   combinations,
 });
 
+const authoritativeBundle = (combinationId) => {
+  const rawVersion = INTEGRATION_BUNDLE.capture.version_response;
+  const versionSha256 = INTEGRATION_BUNDLE.capture.version_before_sha256;
+  return {
+    ...structuredClone(INTEGRATION_BUNDLE),
+    classification: 'combination_identity_evidence',
+    promotion_authority: 'identity_only',
+    audit_only: false,
+    combination_id: combinationId,
+    capture: {
+      base_url: 'https://rxnav.nlm.nih.gov/REST',
+      captured_at: '2026-07-28T06:27:46.630Z',
+      version_before_response: rawVersion,
+      version_before_sha256: versionSha256,
+      version_after_response: rawVersion,
+      version_after_sha256: versionSha256,
+      version_stable: true,
+    },
+  };
+};
+
 const compiled = (manifest = manifestOf(cotrimoxazole())) => compileCombinationIdentityManifest(
   manifest,
-  { kind: 'verified_manifest', evidenceVerified: true },
+  {
+    kind: 'verified_manifest',
+    verificationReport: verifyCombinationManifestEvidence(manifest, {
+      [manifest.combinations[0].combination_id]: authoritativeBundle(
+        manifest.combinations[0].combination_id,
+      ),
+    }, {
+      pmbjpSourceReport: verifyPmbjpCombinationEvidenceFiles(manifest, PMBJP_SOURCE),
+    }),
+  },
 );
 const resolve = (product, manifest = manifestOf(cotrimoxazole()), profile = 'internal-evaluation') => (
   resolveCombinationIdentity({ product, manifest: compiled(manifest), profile })
@@ -226,6 +306,46 @@ test('the product fixtures hash to the real catalogue product ids', () => {
 
 test('a well-formed fixed-dose combination validates', () => {
   assert.equal(validateCombinationIdentityManifest(manifestOf(cotrimoxazole())), true);
+});
+
+test('each component requires one reviewed runtime identity from its accepted assertion set', () => {
+  const missing = cotrimoxazole();
+  delete missing.components[0].runtime_ingredient_id;
+  assert.throws(
+    () => validateCombinationIdentityManifest(manifestOf(missing)),
+    /runtime_ingredient_id/u,
+  );
+
+  const unreviewed = cotrimoxazole();
+  unreviewed.components[0].runtime_ingredient_id = TMP_ID;
+  assert.throws(
+    () => validateCombinationIdentityManifest(manifestOf(unreviewed)),
+    /runtime_ingredient_id.*component name/u,
+  );
+
+  const mismatchedName = cotrimoxazole();
+  mismatchedName.components[0].runtime_ingredient_id = SMX_PMBJP_ID;
+  assert.throws(
+    () => validateCombinationIdentityManifest(manifestOf(mismatchedName)),
+    /runtime_ingredient_id.*component name/u,
+  );
+});
+
+test('SCD denominator value and unit are both required or both absent', () => {
+  for (const [denominator_value, denominator_unit] of [
+    [null, 'EACH'],
+    ['1', null],
+  ]) {
+    const combination = cotrimoxazole();
+    Object.assign(
+      combination.presentations[0].rxnorm_scd.ingredients_and_strengths[0],
+      { denominator_value, denominator_unit },
+    );
+    assert.throws(
+      () => validateCombinationIdentityManifest(manifestOf(combination)),
+      /denominator_value.*denominator_unit|denominator_unit.*denominator_value/u,
+    );
+  }
 });
 
 // ── 1. release profile fails closed ──────────────────────────────────────────
@@ -268,9 +388,15 @@ test('BLOCKER 1: an audit result is a DISTINCT type a runtime consumer cannot us
     () => assertRuntimeCombinationResult(result),
     /audit result may not be used on a runtime path/u,
   );
-  assert.equal(
-    assertRuntimeCombinationResult(resolve(PMBJP_89)).status,
-    'reviewed_override',
+  const runtimeResult = resolve(PMBJP_89);
+  assert.strictEqual(assertRuntimeCombinationResult(runtimeResult), runtimeResult);
+  assert.equal(runtimeResult.status, 'reviewed_override');
+  assert.ok(Object.isFrozen(runtimeResult));
+  assert.ok(Object.isFrozen(runtimeResult.components));
+  assert.ok(Object.isFrozen(runtimeResult.runtime_subject));
+  assert.throws(
+    () => assertRuntimeCombinationResult(structuredClone(runtimeResult)),
+    /not an authentic verified resolver result/u,
   );
 });
 
@@ -321,7 +447,7 @@ test('BLOCKER 3: an SCD ingredient entry names its component and compared field'
   assert.deepEqual(combination.presentations[0].rxnorm_scd.ingredients_and_strengths[0], {
     component_rxcui: '10180', ingredient_rxcui_field: 'baseRxcui',
     numerator_value: '800', numerator_unit: 'MG',
-    denominator_value: null, denominator_unit: null,
+    denominator_value: '1', denominator_unit: 'EACH',
   });
   const broken = structuredClone(combination.presentations);
   broken[0].rxnorm_scd.ingredients_and_strengths[0].ingredient_rxcui_field = 'guessed';
@@ -343,8 +469,14 @@ test('BLOCKER 3: the MIN component relation must match the declared components',
 test('BLOCKER 3: two components may not reuse one RxCUI', () => {
   rejects({
     components: [
-      { name: 'sulfamethoxazole', rxcui: '10180', tty: 'IN', assertion_ingredient_ids: [SMX_ID] },
-      { name: 'trimethoprim', rxcui: '10180', tty: 'IN', assertion_ingredient_ids: [TMP_ID] },
+      {
+        name: 'sulfamethoxazole', rxcui: '10180', tty: 'IN',
+        runtime_ingredient_id: SMX_ID, assertion_ingredient_ids: [SMX_ID],
+      },
+      {
+        name: 'trimethoprim', rxcui: '10180', tty: 'IN',
+        runtime_ingredient_id: TMP_ID, assertion_ingredient_ids: [TMP_ID],
+      },
     ],
   }, /rxcui 10180 is used by more than one component/u);
 });
@@ -385,8 +517,14 @@ test('BLOCKER 3: the combination term type must still be MIN, and components IN 
   rejects({ rxnorm: { ...cotrimoxazole().rxnorm, tty: 'IN' } }, /tty must be MIN/u);
   rejects({
     components: [
-      { name: 'sulfamethoxazole', rxcui: '10180', tty: 'MIN', assertion_ingredient_ids: [SMX_ID] },
-      { name: 'trimethoprim', rxcui: '10829', tty: 'IN', assertion_ingredient_ids: [TMP_ID] },
+      {
+        name: 'sulfamethoxazole', rxcui: '10180', tty: 'MIN',
+        runtime_ingredient_id: SMX_ID, assertion_ingredient_ids: [SMX_ID],
+      },
+      {
+        name: 'trimethoprim', rxcui: '10829', tty: 'IN',
+        runtime_ingredient_id: TMP_ID, assertion_ingredient_ids: [TMP_ID],
+      },
     ],
   }, /components\[\d+\] tty must be IN or PIN/u);
 });
@@ -411,16 +549,22 @@ test('BLOCKER 4: an ingredient change on a reviewed product yields stale, not a 
   assert.equal(result.source_identity.code, '89');
 });
 
-test('BLOCKER 4: a reviewed product whose assertion hash drifts is stale', () => {
+test('BLOCKER 4: an incoherent reviewed assertion hash is rejected before compilation', () => {
   const manifest = manifestOf(cotrimoxazole({
     presentations: [
       { ...cotrimoxazole().presentations[0], product_assertion_sha256: 'b'.repeat(64) },
       cotrimoxazole().presentations[1],
     ],
   }));
-  const result = resolve(PMBJP_89, manifest);
-  assert.equal(result.status, 'stale');
-  assert.equal(result.runtime_subject, null);
+  const report = verifyCombinationManifestEvidence(manifest, {
+    [manifest.combinations[0].combination_id]: authoritativeBundle(
+      manifest.combinations[0].combination_id,
+    ),
+  });
+  assert.equal(report.verified, false);
+  assert.ok(report.reports[0].findings.some(
+    (finding) => finding.code === 'product_assertion_hash_mismatch',
+  ));
 });
 
 test('BLOCKER 4: an unusable ingredient identity is reported, not silently dropped', () => {
@@ -500,7 +644,7 @@ test('HARDENING: overlapping combinations are rejected at authoring, not at runt
 // A generic two-component combination, so overlap can be reasoned about
 // independently of co-trimoxazole's specifics.
 const alias = (n) => `sha256:${String(n).repeat(64).slice(0, 64)}`;
-const pairCombination = (id, drug, [rxcuiA, aliasesA], [rxcuiB, aliasesB], row) => ({
+const pairCombination = (id, drug, [rxcuiA, nameA], [rxcuiB, nameB], row) => ({
   ...cotrimoxazole(),
   combination_id: id,
   runtime_drug: drug,
@@ -511,8 +655,16 @@ const pairCombination = (id, drug, [rxcuiA, aliasesA], [rxcuiB, aliasesB], row) 
     },
   },
   components: [
-    { name: `${drug}-a`, rxcui: rxcuiA, tty: 'IN', assertion_ingredient_ids: aliasesA },
-    { name: `${drug}-b`, rxcui: rxcuiB, tty: 'IN', assertion_ingredient_ids: aliasesB },
+    {
+      name: nameA, rxcui: rxcuiA, tty: 'IN',
+      runtime_ingredient_id: ingredientIdForName(nameA),
+      assertion_ingredient_ids: [ingredientIdForName(nameA)],
+    },
+    {
+      name: nameB, rxcui: rxcuiB, tty: 'IN',
+      runtime_ingredient_id: ingredientIdForName(nameB),
+      assertion_ingredient_ids: [ingredientIdForName(nameB)],
+    },
   ],
   presentations: [{
     source_identity: { namespace: 'presentation:pmbjp', code: `${id}-code` },
@@ -545,21 +697,20 @@ const pairCombination = (id, drug, [rxcuiA, aliasesA], [rxcuiB, aliasesB], row) 
   }],
 });
 
-test('HARDENING: overlap is judged by alias intersection, not textual identity', () => {
-  // A accepts {x},{y}; B accepts {x},{y,z}. The product active set {x,y} would match
-  // BOTH, so this must fail at authoring rather than become a runtime ambiguity.
-  const a = pairCombination('combination:a', 'drug-a', ['5001', [alias(1)]], ['5002', [alias(2)]], PMBJP_89);
-  const b = pairCombination('combination:b', 'drug-b', ['5003', [alias(1)]], ['5004', [alias(2), alias(3)]], PMBJP_90);
+test('HARDENING: overlap is judged by active identities, not textual combination ids', () => {
+  const a = pairCombination(
+    'combination:a', 'drug-a', ['5001', 'shared-a'], ['5002', 'shared-b'], PMBJP_89,
+  );
+  const b = pairCombination(
+    'combination:b', 'drug-b', ['5003', 'shared-a'], ['5004', 'shared-b'], PMBJP_90,
+  );
   assert.throws(
     () => validateCombinationIdentityManifest(manifestOf(a, b)),
     /could both match the same product active set/u,
   );
 });
 
-test('HARDENING: a Hall-deficient three-component pair does NOT overlap', () => {
-  // every component has an intersecting counterpart, yet no perfect matching exists:
-  // A1 and A2 can both pair only with B1. This exercises the distinct-representatives
-  // search rather than a simple "do any aliases intersect" test.
+test('HARDENING: three-component combinations that share only one component do not overlap', () => {
   const triple = (id, drug, specs, row) => ({
     ...cotrimoxazole(),
     combination_id: id,
@@ -572,8 +723,12 @@ test('HARDENING: a Hall-deficient three-component pair does NOT overlap', () => 
         response_sha256: SHA,
       },
     },
-    components: specs.map(([rxcui, aliases], index) => ({
-      name: `${drug}-${index}`, rxcui, tty: 'IN', assertion_ingredient_ids: aliases,
+    components: specs.map(([rxcui, name]) => ({
+      name,
+      rxcui,
+      tty: 'IN',
+      runtime_ingredient_id: ingredientIdForName(name),
+      assertion_ingredient_ids: [ingredientIdForName(name)],
     })),
     presentations: [{
       source_identity: { namespace: 'presentation:pmbjp', code: `${id}-code` },
@@ -594,10 +749,10 @@ test('HARDENING: a Hall-deficient three-component pair does NOT overlap', () => 
     }],
   });
   const a = triple('combination:hall-a', 'drug-a', [
-    ['8001', [alias(1)]], ['8002', [alias(2)]], ['8003', [alias(3), alias(4)]],
+    ['8001', 'shared'], ['8002', 'a-two'], ['8003', 'a-three'],
   ], PMBJP_89);
   const b = triple('combination:hall-b', 'drug-b', [
-    ['8004', [alias(1), alias(2)]], ['8005', [alias(3)]], ['8006', [alias(4)]],
+    ['8004', 'shared'], ['8005', 'b-two'], ['8006', 'b-three'],
   ], PMBJP_90);
   assert.equal(validateCombinationIdentityManifest(manifestOf(a, b)), true);
 });
@@ -605,16 +760,32 @@ test('HARDENING: a Hall-deficient three-component pair does NOT overlap', () => 
 test('HARDENING: combinations that merely SHARE a component are legitimate', () => {
   // paracetamol+codeine and paracetamol+ibuprofen share paracetamol but no active
   // set matches both. Rejecting these would make the model useless for real FDCs.
-  const a = pairCombination('combination:para-codeine', 'drug-a', ['161', [alias(1)]], ['2670', [alias(2)]], PMBJP_89);
-  const b = pairCombination('combination:para-ibuprofen', 'drug-b', ['161', [alias(1)]], ['5640', [alias(3)]], PMBJP_90);
+  const a = pairCombination(
+    'combination:para-codeine',
+    'drug-a',
+    ['161', 'paracetamol'],
+    ['2670', 'codeine'],
+    PMBJP_89,
+  );
+  const b = pairCombination(
+    'combination:para-ibuprofen',
+    'drug-b',
+    ['161', 'paracetamol'],
+    ['5640', 'ibuprofen'],
+    PMBJP_90,
+  );
   assert.equal(validateCombinationIdentityManifest(manifestOf(a, b)), true);
 });
 
 test('HARDENING: one reviewed product may not belong to two combinations', () => {
   // deliberately NON-overlapping component sets, so this isolates the reviewed-product
   // clash rather than re-testing active-set overlap
-  const a = pairCombination('combination:x', 'drug-a', ['7001', [alias(4)]], ['7002', [alias(5)]], PMBJP_89);
-  const b = pairCombination('combination:y', 'drug-b', ['7003', [alias(6)]], ['7004', [alias(7)]], PMBJP_90);
+  const a = pairCombination(
+    'combination:x', 'drug-a', ['7001', 'x-one'], ['7002', 'x-two'], PMBJP_89,
+  );
+  const b = pairCombination(
+    'combination:y', 'drug-b', ['7003', 'y-one'], ['7004', 'y-two'], PMBJP_90,
+  );
   b.presentations[0].source_identity = { ...a.presentations[0].source_identity };
   assert.throws(
     () => validateCombinationIdentityManifest(manifestOf(a, b)),
@@ -627,6 +798,7 @@ test('HARDENING: component count is bounded', () => {
     name: `ingredient-${index}`,
     rxcui: `${1000 + index}`,
     tty: 'IN',
+    runtime_ingredient_id: `sha256:${String(index).repeat(64).slice(0, 64)}`,
     assertion_ingredient_ids: [`sha256:${String(index).repeat(64).slice(0, 64)}`],
   }));
   rejects({ components: many }, /at most \d+ components/u);
@@ -663,7 +835,48 @@ test('a non-empty manifest cannot compile as verified without evidence verificat
   const source = manifestOf(cotrimoxazole());
   assert.throws(
     () => compileCombinationIdentityManifest(source, { kind: 'verified_manifest' }),
-    /may only compile as verified_manifest once its RxNorm evidence has been verified/u,
+    /not an authentic verifier result/u,
+  );
+  assert.throws(
+    () => compileCombinationIdentityManifest(source, {
+      kind: 'verified_manifest',
+      evidenceVerified: true,
+    }),
+    /not an authentic verifier result/u,
+  );
+  assert.throws(
+    () => compileCombinationIdentityManifest(source, {
+      kind: 'verified_manifest',
+      verificationReport: { verified: true, combinations_checked: 1, reports: [] },
+    }),
+    /not an authentic verifier result/u,
+  );
+
+  const report = verifyCombinationManifestEvidence(
+    source,
+    {
+      [source.combinations[0].combination_id]: authoritativeBundle(
+        source.combinations[0].combination_id,
+      ),
+    },
+    {
+      pmbjpSourceReport: verifyPmbjpCombinationEvidenceFiles(source, PMBJP_SOURCE),
+    },
+  );
+  assert.throws(
+    () => compileCombinationIdentityManifest(structuredClone(source), {
+      kind: 'verified_manifest',
+      verificationReport: report,
+    }),
+    /not bound to this exact manifest object/u,
+  );
+  source.notices.push('changed after verification');
+  assert.throws(
+    () => compileCombinationIdentityManifest(source, {
+      kind: 'verified_manifest',
+      verificationReport: report,
+    }),
+    /manifest changed since evidence verification/u,
   );
   // an EMPTY manifest compiles freely: there is nothing to verify
   const empty = manifestOf();
@@ -671,6 +884,26 @@ test('a non-empty manifest cannot compile as verified without evidence verificat
     compileCombinationIdentityManifest(empty, { kind: 'verified_manifest' }).compiled_kind,
     'verified_manifest',
   );
+});
+
+test('compilation snapshots the manifest once and rejects stateful accessors', () => {
+  const source = manifestOf(cotrimoxazole());
+  const combinations = source.combinations;
+  let reads = 0;
+  Object.defineProperty(source, 'combinations', {
+    enumerable: true,
+    configurable: true,
+    get() {
+      reads += 1;
+      return reads === 1 ? [] : combinations;
+    },
+  });
+
+  assert.throws(
+    () => compileCombinationIdentityManifest(source, { kind: 'verified_manifest' }),
+    /enumerable data property|accessors/u,
+  );
+  assert.equal(reads, 0);
 });
 
 test('HARDENING: no reachable value in the compiled form is a Map or a Set', () => {
@@ -700,10 +933,7 @@ test('HARDENING: no reachable value in the compiled form is a Map or a Set', () 
 
 test('HARDENING: the compiled form is DEEPLY immutable and detached from its source', () => {
   const source = manifestOf(cotrimoxazole());
-  const compiledManifest = compileCombinationIdentityManifest(
-    source,
-    { kind: 'verified_manifest', evidenceVerified: true },
-  );
+  const compiledManifest = compiled(source);
 
   // mutating the source after compilation must not reach the compiled form
   source.combinations[0].components[0].assertion_ingredient_ids.push(alias(7));
@@ -774,17 +1004,49 @@ test('MIN is admissible only inside a fixed_dose_combination identity', () => {
 
 test('a combination needs at least two components', () => {
   rejects({
-    components: [{ name: 'trimethoprim', rxcui: '10829', tty: 'IN', assertion_ingredient_ids: [TMP_ID] }],
+    components: [{
+      name: 'trimethoprim',
+      rxcui: '10829',
+      tty: 'IN',
+      runtime_ingredient_id: TMP_ID,
+      assertion_ingredient_ids: [TMP_ID],
+    }],
   }, /requires at least two components/u);
 });
 
-test('a component may not claim an assertion identity another component claims', () => {
-  rejects({
-    components: [
-      { name: 'sulfamethoxazole', rxcui: '10180', tty: 'IN', assertion_ingredient_ids: [SMX_ID] },
-      { name: 'trimethoprim', rxcui: '10829', tty: 'IN', assertion_ingredient_ids: [SMX_ID] },
-    ],
-  }, /claimed by more than one component/u);
+test('a component may not claim an assertion identity more than once', () => {
+  const combination = cotrimoxazole();
+  combination.components[0].assertion_ingredient_ids.push(SMX_ID);
+  rejects(
+    { components: combination.components },
+    /assertion_ingredient_ids must be unique/u,
+  );
+});
+
+test('noncanonical component assertion aliases require semantic preimages', () => {
+  const combination = cotrimoxazole();
+  const component = combination.components[0];
+  const warfarinId = ingredientIdForName('warfarin');
+  component.assertion_ingredient_ids.push(warfarinId);
+  component.assertion_ingredient_aliases = [{
+    ingredient_id: warfarinId,
+    observed_name: 'warfarin',
+    source_field: 'molecule',
+  }];
+
+  rejects(
+    { components: combination.components },
+    /must equal the component name or the exact combination-prefixed component alias/u,
+  );
+});
+
+test('an extra component assertion id without a declared preimage is rejected', () => {
+  const combination = cotrimoxazole();
+  combination.components[0].assertion_ingredient_ids.push(ingredientIdForName('warfarin'));
+  rejects(
+    { components: combination.components },
+    /assertion_ingredient_ids must equal the runtime identity plus declared aliases/u,
+  );
 });
 
 test('unknown properties, bad match modes and non-canonical drugs are rejected', () => {
@@ -811,6 +1073,24 @@ test('C2: both reviewed tablet strengths resolve', () => {
   }
   assert.equal(resolve(PMBJP_89).rxnorm_scd.rxcui, '198335');
   assert.equal(resolve(PMBJP_90).rxnorm_scd.rxcui, '142118');
+});
+
+test('multiple reviewed source identities fail closed independent of source order', () => {
+  for (const sources of [
+    [
+      { source: 'janaushadhi', source_id: '89', seen_at: '2026-07-07' },
+      { source: 'janaushadhi', source_id: '90', seen_at: '2026-07-07' },
+    ],
+    [
+      { source: 'janaushadhi', source_id: '90', seen_at: '2026-07-07' },
+      { source: 'janaushadhi', source_id: '89', seen_at: '2026-07-07' },
+    ],
+  ]) {
+    const result = resolve({ ...PMBJP_89, sources });
+    assert.equal(result.status, 'ambiguous');
+    assert.equal(result.runtime_subject, null);
+    assert.equal(result.error, 'multiple_reviewed_combination_source_identities');
+  }
 });
 
 test('no component of a combination ever inherits it', () => {
@@ -840,10 +1120,20 @@ test('an unreviewed product matching the component set still fails closed', () =
 
 // ── committed state ──────────────────────────────────────────────────────────
 
-test('the committed combination manifest is empty pending independent approval', () => {
+test('the committed manifest records only the reviewed co-trimoxazole tablet identity', () => {
   const manifest = readJson('data-static/combination-identity-overrides.json');
   assert.equal(validateCombinationIdentityManifest(manifest), true);
-  assert.deepEqual(manifest.combinations, []);
+  assert.equal(manifest.combinations.length, 1);
+  const [combination] = manifest.combinations;
+  assert.equal(
+    combination.combination_id,
+    'combination:co-trimoxazole:rxnorm-10831',
+  );
+  assert.deepEqual(
+    combination.presentations.map((presentation) => presentation.source_identity.code),
+    ['89', '90'],
+  );
+  assert.deepEqual(combination.allowed_profiles, ['internal-evaluation']);
   assert.equal(readJson('data-static/interaction-rules.json').rules.length, 0);
 });
 

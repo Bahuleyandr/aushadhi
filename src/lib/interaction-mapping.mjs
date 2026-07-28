@@ -17,9 +17,11 @@ import {
   normalizeRuntimeInteractionSubject,
 } from './interaction-engine.mjs';
 import {
-  compileCombinationIdentityManifest,
+  assertRuntimeCombinationResult,
+  assertVerifiedCombinationIdentityManifest,
   resolveCombinationIdentity,
 } from './interaction-combination-identity.mjs';
+import { strictPlainDataSnapshotAllowShared } from './strict-plain-data.mjs';
 
 export const INTERACTION_MAPPING_SCHEMA_VERSION = 1;
 export const INGREDIENT_OCCURRENCE_NAMESPACE = 'aushadhi:ingredient-occurrence:v1';
@@ -40,6 +42,22 @@ const RELATIONSHIPS = new Set([
   'synonym',
 ]);
 const RXNORM_INGREDIENT_TYPES = new Set(['IN', 'PIN']);
+const REVIEWED_COMBINATION_PRODUCTS = new WeakMap();
+
+function deepFreeze(value, seen = new Set()) {
+  if (value === null || typeof value !== 'object' || seen.has(value)) return value;
+  seen.add(value);
+  for (const child of Object.values(value)) deepFreeze(child, seen);
+  return Object.freeze(value);
+}
+
+function mappedProductFingerprint(product) {
+  return createHash('sha256')
+    .update('aushadhi:reviewed-combination-mapped-product:v1', 'utf8')
+    .update('\u0000', 'utf8')
+    .update(JSON.stringify(product), 'utf8')
+    .digest('hex');
+}
 
 // Clinician decision C4 (2026-07-27): a PMBJP presentation mapping must rest on an
 // authoritative PMBJP product-identity source -- one that confirms the drug code,
@@ -616,10 +634,10 @@ function mappedPresentation(product, indexes) {
   };
 }
 
-function mappedIngredient(ingredient, productId, presentation, entry) {
+function ingredientMappingBase(ingredient, productId) {
   const assertion = createIngredientIdentity(ingredient);
   const occurrenceId = ingredientOccurrenceId(productId, ingredient);
-  const base = {
+  return {
     ...ingredient,
     assertion_ingredient_id: assertion.ingredient_id,
     ingredient_occurrence_id: occurrenceId,
@@ -628,6 +646,10 @@ function mappedIngredient(ingredient, productId, presentation, entry) {
     assertion_precision: assertion.precision,
     assertion_source_field: assertion.source_field,
   };
+}
+
+function mappedIngredient(ingredient, productId, presentation, entry) {
+  const base = ingredientMappingBase(ingredient, productId);
   if (!entry) {
     return {
       ...base,
@@ -675,6 +697,56 @@ function mappedIngredient(ingredient, productId, presentation, entry) {
   };
 }
 
+function presentationFromReviewedCombination(combination) {
+  return {
+    status: 'reviewed_override',
+    mapping_id: `${combination.combination_id}:presentation`,
+    mapping_scope: 'reviewed_combination_product',
+    combination_id: combination.combination_id,
+    source_identity: combination.source_identity,
+    product_assertion_sha256: combination.product_assertion_sha256,
+    route: combination.runtime_subject.route,
+    formulation: combination.runtime_subject.formulation,
+  };
+}
+
+function mappedCombinationComponent(
+  ingredient,
+  productId,
+  presentation,
+  combination,
+  component,
+) {
+  const base = ingredientMappingBase(ingredient, productId);
+  const runtimeDrug = canonicalDrug(component.name);
+  return {
+    ...base,
+    ingredient_id: component.runtime_ingredient_id,
+    canonical_name: runtimeDrug,
+    runtime_drug: runtimeDrug,
+    identity_relationship: 'exact',
+    external_identifiers: {
+      rxnorm: {
+        rxcui: component.rxcui,
+        name: component.name,
+        tty: component.tty,
+        version: component.version,
+        api_version: component.api_version,
+      },
+      unii: null,
+    },
+    mapping_id: `${combination.combination_id}:component:${component.rxcui}`,
+    mapping_status: 'reviewed_override',
+    mapping_scope: 'reviewed_combination_product',
+    combination_id: combination.combination_id,
+    runtime_subject: normalizeRuntimeInteractionSubject({
+      drug: runtimeDrug,
+      route: presentation.route,
+      formulation: presentation.formulation,
+    }),
+  };
+}
+
 export function mapResolvedProducts({
   records,
   ingredientManifest,
@@ -692,41 +764,66 @@ export function mapResolvedProducts({
   // compiled manifest, so an audit fixture can never reach this path.
   const compiledCombinations = combinationManifest === null
     ? null
-    : compileCombinationIdentityManifest(combinationManifest, {
-      kind: 'verified_manifest',
-      evidenceVerified: combinationManifest.combinations.length === 0,
-    });
+    : assertVerifiedCombinationIdentityManifest(combinationManifest);
   const indexes = buildMappingIndexes(ingredientManifest, presentationManifest, profile);
   // a source identity must be unique across the catalogue: two rows claiming one
   // reviewed identity is an ambiguity, never something to guess between
   const seenSourceIdentities = new Set();
   return records.map((record, recordIndex) => {
-    requireObject(record, `record ${recordIndex}`);
-    if (record.status !== 'resolved') return structuredClone(record);
-    requireObject(record.product, `record ${recordIndex}.product`);
-    const expectedProductId = productIdForRow(record.product);
-    if (record.product.product_id !== expectedProductId) {
+    const stableRecord = strictPlainDataSnapshotAllowShared(record, `record ${recordIndex}`);
+    requireObject(stableRecord, `record ${recordIndex}`);
+    if (stableRecord.status !== 'resolved') return structuredClone(stableRecord);
+    const product = stableRecord.product;
+    requireObject(product, `record ${recordIndex}.product`);
+    const expectedProductId = productIdForRow(product);
+    if (product.product_id !== expectedProductId) {
       throw new TypeError(`record ${recordIndex}.product.product_id does not match product content`);
     }
-    if (!Array.isArray(record.product.ingredients) || record.product.ingredients.length === 0) {
+    if (!Array.isArray(product.ingredients) || product.ingredients.length === 0) {
       throw new TypeError(`record ${recordIndex}.product.ingredients must be non-empty`);
     }
-    for (const key of productSourceIdentityKeys(record.product)) {
+    for (const key of productSourceIdentityKeys(product)) {
       if (seenSourceIdentities.has(key)) {
         throw new TypeError(`duplicate source identity ${key} across catalogue records`);
       }
       seenSourceIdentities.add(key);
     }
-    const presentation = mappedPresentation(record.product, indexes);
+    const combination = compiledCombinations === null || profile === null
+      ? null
+      : resolveCombinationIdentity({
+        product,
+        manifest: compiledCombinations,
+        profile,
+      });
+    const reviewedCombination = combination?.status === 'reviewed_override'
+      ? combination
+      : null;
+    const presentation = reviewedCombination === null
+      ? mappedPresentation(product, indexes)
+      : presentationFromReviewedCombination(reviewedCombination);
+    const combinationComponents = reviewedCombination === null
+      ? new Map()
+      : new Map(reviewedCombination.components.map((component) => (
+        [component.assertion_ingredient_id, component]
+      )));
     const seenOccurrences = new Set();
-    const ingredients = record.product.ingredients.map((ingredient) => {
+    const ingredients = product.ingredients.map((ingredient) => {
       const assertion = createIngredientIdentity(ingredient);
-      const mapped = mappedIngredient(
-        ingredient,
-        expectedProductId,
-        presentation,
-        indexes.ingredients.get(assertion.ingredient_id),
-      );
+      const combinationComponent = combinationComponents.get(assertion.ingredient_id);
+      const mapped = combinationComponent === undefined
+        ? mappedIngredient(
+          ingredient,
+          expectedProductId,
+          presentation,
+          indexes.ingredients.get(assertion.ingredient_id),
+        )
+        : mappedCombinationComponent(
+          ingredient,
+          expectedProductId,
+          presentation,
+          reviewedCombination,
+          combinationComponent,
+        );
       if (seenOccurrences.has(mapped.ingredient_occurrence_id)) {
         throw new TypeError(
           `record ${recordIndex} contains indistinguishable duplicate ingredient occurrences`,
@@ -735,24 +832,69 @@ export function mapResolvedProducts({
       seenOccurrences.add(mapped.ingredient_occurrence_id);
       return mapped;
     });
-    const combination = compiledCombinations === null || profile === null
-      ? null
-      : resolveCombinationIdentity({
-        product: record.product,
-        manifest: compiledCombinations,
+    const productAssertionSha256 = productAssertionHashForRow(product);
+    const mappedProduct = {
+      ...structuredClone(product),
+      product_assertion_sha256: productAssertionSha256,
+      presentation,
+      ingredients,
+      ...(combination === null ? {} : { combination }),
+    };
+    if (productIdForRow(mappedProduct) !== expectedProductId) {
+      throw new TypeError(`record ${recordIndex}.product mapping changed product identity content`);
+    }
+    if (reviewedCombination !== null) {
+      assertRuntimeCombinationResult(reviewedCombination);
+      deepFreeze(mappedProduct);
+      REVIEWED_COMBINATION_PRODUCTS.set(mappedProduct, Object.freeze({
+        combination: reviewedCombination,
         profile,
-      });
-    return {
-      ...structuredClone(record),
-      product: {
-        ...structuredClone(record.product),
-        product_assertion_sha256: productAssertionHashForRow(record.product),
+        product_id: expectedProductId,
+        product_assertion_sha256: mappedProduct.product_assertion_sha256,
+        mapped_product_sha256: mappedProductFingerprint(mappedProduct),
         presentation,
-        ingredients,
-        ...(combination === null ? {} : { combination }),
-      },
+        ingredient_occurrence_ids: Object.freeze(
+          ingredients.map((ingredient) => ingredient.ingredient_occurrence_id),
+        ),
+      }));
+    }
+    return {
+      ...structuredClone(stableRecord),
+      product: mappedProduct,
     };
   });
+}
+
+export function assertAuthenticReviewedCombinationMappedProduct(product) {
+  if (!isObject(product) || !REVIEWED_COMBINATION_PRODUCTS.has(product)) {
+    throw new TypeError('combination product is not an authentic reviewed mapping result');
+  }
+  const binding = REVIEWED_COMBINATION_PRODUCTS.get(product);
+  if (product.combination !== binding.combination
+      || product.presentation !== binding.presentation
+      || product.product_id !== binding.product_id
+      || product.product_assertion_sha256 !== binding.product_assertion_sha256
+      || mappedProductFingerprint(product) !== binding.mapped_product_sha256
+      || product.ingredients.length !== binding.ingredient_occurrence_ids.length
+      || product.ingredients.some((
+        ingredient,
+        index,
+      ) => ingredient.ingredient_occurrence_id !== binding.ingredient_occurrence_ids[index])) {
+    throw new TypeError('combination product no longer matches its reviewed mapping result');
+  }
+  assertRuntimeCombinationResult(product.combination);
+  return product;
+}
+
+export function assertReviewedCombinationMappedProduct(product, expectedProfile) {
+  assertAuthenticReviewedCombinationMappedProduct(product);
+  const binding = REVIEWED_COMBINATION_PRODUCTS.get(product);
+  if (binding.profile !== expectedProfile) {
+    throw new TypeError(
+      `combination product profile ${binding.profile} does not match ${expectedProfile}`,
+    );
+  }
+  return product;
 }
 
 export function summarizeInteractionMappings(records) {
@@ -779,6 +921,11 @@ export function summarizeInteractionMappings(records) {
       if (ingredient.runtime_subject !== null && ingredient.runtime_subject !== undefined) {
         summary.runtime_subjects += 1;
       }
+    }
+    if (record.product?.combination?.status === 'reviewed_override'
+        && record.product.combination.runtime_subject !== null
+        && record.product.combination.runtime_subject !== undefined) {
+      summary.runtime_subjects += 1;
     }
   }
   return summary;

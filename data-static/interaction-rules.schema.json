@@ -11,12 +11,16 @@
     "profile",
     "licence",
     "source_ids",
+    "licence_notices",
     "declared_coverage",
     "rules"
   ],
   "properties": {
     "schema_version": {
-      "const": "1.0.0"
+      "enum": [
+        "1.0.0",
+        "1.1.0"
+      ]
     },
     "pack_id": {
       "type": "string",
@@ -86,12 +90,57 @@
           }
         }
       }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "1.0.0"
+          }
+        },
+        "required": [
+          "schema_version"
+        ]
+      },
+      "then": {
+        "properties": {
+          "rules": {
+            "items": {
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "interaction_family_id"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "subject_specificity"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "subject_roles"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "supersedes_rule_ids"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "$defs": {
     "nonEmptyString": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "pattern": "\\S"
     },
     "conditionList": {
       "type": "array",
@@ -347,7 +396,61 @@
         },
         "review": {
           "$ref": "#/$defs/review"
+        },
+        "interaction_family_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "subject_specificity": {
+          "enum": [
+            "exact_member",
+            "exact_fixed_dose_combination"
+          ]
+        },
+        "subject_roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "object",
+            "perpetrator"
+          ],
+          "properties": {
+            "object": {
+              "$ref": "#/$defs/nonEmptyString"
+            },
+            "perpetrator": {
+              "$ref": "#/$defs/nonEmptyString"
+            }
+          }
+        },
+        "supersedes_rule_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
         }
+      },
+      "dependentRequired": {
+        "interaction_family_id": [
+          "subject_specificity",
+          "subject_roles",
+          "supersedes_rule_ids"
+        ],
+        "subject_specificity": [
+          "interaction_family_id",
+          "subject_roles",
+          "supersedes_rule_ids"
+        ],
+        "subject_roles": [
+          "interaction_family_id",
+          "subject_specificity",
+          "supersedes_rule_ids"
+        ],
+        "supersedes_rule_ids": [
+          "interaction_family_id",
+          "subject_specificity",
+          "subject_roles"
+        ]
       },
       "allOf": [
         {
@@ -417,6 +520,75 @@
                     "review_status": {
                       "const": "review_candidate"
                     }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "interaction_family_id"
+            ]
+          },
+          "then": {
+            "properties": {
+              "review": {
+                "properties": {
+                  "status": {
+                    "const": "clinician_reviewed"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subject_specificity": {
+                "const": "exact_fixed_dose_combination"
+              }
+            },
+            "required": [
+              "subject_specificity"
+            ]
+          },
+          "then": {
+            "properties": {
+              "pair": {
+                "contains": {
+                  "type": "string",
+                  "pattern": "^combination:"
+                },
+                "minContains": 1,
+                "maxContains": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "subject_specificity": {
+                "const": "exact_member"
+              }
+            },
+            "required": [
+              "subject_specificity"
+            ]
+          },
+          "then": {
+            "properties": {
+              "pair": {
+                "not": {
+                  "contains": {
+                    "type": "string",
+                    "pattern": "^combination:"
                   }
                 }
               }

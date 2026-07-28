@@ -20,6 +20,9 @@ import {
   mapResolvedProducts,
   validateProductPresentationManifest,
 } from '../src/lib/interaction-mapping.mjs';
+import {
+  compileCombinationIdentityManifest,
+} from '../src/lib/interaction-combination-identity.mjs';
 import { productAssertionHashForRow, productIdForRow } from '../src/lib/product-resolver.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -225,9 +228,13 @@ test('all eighteen committed mappings are now source-bound', () => {
 
 // ── D1: the combination resolver is wired, and supplements rather than replaces ──
 
-test('the combination resolver is wired and inert with the committed empty manifest', () => {
-  const combinationManifest = readJson('data-static/combination-identity-overrides.json');
-  assert.deepEqual(combinationManifest.combinations, []);
+test('the combination resolver is wired and inert with an explicit empty verified manifest', () => {
+  const combinationManifest = compileCombinationIdentityManifest({
+    schema_version: 1,
+    identity_namespace: 'aushadhi:ingredient-identity:v1',
+    notices: ['Explicit empty test fixture.'],
+    combinations: [],
+  });
   const mapped = mapResolvedProducts({
     records: [{
       status: 'resolved',
