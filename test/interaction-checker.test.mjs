@@ -816,6 +816,7 @@ test('the checked-in rule schema exposes the same versioned D1 fields as the run
     'utf8',
   ));
   assert.deepEqual(schema.properties.schema_version.enum, ['1.0.0', '1.1.0']);
+  assert.ok(schema.required.includes('licence_notices'));
   assert.deepEqual(
     Object.keys(schema.$defs.rule.properties)
       .filter((key) => [
