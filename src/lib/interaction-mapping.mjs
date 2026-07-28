@@ -21,6 +21,7 @@ import {
   assertVerifiedCombinationIdentityManifest,
   resolveCombinationIdentity,
 } from './interaction-combination-identity.mjs';
+import { strictPlainDataSnapshotAllowShared } from './strict-plain-data.mjs';
 
 export const INTERACTION_MAPPING_SCHEMA_VERSION = 1;
 export const INGREDIENT_OCCURRENCE_NAMESPACE = 'aushadhi:ingredient-occurrence:v1';
@@ -48,6 +49,14 @@ function deepFreeze(value, seen = new Set()) {
   seen.add(value);
   for (const child of Object.values(value)) deepFreeze(child, seen);
   return Object.freeze(value);
+}
+
+function mappedProductFingerprint(product) {
+  return createHash('sha256')
+    .update('aushadhi:reviewed-combination-mapped-product:v1', 'utf8')
+    .update('\u0000', 'utf8')
+    .update(JSON.stringify(product), 'utf8')
+    .digest('hex');
 }
 
 // Clinician decision C4 (2026-07-27): a PMBJP presentation mapping must rest on an
@@ -761,17 +770,19 @@ export function mapResolvedProducts({
   // reviewed identity is an ambiguity, never something to guess between
   const seenSourceIdentities = new Set();
   return records.map((record, recordIndex) => {
-    requireObject(record, `record ${recordIndex}`);
-    if (record.status !== 'resolved') return structuredClone(record);
-    requireObject(record.product, `record ${recordIndex}.product`);
-    const expectedProductId = productIdForRow(record.product);
-    if (record.product.product_id !== expectedProductId) {
+    const stableRecord = strictPlainDataSnapshotAllowShared(record, `record ${recordIndex}`);
+    requireObject(stableRecord, `record ${recordIndex}`);
+    if (stableRecord.status !== 'resolved') return structuredClone(stableRecord);
+    const product = stableRecord.product;
+    requireObject(product, `record ${recordIndex}.product`);
+    const expectedProductId = productIdForRow(product);
+    if (product.product_id !== expectedProductId) {
       throw new TypeError(`record ${recordIndex}.product.product_id does not match product content`);
     }
-    if (!Array.isArray(record.product.ingredients) || record.product.ingredients.length === 0) {
+    if (!Array.isArray(product.ingredients) || product.ingredients.length === 0) {
       throw new TypeError(`record ${recordIndex}.product.ingredients must be non-empty`);
     }
-    for (const key of productSourceIdentityKeys(record.product)) {
+    for (const key of productSourceIdentityKeys(product)) {
       if (seenSourceIdentities.has(key)) {
         throw new TypeError(`duplicate source identity ${key} across catalogue records`);
       }
@@ -780,7 +791,7 @@ export function mapResolvedProducts({
     const combination = compiledCombinations === null || profile === null
       ? null
       : resolveCombinationIdentity({
-        product: record.product,
+        product,
         manifest: compiledCombinations,
         profile,
       });
@@ -788,7 +799,7 @@ export function mapResolvedProducts({
       ? combination
       : null;
     const presentation = reviewedCombination === null
-      ? mappedPresentation(record.product, indexes)
+      ? mappedPresentation(product, indexes)
       : presentationFromReviewedCombination(reviewedCombination);
     const combinationComponents = reviewedCombination === null
       ? new Map()
@@ -796,7 +807,7 @@ export function mapResolvedProducts({
         [component.assertion_ingredient_id, component]
       )));
     const seenOccurrences = new Set();
-    const ingredients = record.product.ingredients.map((ingredient) => {
+    const ingredients = product.ingredients.map((ingredient) => {
       const assertion = createIngredientIdentity(ingredient);
       const combinationComponent = combinationComponents.get(assertion.ingredient_id);
       const mapped = combinationComponent === undefined
@@ -821,13 +832,17 @@ export function mapResolvedProducts({
       seenOccurrences.add(mapped.ingredient_occurrence_id);
       return mapped;
     });
+    const productAssertionSha256 = productAssertionHashForRow(product);
     const mappedProduct = {
-      ...structuredClone(record.product),
-      product_assertion_sha256: productAssertionHashForRow(record.product),
+      ...structuredClone(product),
+      product_assertion_sha256: productAssertionSha256,
       presentation,
       ingredients,
       ...(combination === null ? {} : { combination }),
     };
+    if (productIdForRow(mappedProduct) !== expectedProductId) {
+      throw new TypeError(`record ${recordIndex}.product mapping changed product identity content`);
+    }
     if (reviewedCombination !== null) {
       assertRuntimeCombinationResult(reviewedCombination);
       deepFreeze(mappedProduct);
@@ -836,6 +851,7 @@ export function mapResolvedProducts({
         profile,
         product_id: expectedProductId,
         product_assertion_sha256: mappedProduct.product_assertion_sha256,
+        mapped_product_sha256: mappedProductFingerprint(mappedProduct),
         presentation,
         ingredient_occurrence_ids: Object.freeze(
           ingredients.map((ingredient) => ingredient.ingredient_occurrence_id),
@@ -843,7 +859,7 @@ export function mapResolvedProducts({
       }));
     }
     return {
-      ...structuredClone(record),
+      ...structuredClone(stableRecord),
       product: mappedProduct,
     };
   });
@@ -858,6 +874,7 @@ export function assertAuthenticReviewedCombinationMappedProduct(product) {
       || product.presentation !== binding.presentation
       || product.product_id !== binding.product_id
       || product.product_assertion_sha256 !== binding.product_assertion_sha256
+      || mappedProductFingerprint(product) !== binding.mapped_product_sha256
       || product.ingredients.length !== binding.ingredient_occurrence_ids.length
       || product.ingredients.some((
         ingredient,

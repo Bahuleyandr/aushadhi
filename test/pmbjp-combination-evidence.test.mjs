@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  assertPhysicalDirectoryPath,
   assertVerifiedPmbjpCombinationEvidence,
   verifyPmbjpCombinationEvidenceFiles,
 } from '../src/lib/pmbjp-combination-evidence.mjs';
@@ -86,6 +87,35 @@ test('PMBJP source files are refused outside the restricted internal-evaluation 
         tableTextPath: outsideTable,
       }),
       /must remain inside/u,
+    );
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test('the restricted-source boundary rejects a junction root and a junction ancestor', () => {
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'aushadhi-pmbjp-junction-'));
+  const physicalTarget = path.join(scratch, 'physical-target');
+  const nestedTarget = path.join(physicalTarget, 'nested');
+  const linkedRoot = path.join(scratch, 'linked-root');
+  fs.mkdirSync(nestedTarget, { recursive: true });
+  fs.symlinkSync(
+    physicalTarget,
+    linkedRoot,
+    process.platform === 'win32' ? 'junction' : 'dir',
+  );
+
+  try {
+    assert.throws(
+      () => assertPhysicalDirectoryPath(linkedRoot, 'restricted source root'),
+      /symbolic link|junction|reparse/u,
+    );
+    assert.throws(
+      () => assertPhysicalDirectoryPath(
+        path.join(linkedRoot, 'nested'),
+        'restricted source root',
+      ),
+      /symbolic link|junction|reparse/u,
     );
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true });

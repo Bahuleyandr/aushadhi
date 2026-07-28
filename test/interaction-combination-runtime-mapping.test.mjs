@@ -240,6 +240,39 @@ test('a verified reviewed combination maps its exact product and both product-sc
   }]).runtime_subjects, 3);
 });
 
+test('mapping rejects a stateful product accessor before it can transplant catalogue content', () => {
+  const { compiled } = compileCommittedManifest();
+  const authenticProduct = resolved(PMBJP_89).product;
+  const suspensionProduct = {
+    ...resolved(PMBJP_88).product,
+    product_id: authenticProduct.product_id,
+  };
+  let productReads = 0;
+  const statefulRecord = {
+    input: PMBJP_89.brand_name,
+    status: 'resolved',
+  };
+  Object.defineProperty(statefulRecord, 'product', {
+    enumerable: true,
+    get() {
+      productReads += 1;
+      return productReads === 9 ? suspensionProduct : authenticProduct;
+    },
+  });
+
+  assert.throws(
+    () => mapResolvedProducts({
+      records: [statefulRecord],
+      ingredientManifest: EMPTY_INGREDIENT_MANIFEST,
+      presentationManifest: EMPTY_PRESENTATION_MANIFEST,
+      combinationManifest: compiled,
+      profile: 'internal-evaluation',
+    }),
+    /product must be an enumerable data property|accessors/u,
+  );
+  assert.equal(productReads, 0);
+});
+
 test('an authentic mapped combination supplements its component subjects in the checker', () => {
   const { manifest, compiled } = compileCommittedManifest();
   const combinationProduct = map(PMBJP_89, compiled);

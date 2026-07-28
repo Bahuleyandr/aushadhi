@@ -263,6 +263,7 @@ function verifyPmbjpCombinationEvidence(
 }
 
 function requireRestrictedSourcePath(file, restrictedRoot, label) {
+  assertPhysicalDirectoryPath(restrictedRoot, 'verifier-owned restricted source root');
   const realRoot = fs.realpathSync(restrictedRoot);
   const realFile = fs.realpathSync(file);
   const relative = path.relative(realRoot, realFile);
@@ -270,6 +271,30 @@ function requireRestrictedSourcePath(file, restrictedRoot, label) {
     throw new TypeError(`${label} must remain inside ${realRoot}`);
   }
   return realFile;
+}
+
+export function assertPhysicalDirectoryPath(directory, label = 'directory') {
+  if (typeof directory !== 'string' || directory.trim() === '') {
+    throw new TypeError(`${label} must be a non-empty path`);
+  }
+  const absolute = path.resolve(directory);
+  const parsed = path.parse(absolute);
+  const relative = path.relative(parsed.root, absolute);
+  const segments = relative === '' ? [] : relative.split(path.sep);
+  let current = parsed.root;
+  for (const segment of segments) {
+    current = path.join(current, segment);
+    const stats = fs.lstatSync(current);
+    if (stats.isSymbolicLink()) {
+      throw new TypeError(
+        `${label} may not contain a symbolic link, junction, or reparse-point directory`,
+      );
+    }
+    if (!stats.isDirectory()) {
+      throw new TypeError(`${label} must resolve through physical directories only`);
+    }
+  }
+  return absolute;
 }
 
 export function verifyPmbjpCombinationEvidenceFiles(
@@ -280,13 +305,19 @@ export function verifyPmbjpCombinationEvidenceFiles(
     strictPlainDataSnapshot(manifest, 'combination identity manifest'),
   );
   if (presentations.length === 0) return verifyPmbjpCombinationEvidence(manifest);
+  const trustedRoot = assertPhysicalDirectoryPath(
+    TRUSTED_RESTRICTED_ROOT,
+    'verifier-owned restricted source root',
+  );
   if (restrictedRoot !== undefined) {
     if (typeof restrictedRoot !== 'string' || restrictedRoot.trim() === '') {
       throw new TypeError('restrictedRoot must be a non-empty string when supplied');
     }
-    const suppliedRoot = fs.realpathSync(restrictedRoot);
-    const trustedRoot = fs.realpathSync(TRUSTED_RESTRICTED_ROOT);
-    if (suppliedRoot !== trustedRoot) {
+    const suppliedRoot = assertPhysicalDirectoryPath(
+      restrictedRoot,
+      'supplied restricted source root',
+    );
+    if (path.relative(trustedRoot, suppliedRoot) !== '') {
       throw new TypeError(
         `restrictedRoot must equal the verifier-owned source zone ${trustedRoot}`,
       );
@@ -297,12 +328,12 @@ export function verifyPmbjpCombinationEvidenceFiles(
   }
   const verifiedPdfPath = requireRestrictedSourcePath(
     pdfPath,
-    TRUSTED_RESTRICTED_ROOT,
+    trustedRoot,
     'PMBJP PDF',
   );
   const verifiedTextPath = requireRestrictedSourcePath(
     tableTextPath,
-    TRUSTED_RESTRICTED_ROOT,
+    trustedRoot,
     'PMBJP table extract',
   );
   return verifyPmbjpCombinationEvidence(
