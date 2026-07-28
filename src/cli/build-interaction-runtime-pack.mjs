@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
+import { validateCombinationIdentityManifest } from '../lib/interaction-combination-identity.mjs';
+import { verifyCombinationManifestEvidence } from '../lib/combination-rxnorm-evidence.mjs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -78,11 +80,50 @@ function replaceAtomically(targetPath, text) {
   }
 }
 
+// Machine-enforced coupling: a non-empty combination manifest may not be compiled or
+// promoted until its RxNorm evidence verifies. This is not a separately documented
+// command a developer can forget -- the promotion gate runs it.
+export function assertCombinationEvidenceVerified(root = ROOT) {
+  const manifestPath = path.join(root, 'data-static', 'combination-identity-overrides.json');
+  if (!fs.existsSync(manifestPath)) return { combinations: 0, verified: true };
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  validateCombinationIdentityManifest(manifest);
+  if (manifest.combinations.length === 0) return { combinations: 0, verified: true };
+
+  const bundleDir = path.join(root, 'data-static', 'combination-rxnorm-evidence');
+  const bundles = {};
+  for (const combination of manifest.combinations) {
+    const file = path.join(
+      bundleDir,
+      `${combination.combination_id.replaceAll(/[^a-zA-Z0-9._-]/gu, '_')}.json`,
+    );
+    if (fs.existsSync(file)) {
+      bundles[combination.combination_id] = JSON.parse(fs.readFileSync(file, 'utf8'));
+    }
+  }
+  const report = verifyCombinationManifestEvidence(manifest, bundles);
+  if (!report.verified) {
+    const detail = report.reports
+      .filter((entry) => !entry.verified)
+      .map((entry) => `${entry.combination_id}: ${entry.findings.map((f) => f.code).join(', ')}`)
+      .join('; ');
+    throw new Error(
+      'combination RxNorm evidence is unverified, so the runtime pack may not be built or '
+      + `checked: ${detail}`,
+    );
+  }
+  return { combinations: report.combinations_checked, verified: true };
+}
+
 function main() {
   const args = process.argv.slice(2);
   if (args.some((arg) => arg !== '--check') || args.filter((arg) => arg === '--check').length > 1) {
     throw new TypeError('usage: node src/cli/build-interaction-runtime-pack.mjs [--check]');
   }
+  // Machine-enforced coupling: a non-empty combination manifest may not compile or
+  // promote until its RxNorm evidence verifies. This is not a separately documented
+  // command a developer can forget -- the promotion gate runs it.
+  assertCombinationEvidenceVerified();
   const serialized = serializeInteractionRuntimePack(buildCommittedRuntimePack());
   if (args.includes('--check')) {
     if (!fs.existsSync(PATHS.output) || fs.readFileSync(PATHS.output, 'utf8') !== serialized) {

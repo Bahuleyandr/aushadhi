@@ -68,14 +68,20 @@
             "name": "fixture",
             "ingredients_and_strengths": [
               {
-                "ingredient_rxcui": "10180",
+                "component_rxcui": "10180",
+                "ingredient_rxcui_field": "baseRxcui",
                 "numerator_value": "800",
-                "numerator_unit": "MG"
+                "numerator_unit": "MG",
+                "denominator_value": null,
+                "denominator_unit": null
               },
               {
-                "ingredient_rxcui": "10829",
+                "component_rxcui": "10829",
+                "ingredient_rxcui_field": "baseRxcui",
                 "numerator_value": "160",
-                "numerator_unit": "MG"
+                "numerator_unit": "MG",
+                "denominator_value": null,
+                "denominator_unit": null
               }
             ],
             "dose_form": "Oral Tablet",
@@ -99,14 +105,20 @@
             "name": "fixture",
             "ingredients_and_strengths": [
               {
-                "ingredient_rxcui": "10180",
+                "component_rxcui": "10180",
+                "ingredient_rxcui_field": "baseRxcui",
                 "numerator_value": "100",
-                "numerator_unit": "MG"
+                "numerator_unit": "MG",
+                "denominator_value": null,
+                "denominator_unit": null
               },
               {
-                "ingredient_rxcui": "10829",
+                "component_rxcui": "10829",
+                "ingredient_rxcui_field": "baseRxcui",
                 "numerator_value": "20",
-                "numerator_unit": "MG"
+                "numerator_unit": "MG",
+                "denominator_value": null,
+                "denominator_unit": null
               }
             ],
             "dose_form": "Oral Tablet",

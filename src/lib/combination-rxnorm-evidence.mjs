@@ -25,11 +25,13 @@ export const EVIDENCE_BUNDLE_SCHEMA_VERSION = 1;
 // which RxNorm ingredient notion a comparison used; recorded per presentation so a
 // PIN-based product cannot silently be compared on a different field
 export const INGREDIENT_RXCUI_FIELDS = new Set([
-  'ingredient_rxcui',
-  'base_ingredient_rxcui',
-  'basis_of_strength_rxcui',
-  'active_ingredient_rxcui',
+  'rxcui', 'baseRxcui', 'bossRxcui', 'activeIngredientRxcui',
 ]);
+// Term type alone is not enough: an obsolete or remapped concept is still
+// recognisably an SCD. Every concept in the relationship graph must be active and
+// current.
+const ACCEPTABLE_STATUS = 'Active';
+const ACCEPTABLE_IS_CURRENT = 'YES';
 
 const SHA256 = /^[a-f0-9]{64}$/u;
 // fixture hashes exist so tests can exercise matching without network capture; a
@@ -81,8 +83,66 @@ function parseBundle(bundle, key) {
   }
 }
 
+// Every committed response is hashed, not only the ones the manifest pins, so the
+// bundle cannot carry an unverified status or relationship response.
+function verifyBundleIntegrity(findings, bundle) {
+  const recorded = bundle.response_hashes;
+  if (!recorded || typeof recorded !== 'object') {
+    return fail(findings, 'missing_response_hashes',
+      'evidence bundle does not record a hash for each committed response');
+  }
+  for (const [key, raw] of Object.entries(bundle.responses ?? {})) {
+    const declared = recorded[key];
+    if (declared === undefined) {
+      fail(findings, 'unhashed_response', `committed response ${key} has no recorded hash`);
+      continue;
+    }
+    const recomputed = sha256(raw);
+    if (recomputed !== declared) {
+      fail(findings, 'bundle_hash_mismatch',
+        `committed response ${key} hashes to ${recomputed} but the bundle records ${declared}`);
+    }
+  }
+  for (const key of Object.keys(recorded)) {
+    if (!(key in (bundle.responses ?? {}))) {
+      fail(findings, 'orphan_response_hash', `bundle records a hash for absent response ${key}`);
+    }
+  }
+  return findings;
+}
+
+// RxNorm's history-status response distinguishes Active / Obsolete / Remapped /
+// Non Current / Unknown. A remapped concept must be re-reviewed against its
+// replacement rather than silently accepted.
+function verifyConceptStatus(findings, rxcui, role, bundle) {
+  const key = `rxcui/${rxcui}/historystatus`;
+  const raw = bundleEntry(bundle, key);
+  if (raw === null) {
+    return fail(findings, 'missing_concept_status',
+      `${role} ${rxcui} has no committed history-status response`);
+  }
+  const status = parseBundle(bundle, key)?.rxcuiStatusHistory?.metaData;
+  if (!status) {
+    return fail(findings, 'unreadable_concept_status',
+      `${role} ${rxcui} history-status response is unparseable`);
+  }
+  if (status.status !== ACCEPTABLE_STATUS) {
+    return fail(findings, 'concept_not_active',
+      `${role} ${rxcui} has RxNorm status ${status.status}, not ${ACCEPTABLE_STATUS}`);
+  }
+  if (String(status.isCurrent ?? '').toUpperCase() !== ACCEPTABLE_IS_CURRENT) {
+    return fail(findings, 'concept_not_current',
+      `${role} ${rxcui} is not current (isCurrent=${status.isCurrent})`);
+  }
+  return findings;
+}
+
 function verifyCombinationConcept(findings, combination, bundle) {
   const { rxnorm } = combination;
+  verifyConceptStatus(findings, rxnorm.rxcui, 'combination MIN', bundle);
+  for (const component of combination.components) {
+    verifyConceptStatus(findings, component.rxcui, 'component', bundle);
+  }
   const propertiesKey = `rxcui/${rxnorm.rxcui}/properties`;
   verifyHash(findings, bundle, propertiesKey, rxnorm.properties_response_sha256,
     `${combination.combination_id} rxnorm.properties_response_sha256`);
@@ -165,21 +225,33 @@ function verifyPresentation(findings, combination, presentation, bundle) {
       `${label} declares dose form "${scd.dose_form}" but RxNorm returned "${observed.dose_form}"`);
   }
 
-  const field = presentation.ingredient_rxcui_field ?? 'ingredient_rxcui';
-  if (!INGREDIENT_RXCUI_FIELDS.has(field)) {
-    fail(findings, 'unsupported_ingredient_field', `${label} compares an unsupported field ${field}`);
-    return findings;
+  // the compared field is selected PER ENTRY: a MIN may mix IN and PIN components,
+  // and RxNorm exposes base / basis-of-strength / active ingredient separately
+  const declaredIngredients = new Map();
+  const fieldByComponent = new Map();
+  for (const entry of scd.ingredients_and_strengths) {
+    if (!INGREDIENT_RXCUI_FIELDS.has(entry.ingredient_rxcui_field)) {
+      fail(findings, 'unsupported_ingredient_field',
+        `${label} compares an unsupported field ${entry.ingredient_rxcui_field}`);
+      return findings;
+    }
+    declaredIngredients.set(entry.component_rxcui, `${entry.numerator_value}${entry.numerator_unit}`);
+    fieldByComponent.set(entry.component_rxcui, entry.ingredient_rxcui_field);
   }
-  const declaredIngredients = new Map(
-    scd.ingredients_and_strengths.map((entry) => [
-      entry.ingredient_rxcui, `${entry.numerator_value}${entry.numerator_unit}`,
-    ]),
-  );
-  const observedIngredients = new Map(
-    (observed.ingredients ?? []).map((entry) => [
-      String(entry[field] ?? ''), `${entry.numerator_value}${entry.numerator_unit}`,
-    ]),
-  );
+  const observedIngredients = new Map();
+  for (const entry of observed.ingredients ?? []) {
+    // match on whichever field the corresponding declared entry nominated
+    for (const [componentRxcui, field] of fieldByComponent) {
+      if (String(entry[field] ?? '') === componentRxcui) {
+        observedIngredients.set(componentRxcui, `${entry.numerator_value}${entry.numerator_unit}`);
+      }
+    }
+    if (![...fieldByComponent.values()].some((field) => (
+      declaredIngredients.has(String(entry[field] ?? ''))
+    ))) {
+      observedIngredients.set(`unmatched:${entry.rxcui ?? entry.baseRxcui ?? '?'}`, 'unmatched');
+    }
+  }
   if (!sameSet(new Set(declaredIngredients.keys()), new Set(observedIngredients.keys()))) {
     fail(findings, 'scd_ingredient_mismatch',
       `${label} declares ingredients ${[...declaredIngredients.keys()].sort().join(', ')} `
@@ -192,6 +264,7 @@ function verifyPresentation(findings, combination, presentation, bundle) {
         `${label} declares ${rxcui} at ${strength} but RxNorm returned ${observedStrength}`);
     }
   }
+  verifyConceptStatus(findings, scd.rxcui, 'presentation SCD', bundle);
   const componentRxcuis = new Set(combination.components.map((component) => component.rxcui));
   if (!sameSet(new Set(declaredIngredients.keys()), componentRxcuis)) {
     fail(findings, 'scd_component_mismatch',
@@ -250,6 +323,7 @@ export function verifyCombinationRxNormEvidence(combination, bundle) {
   if (bundle.schema_version !== EVIDENCE_BUNDLE_SCHEMA_VERSION) {
     fail(findings, 'unsupported_bundle_schema', 'evidence bundle schema_version is unsupported');
   }
+  verifyBundleIntegrity(findings, bundle);
   verifyRelease(findings, combination, bundle);
   verifyCombinationConcept(findings, combination, bundle);
   for (const presentation of combination.presentations) {
