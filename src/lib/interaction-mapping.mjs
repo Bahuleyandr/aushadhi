@@ -17,6 +17,7 @@ import {
   normalizeRuntimeInteractionSubject,
 } from './interaction-engine.mjs';
 import {
+  assertRuntimeCombinationResult,
   assertVerifiedCombinationIdentityManifest,
   resolveCombinationIdentity,
 } from './interaction-combination-identity.mjs';
@@ -40,6 +41,14 @@ const RELATIONSHIPS = new Set([
   'synonym',
 ]);
 const RXNORM_INGREDIENT_TYPES = new Set(['IN', 'PIN']);
+const REVIEWED_COMBINATION_PRODUCTS = new WeakMap();
+
+function deepFreeze(value, seen = new Set()) {
+  if (value === null || typeof value !== 'object' || seen.has(value)) return value;
+  seen.add(value);
+  for (const child of Object.values(value)) deepFreeze(child, seen);
+  return Object.freeze(value);
+}
 
 // Clinician decision C4 (2026-07-27): a PMBJP presentation mapping must rest on an
 // authoritative PMBJP product-identity source -- one that confirms the drug code,
@@ -812,17 +821,57 @@ export function mapResolvedProducts({
       seenOccurrences.add(mapped.ingredient_occurrence_id);
       return mapped;
     });
+    const mappedProduct = {
+      ...structuredClone(record.product),
+      product_assertion_sha256: productAssertionHashForRow(record.product),
+      presentation,
+      ingredients,
+      ...(combination === null ? {} : { combination }),
+    };
+    if (reviewedCombination !== null) {
+      assertRuntimeCombinationResult(reviewedCombination);
+      deepFreeze(mappedProduct);
+      REVIEWED_COMBINATION_PRODUCTS.set(mappedProduct, Object.freeze({
+        combination: reviewedCombination,
+        profile,
+        product_id: expectedProductId,
+        product_assertion_sha256: mappedProduct.product_assertion_sha256,
+        presentation,
+        ingredient_occurrence_ids: Object.freeze(
+          ingredients.map((ingredient) => ingredient.ingredient_occurrence_id),
+        ),
+      }));
+    }
     return {
       ...structuredClone(record),
-      product: {
-        ...structuredClone(record.product),
-        product_assertion_sha256: productAssertionHashForRow(record.product),
-        presentation,
-        ingredients,
-        ...(combination === null ? {} : { combination }),
-      },
+      product: mappedProduct,
     };
   });
+}
+
+export function assertReviewedCombinationMappedProduct(product, expectedProfile) {
+  if (!isObject(product) || !REVIEWED_COMBINATION_PRODUCTS.has(product)) {
+    throw new TypeError('combination product is not an authentic reviewed mapping result');
+  }
+  const binding = REVIEWED_COMBINATION_PRODUCTS.get(product);
+  if (binding.profile !== expectedProfile) {
+    throw new TypeError(
+      `combination product profile ${binding.profile} does not match ${expectedProfile}`,
+    );
+  }
+  if (product.combination !== binding.combination
+      || product.presentation !== binding.presentation
+      || product.product_id !== binding.product_id
+      || product.product_assertion_sha256 !== binding.product_assertion_sha256
+      || product.ingredients.length !== binding.ingredient_occurrence_ids.length
+      || product.ingredients.some((
+        ingredient,
+        index,
+      ) => ingredient.ingredient_occurrence_id !== binding.ingredient_occurrence_ids[index])) {
+    throw new TypeError('combination product no longer matches its reviewed mapping result');
+  }
+  assertRuntimeCombinationResult(product.combination);
+  return product;
 }
 
 export function summarizeInteractionMappings(records) {

@@ -43,6 +43,7 @@ import {
 } from './interaction-engine.mjs';
 import {
   assertVerifiedCombinationManifestEvidence,
+  verifiedCombinationManifestSnapshot,
 } from './combination-rxnorm-evidence.mjs';
 
 export const COMBINATION_IDENTITY_SCHEMA_VERSION = 1;
@@ -69,6 +70,7 @@ const IDENTITY_SOURCE_KINDS = new Set([
 ]);
 const TENDER_STATUSES = new Set(['present', 'not_present', 'not_checked']);
 const COMPILED_MANIFEST_KINDS = new WeakMap();
+const RUNTIME_COMBINATION_RESULTS = new WeakSet();
 
 function isObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -433,7 +435,7 @@ function validatePresentations(combination, label, componentRxcuis) {
     requireObject(presentation, presentationLabel);
     requireExactKeys(presentation, new Set([
       'source_identity', 'product_id', 'product_assertion_sha256',
-      'route', 'formulation', 'rxnorm_scd',
+      'product_assertion', 'route', 'formulation', 'rxnorm_scd',
     ]), presentationLabel);
 
     const identityLabel = `${presentationLabel}.source_identity`;
@@ -456,6 +458,9 @@ function validatePresentations(combination, label, componentRxcuis) {
       presentation.product_assertion_sha256,
       `${presentationLabel}.product_assertion_sha256`,
     );
+    if (presentation.product_assertion !== undefined) {
+      requireObject(presentation.product_assertion, `${presentationLabel}.product_assertion`);
+    }
     const route = requireString(presentation.route, `${presentationLabel}.route`);
     const formulation = requireString(presentation.formulation, `${presentationLabel}.formulation`);
     canonicalPresentationValues(route, formulation, presentationLabel);
@@ -685,11 +690,14 @@ export function compileCombinationIdentityManifest(manifest, options = {}) {
   if (!COMPILED_KINDS.has(kind)) {
     throw new TypeError(`compiled kind must be one of: ${[...COMPILED_KINDS].join(', ')}`);
   }
-  validateCombinationIdentityManifest(manifest);
-  if (kind === 'verified_manifest' && manifest.combinations.length > 0) {
-    assertVerifiedCombinationManifestEvidence(verificationReport, manifest);
+  let sourceManifest = manifest;
+  validateCombinationIdentityManifest(sourceManifest);
+  if (kind === 'verified_manifest' && sourceManifest.combinations.length > 0) {
+    assertVerifiedCombinationManifestEvidence(verificationReport, sourceManifest);
+    sourceManifest = verifiedCombinationManifestSnapshot(verificationReport, sourceManifest);
+    validateCombinationIdentityManifest(sourceManifest);
   }
-  const combinations = deepFreeze(structuredClone(manifest.combinations));
+  const combinations = deepFreeze(structuredClone(sourceManifest.combinations));
   // module-private: never reachable from the returned object. Object.freeze does not
   // freeze a Map's or a Set's entries, so no collection instance is exposed at all.
   const reviewedProducts = new Map();
@@ -795,15 +803,16 @@ const noCombination = (reason, extra = {}) => ({
 // the namespace `presentation:pmbjp`. Keep the alias explicit rather than guessing.
 const SOURCE_NAMESPACE_ALIASES = new Map([['presentation:janaushadhi:', 'presentation:pmbjp:']]);
 
-function reviewedEntryFor(compiledManifest, product) {
+function reviewedEntriesFor(compiledManifest, product) {
+  const matches = new Map();
   for (const rawKey of sourceIdentityKeys(product)) {
     for (const [from, to] of SOURCE_NAMESPACE_ALIASES) {
       const key = rawKey.startsWith(from) ? `${to}${rawKey.slice(from.length)}` : rawKey;
       const entry = compiledManifest.reviewed_products.get(key);
-      if (entry) return { entry, key };
+      if (entry) matches.set(key, { entry, key });
     }
   }
-  return null;
+  return [...matches.values()];
 }
 
 function resolveInternal(
@@ -828,8 +837,19 @@ function resolveInternal(
 
   // A reviewed product is recognised by its STABLE source identity first, so that a
   // content change surfaces as drift instead of looking like an ordinary non-match.
-  const reviewed = reviewedEntryFor(compiledManifest, product);
-  if (reviewed && allowed(reviewed.entry.combination)) {
+  const reviewedMatches = reviewedEntriesFor(compiledManifest, product)
+    .filter((reviewed) => allowed(reviewed.entry.combination));
+  if (reviewedMatches.length > 1) {
+    return {
+      status: 'ambiguous',
+      combination_id: null,
+      runtime_subject: null,
+      source_identities: reviewedMatches.map(({ key }) => key).sort(),
+      error: 'multiple_reviewed_combination_source_identities',
+    };
+  }
+  const reviewed = reviewedMatches[0] ?? null;
+  if (reviewed) {
     const { combination, presentation } = reviewed.entry;
     const assertionSha256 = productAssertionHashForRow(product);
     const productId = productIdForRow(product);
@@ -858,7 +878,9 @@ function resolveInternal(
     const match = {
       status: 'reviewed_override',
       combination_id: combination.combination_id,
+      profile,
       source_identity: presentation.source_identity,
+      product_id: productId,
       product_assertion_sha256: assertionSha256,
       exposure_scope: combination.exposure_scope,
       components: combination.components.map((component, componentIndex) => ({
@@ -878,8 +900,8 @@ function resolveInternal(
     // An audit result is a DIFFERENT TYPE, not a runtime result carrying a flag: a
     // careless consumer can ignore a flag, but there is no runtime_subject here to
     // consume, and assertRuntimeCombinationResult refuses it outright.
-    return auditOnly
-      ? {
+    if (auditOnly) {
+      return {
         ...match,
         status: 'audit_match',
         audit_only: true,
@@ -887,8 +909,11 @@ function resolveInternal(
         authored_profiles: [...combination.allowed_profiles],
         candidate_subject: subject,
         runtime_subject: null,
-      }
-      : { ...match, runtime_subject: subject };
+      };
+    }
+    const runtimeResult = deepFreeze({ ...match, runtime_subject: subject });
+    RUNTIME_COMBINATION_RESULTS.add(runtimeResult);
+    return runtimeResult;
   }
 
   const matching = compiledManifest.combinations.filter((combination) => (
@@ -915,6 +940,11 @@ export function assertRuntimeCombinationResult(result) {
   }
   if (isObject(result) && result.compiled_kind === 'audit_fixture') {
     throw new TypeError('a result derived from an audit fixture may not be used on a runtime path');
+  }
+  if (isObject(result)
+      && result.status === 'reviewed_override'
+      && !RUNTIME_COMBINATION_RESULTS.has(result)) {
+    throw new TypeError('combination runtime result is not an authentic verified resolver result');
   }
   return result;
 }

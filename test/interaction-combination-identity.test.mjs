@@ -34,7 +34,11 @@ import {
 } from '../src/lib/combination-rxnorm-evidence.mjs';
 import { ingredientIdForName } from '../src/lib/ingredient-identity.mjs';
 import { validateIngredientMappingManifest } from '../src/lib/interaction-mapping.mjs';
-import { productAssertionHashForRow, productIdForRow } from '../src/lib/product-resolver.mjs';
+import {
+  productAssertionForRow,
+  productAssertionHashForRow,
+  productIdForRow,
+} from '../src/lib/product-resolver.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
@@ -150,6 +154,7 @@ const presentationFor = (row, route, formulation, code, scdObject) => ({
   source_identity: { namespace: 'presentation:pmbjp', code },
   product_id: productIdForRow(row),
   product_assertion_sha256: productAssertionHashForRow(row),
+  product_assertion: productAssertionForRow(row),
   route,
   formulation,
   rxnorm_scd: scdObject,
@@ -158,7 +163,7 @@ const presentationFor = (row, route, formulation, code, scdObject) => ({
 const evidence = (id) => ({
   evidence_ref: id,
   source_id: 'janaushadhi',
-  identifier: `pmbjp-product-list:${id}`,
+  identifier: id === 'list-89' ? 'pmbjp-product-list:89,90' : `pmbjp-product-list:${id}`,
   source_url: 'https://static.pib.gov.in/example.pdf',
   retrieved_at: '2026-07-27',
   evidence_sha256: SHA,
@@ -358,9 +363,15 @@ test('BLOCKER 1: an audit result is a DISTINCT type a runtime consumer cannot us
     () => assertRuntimeCombinationResult(result),
     /audit result may not be used on a runtime path/u,
   );
-  assert.equal(
-    assertRuntimeCombinationResult(resolve(PMBJP_89)).status,
-    'reviewed_override',
+  const runtimeResult = resolve(PMBJP_89);
+  assert.strictEqual(assertRuntimeCombinationResult(runtimeResult), runtimeResult);
+  assert.equal(runtimeResult.status, 'reviewed_override');
+  assert.ok(Object.isFrozen(runtimeResult));
+  assert.ok(Object.isFrozen(runtimeResult.components));
+  assert.ok(Object.isFrozen(runtimeResult.runtime_subject));
+  assert.throws(
+    () => assertRuntimeCombinationResult(structuredClone(runtimeResult)),
+    /not an authentic verified resolver result/u,
   );
 });
 
@@ -513,16 +524,22 @@ test('BLOCKER 4: an ingredient change on a reviewed product yields stale, not a 
   assert.equal(result.source_identity.code, '89');
 });
 
-test('BLOCKER 4: a reviewed product whose assertion hash drifts is stale', () => {
+test('BLOCKER 4: an incoherent reviewed assertion hash is rejected before compilation', () => {
   const manifest = manifestOf(cotrimoxazole({
     presentations: [
       { ...cotrimoxazole().presentations[0], product_assertion_sha256: 'b'.repeat(64) },
       cotrimoxazole().presentations[1],
     ],
   }));
-  const result = resolve(PMBJP_89, manifest);
-  assert.equal(result.status, 'stale');
-  assert.equal(result.runtime_subject, null);
+  const report = verifyCombinationManifestEvidence(manifest, {
+    [manifest.combinations[0].combination_id]: authoritativeBundle(
+      manifest.combinations[0].combination_id,
+    ),
+  });
+  assert.equal(report.verified, false);
+  assert.ok(report.reports[0].findings.some(
+    (finding) => finding.code === 'product_assertion_hash_mismatch',
+  ));
 });
 
 test('BLOCKER 4: an unusable ingredient identity is reported, not silently dropped', () => {
@@ -979,6 +996,24 @@ test('C2: both reviewed tablet strengths resolve', () => {
   }
   assert.equal(resolve(PMBJP_89).rxnorm_scd.rxcui, '198335');
   assert.equal(resolve(PMBJP_90).rxnorm_scd.rxcui, '142118');
+});
+
+test('multiple reviewed source identities fail closed independent of source order', () => {
+  for (const sources of [
+    [
+      { source: 'janaushadhi', source_id: '89', seen_at: '2026-07-07' },
+      { source: 'janaushadhi', source_id: '90', seen_at: '2026-07-07' },
+    ],
+    [
+      { source: 'janaushadhi', source_id: '90', seen_at: '2026-07-07' },
+      { source: 'janaushadhi', source_id: '89', seen_at: '2026-07-07' },
+    ],
+  ]) {
+    const result = resolve({ ...PMBJP_89, sources });
+    assert.equal(result.status, 'ambiguous');
+    assert.equal(result.runtime_subject, null);
+    assert.equal(result.error, 'multiple_reviewed_combination_source_identities');
+  }
 });
 
 test('no component of a combination ever inherits it', () => {

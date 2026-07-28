@@ -20,6 +20,13 @@
 //     basis-of-strength substance, active ingredient) and the field actually
 //     compared must be recorded, not inferred.
 import { createHash } from 'node:crypto';
+import { createIngredientIdentity } from './ingredient-identity.mjs';
+import {
+  productAssertionForRow,
+  productAssertionHashForRow,
+  productIdForRow,
+} from './product-resolver.mjs';
+import { strictPlainDataSnapshot } from './strict-plain-data.mjs';
 
 export const EVIDENCE_BUNDLE_SCHEMA_VERSION = 1;
 // which RxNorm ingredient notion a comparison used; recorded per presentation so a
@@ -51,12 +58,256 @@ const FIXTURE_HASHES = new Set([
 
 const sha256 = (text) => createHash('sha256').update(text, 'utf8').digest('hex');
 const sameSet = (left, right) => left.size === right.size && [...left].every((v) => right.has(v));
+const RXNORM_RELEASE_DATE = /^(\d{2})-([A-Z][a-z]{2})-(\d{4})$/u;
+const MONTH_INDEX = new Map([
+  ['Jan', 0], ['Feb', 1], ['Mar', 2], ['Apr', 3], ['May', 4], ['Jun', 5],
+  ['Jul', 6], ['Aug', 7], ['Sep', 8], ['Oct', 9], ['Nov', 10], ['Dec', 11],
+]);
+const PRODUCT_ASSERTION_KEYS = new Set([
+  'brand_name', 'manufacturer', 'pack_label', 'form_raw', 'ingredients',
+]);
+const PRODUCT_ASSERTION_INGREDIENT_KEYS = new Set([
+  'observed_name', 'source_field', 'strength_raw', 'strength_value', 'strength_unit',
+]);
+const PRODUCT_ASSERTION_SOURCE_FIELDS = new Set(['observed_name', 'molecule_raw', 'molecule']);
+const RXNORM_DOSE_FORM_SCOPES = new Map([
+  ['Oral Tablet', Object.freeze({ route: 'oral', formulation: 'tablet' })],
+]);
 
 function deepFreeze(value, seen = new Set()) {
   if (value === null || typeof value !== 'object' || seen.has(value)) return value;
   seen.add(value);
   for (const child of Object.values(value)) deepFreeze(child, seen);
   return Object.freeze(value);
+}
+
+function rxNormReleaseTimestamp(value) {
+  const match = RXNORM_RELEASE_DATE.exec(String(value ?? ''));
+  if (!match) return null;
+  const month = MONTH_INDEX.get(match[2]);
+  if (month === undefined) return null;
+  const timestamp = Date.UTC(Number(match[3]), month, Number(match[1]));
+  const parsed = new Date(timestamp);
+  if (parsed.getUTCFullYear() !== Number(match[3])
+      || parsed.getUTCMonth() !== month
+      || parsed.getUTCDate() !== Number(match[1])) {
+    return null;
+  }
+  return timestamp;
+}
+
+function exactKeys(value, expected) {
+  const keys = Object.keys(value);
+  return keys.length === expected.size && keys.every((key) => expected.has(key));
+}
+
+function samePlainData(left, right) {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left)
+      && Array.isArray(right)
+      && left.length === right.length
+      && left.every((entry, index) => samePlainData(entry, right[index]));
+  }
+  if (left === null || right === null
+      || typeof left !== 'object' || typeof right !== 'object') {
+    return false;
+  }
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+  return leftKeys.length === rightKeys.length
+    && leftKeys.every((key, index) => (
+      key === rightKeys[index] && samePlainData(left[key], right[key])
+    ));
+}
+
+function rowFromProductAssertion(findings, presentation, label) {
+  const assertion = presentation.product_assertion;
+  if (!assertion || typeof assertion !== 'object' || Array.isArray(assertion)) {
+    fail(findings, 'missing_product_assertion',
+      `${label} requires the canonical product assertion preimage`);
+    return null;
+  }
+  if (!exactKeys(assertion, PRODUCT_ASSERTION_KEYS)
+      || typeof assertion.brand_name !== 'string'
+      || assertion.brand_name.trim() === ''
+      || !Array.isArray(assertion.ingredients)
+      || assertion.ingredients.length === 0) {
+    fail(findings, 'invalid_product_assertion', `${label} product_assertion is not canonical`);
+    return null;
+  }
+  for (const field of ['manufacturer', 'pack_label', 'form_raw']) {
+    if (assertion[field] !== null && typeof assertion[field] !== 'string') {
+      fail(findings, 'invalid_product_assertion',
+        `${label} product_assertion.${field} must be a string or null`);
+      return null;
+    }
+  }
+
+  const ingredients = [];
+  for (const [index, ingredient] of assertion.ingredients.entries()) {
+    if (!ingredient || typeof ingredient !== 'object' || Array.isArray(ingredient)
+        || !exactKeys(ingredient, PRODUCT_ASSERTION_INGREDIENT_KEYS)
+        || typeof ingredient.observed_name !== 'string'
+        || ingredient.observed_name.trim() === ''
+        || !PRODUCT_ASSERTION_SOURCE_FIELDS.has(ingredient.source_field)
+        || (ingredient.strength_raw !== null && typeof ingredient.strength_raw !== 'string')
+        || (ingredient.strength_unit !== null && typeof ingredient.strength_unit !== 'string')
+        || (ingredient.strength_value !== null
+          && !Number.isFinite(ingredient.strength_value))) {
+      fail(findings, 'invalid_product_assertion',
+        `${label} product_assertion.ingredients[${index}] is not canonical`);
+      return null;
+    }
+    ingredients.push({
+      [ingredient.source_field]: ingredient.observed_name,
+      strength_raw: ingredient.strength_raw,
+      strength_value: ingredient.strength_value,
+      strength_unit: ingredient.strength_unit,
+    });
+  }
+
+  const row = {
+    brand_name: assertion.brand_name,
+    manufacturer: assertion.manufacturer,
+    pack_label: assertion.pack_label,
+    form_raw: assertion.form_raw,
+    ingredients,
+  };
+  let canonical;
+  try {
+    canonical = productAssertionForRow(row);
+  } catch (error) {
+    fail(findings, 'invalid_product_assertion', `${label} ${error.message}`);
+    return null;
+  }
+  if (!samePlainData(canonical, assertion)) {
+    fail(findings, 'noncanonical_product_assertion',
+      `${label} product_assertion does not equal its canonical form`);
+    return null;
+  }
+  if (productAssertionHashForRow(row) !== presentation.product_assertion_sha256) {
+    fail(findings, 'product_assertion_hash_mismatch',
+      `${label} product_assertion does not hash to product_assertion_sha256`);
+  }
+  if (productIdForRow(row) !== presentation.product_id) {
+    fail(findings, 'product_id_mismatch',
+      `${label} product_assertion does not hash to product_id`);
+  }
+  return row;
+}
+
+function componentAssignment(components, assertionIds) {
+  if (!Array.isArray(components) || assertionIds.length !== components.length) return null;
+  const used = new Array(assertionIds.length).fill(false);
+  const slots = new Array(components.length).fill(-1);
+  const assign = (componentIndex) => {
+    if (componentIndex === components.length) return true;
+    const accepted = new Set(components[componentIndex].assertion_ingredient_ids ?? []);
+    for (let slot = 0; slot < assertionIds.length; slot += 1) {
+      if (used[slot] || !accepted.has(assertionIds[slot])) continue;
+      used[slot] = true;
+      slots[componentIndex] = slot;
+      if (assign(componentIndex + 1)) return true;
+      used[slot] = false;
+      slots[componentIndex] = -1;
+    }
+    return false;
+  };
+  return assign(0) ? slots : null;
+}
+
+function normalizedWords(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, ' ')
+    .trim();
+}
+
+function presentationCodeEvidence(combination, code) {
+  const evidenceByRef = new Map(
+    (combination.review?.evidence ?? []).map((entry) => [entry.evidence_ref, entry]),
+  );
+  for (const source of combination.provenance?.identity_sources ?? []) {
+    if (source.kind !== 'official_product_list') continue;
+    const evidence = evidenceByRef.get(source.evidence_ref);
+    if (evidence?.source_id !== 'janaushadhi') continue;
+    const match = /^pmbjp-product-list:(\d+(?:,\d+)*)$/u.exec(evidence.identifier ?? '');
+    if (match && match[1].split(',').includes(code)) return evidence;
+  }
+  return null;
+}
+
+function verifyPresentationProductBinding(findings, combination, presentation) {
+  const label = `${combination.combination_id} presentation `
+    + `${presentation.source_identity?.namespace ?? '(missing)'}:`
+    + `${presentation.source_identity?.code ?? '(missing)'}`;
+  const expectedCombinationId = `combination:${
+    normalizedWords(combination.runtime_drug).replaceAll(' ', '-')
+  }:rxnorm-${combination.rxnorm?.rxcui}`;
+  if (combination.combination_id !== expectedCombinationId) {
+    fail(findings, 'combination_id_identity_mismatch',
+      `${label} must use structural id ${expectedCombinationId}`);
+  }
+  if (presentation.source_identity?.namespace !== 'presentation:pmbjp'
+      || !/^\d+$/u.test(String(presentation.source_identity?.code ?? ''))
+      || presentationCodeEvidence(
+        combination,
+        String(presentation.source_identity?.code ?? ''),
+      ) === null) {
+    fail(findings, 'presentation_source_not_bound_to_review_evidence',
+      `${label} is not bound to an authoritative PMBJP product-list review record`);
+  }
+
+  const row = rowFromProductAssertion(findings, presentation, label);
+  if (row === null) return findings;
+  const brandWords = normalizedWords(row.brand_name);
+  const runtimeWords = normalizedWords(combination.runtime_drug);
+  if (!runtimeWords || !(` ${brandWords} `.includes(` ${runtimeWords} `))) {
+    fail(findings, 'runtime_drug_product_mismatch',
+      `${label} runtime drug "${combination.runtime_drug}" is not identified by the reviewed product`);
+  }
+
+  const assertionIds = row.ingredients.map(
+    (ingredient) => createIngredientIdentity(ingredient).ingredient_id,
+  );
+  const assignedSlots = componentAssignment(combination.components, assertionIds);
+  if (assignedSlots === null) {
+    fail(findings, 'product_component_set_mismatch',
+      `${label} product assertion does not exactly match the combination components`);
+    return findings;
+  }
+  const scdEntries = new Map(
+    presentation.rxnorm_scd.ingredients_and_strengths.map(
+      (entry) => [entry.component_rxcui, entry],
+    ),
+  );
+  for (const [componentIndex, component] of combination.components.entries()) {
+    const ingredient = row.ingredients[assignedSlots[componentIndex]];
+    const scdEntry = scdEntries.get(component.rxcui);
+    if (!scdEntry
+        || ingredient.strength_value === null
+        || ingredient.strength_value === undefined
+        || String(ingredient.strength_value) !== scdEntry.numerator_value
+        || String(ingredient.strength_unit ?? '').toUpperCase() !== scdEntry.numerator_unit) {
+      fail(findings, 'product_scd_strength_mismatch',
+        `${label} product strength for ${component.name} does not equal its SCD strength`);
+    }
+  }
+
+  const expectedScope = RXNORM_DOSE_FORM_SCOPES.get(presentation.rxnorm_scd.dose_form);
+  if (expectedScope === undefined) {
+    fail(findings, 'unsupported_scd_runtime_scope',
+      `${label} dose form ${presentation.rxnorm_scd.dose_form} has no reviewed runtime scope`);
+  } else if (presentation.route !== expectedScope.route
+      || presentation.formulation !== expectedScope.formulation) {
+    fail(findings, 'product_scd_scope_mismatch',
+      `${label} declares ${presentation.route}/${presentation.formulation} but `
+      + `${presentation.rxnorm_scd.dose_form} requires `
+      + `${expectedScope.route}/${expectedScope.formulation}`);
+  }
+  return findings;
 }
 
 function fail(findings, code, detail) {
@@ -121,6 +372,18 @@ function verifyCapture(findings, bundle) {
         || Number.isNaN(Date.parse(capture.captured_at)))) {
     fail(findings, 'invalid_capture_timestamp',
       'authoritative evidence capture.captured_at must be an ISO UTC timestamp');
+  }
+  const capturedAt = Date.parse(capture.captured_at);
+  const releaseAt = rxNormReleaseTimestamp(bundle.rxnorm_release);
+  if (bundle.classification === AUTHORITATIVE_CLASSIFICATION && releaseAt === null) {
+    fail(findings, 'invalid_rxnorm_release_date',
+      'authoritative evidence rxnorm_release must use DD-Mon-YYYY');
+  } else if (bundle.classification === AUTHORITATIVE_CLASSIFICATION
+      && !Number.isNaN(capturedAt)
+      && capturedAt < releaseAt) {
+    fail(findings, 'capture_predates_rxnorm_release',
+      `capture.captured_at ${capture.captured_at} predates declared RxNorm release `
+      + `${bundle.rxnorm_release}`);
   }
 
   const captures = [];
@@ -558,9 +821,22 @@ export function verifyCombinationRxNormEvidence(combination, bundle, options = u
 }
 
 export function verifyCombinationManifestEvidence(manifest, bundles) {
-  const reports = manifest.combinations.map((combination) => (
-    verifyCombinationRxNormEvidence(combination, bundles?.[combination.combination_id])
-  ));
+  const snapshot = strictPlainDataSnapshot(manifest, 'combination identity manifest');
+  const reports = snapshot.combinations.map((combination) => {
+    const rxNormReport = verifyCombinationRxNormEvidence(
+      combination,
+      bundles?.[combination.combination_id],
+    );
+    const findings = [...rxNormReport.findings];
+    for (const presentation of combination.presentations ?? []) {
+      verifyPresentationProductBinding(findings, combination, presentation);
+    }
+    return {
+      combination_id: combination.combination_id,
+      verified: findings.length === 0,
+      findings,
+    };
+  });
   const report = deepFreeze({
     verified: reports.every((report) => report.verified),
     combinations_checked: reports.length,
@@ -569,7 +845,8 @@ export function verifyCombinationManifestEvidence(manifest, bundles) {
   if (report.verified) {
     MANIFEST_REPORT_BINDINGS.set(report, {
       manifest,
-      fingerprint: sha256(JSON.stringify(manifest)),
+      snapshot,
+      fingerprint: sha256(JSON.stringify(snapshot)),
     });
   }
   return report;
@@ -583,11 +860,17 @@ export function assertVerifiedCombinationManifestEvidence(report, manifest) {
   if (binding.manifest !== manifest) {
     throw new TypeError('combination evidence report is not bound to this exact manifest object');
   }
-  if (sha256(JSON.stringify(manifest)) !== binding.fingerprint) {
+  const currentSnapshot = strictPlainDataSnapshot(manifest, 'combination identity manifest');
+  if (sha256(JSON.stringify(currentSnapshot)) !== binding.fingerprint) {
     throw new TypeError('combination evidence manifest changed since evidence verification');
   }
   if (report.verified !== true) {
     throw new TypeError('combination evidence report is not verified');
   }
   return report;
+}
+
+export function verifiedCombinationManifestSnapshot(report, manifest) {
+  assertVerifiedCombinationManifestEvidence(report, manifest);
+  return MANIFEST_REPORT_BINDINGS.get(report).snapshot;
 }

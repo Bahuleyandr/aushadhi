@@ -10,10 +10,15 @@ import {
   verifyCombinationManifestEvidence,
 } from '../src/lib/combination-rxnorm-evidence.mjs';
 import {
+  checkResolvedProducts,
+} from '../src/lib/interaction-checker.mjs';
+import {
   mapResolvedProducts,
   summarizeInteractionMappings,
 } from '../src/lib/interaction-mapping.mjs';
 import {
+  productAssertionForRow,
+  productAssertionHashForRow,
   productIdForRow,
 } from '../src/lib/product-resolver.mjs';
 
@@ -57,6 +62,17 @@ const PMBJP_89 = pmbjpRow(
   ],
   '89',
 );
+const PMBJP_88 = {
+  ...pmbjpRow(
+    'Co-trimoxazole (Sulphamethoxazole 200mg and Trimethoprim 40mg per 5ml) Oral Suspension IP',
+    [
+      ['co-trimoxazole sulphamethoxazole', '200mg', 200],
+      ['trimethoprim', '40mg', 40],
+    ],
+    '88',
+  ),
+  pack_label: '50 ml',
+};
 const UNREVIEWED = pmbjpRow(
   'Co-trimoxazole (Sulphamethoxazole 400mg and Trimethoprim 80mg) Tablets IP',
   [
@@ -109,6 +125,57 @@ const map = (row, combinationManifest, profile = 'internal-evaluation') => (
   })[0].product
 );
 
+const runtimeIngredient = (ingredientId) => ({
+  ingredient_id: ingredientId,
+  mapping_status: 'exact',
+  runtime_drug: ingredientId,
+  runtime_subject: {
+    drug: ingredientId,
+    route: 'oral',
+    formulation: 'tablet',
+  },
+});
+
+function reviewedRule(ruleId, pair, productIds, relationship = null) {
+  return {
+    rule_id: ruleId,
+    pair: [...pair].sort(),
+    product_pairs: [[...productIds].sort()],
+    applicability: {
+      routes: [],
+      dose_conditions: [],
+      population_conditions: [],
+    },
+    severity: 'major',
+    dispense_action: 'confirm_and_monitor',
+    mechanism: 'Clinician-reviewed test mechanism.',
+    management: 'Clinician-reviewed test management.',
+    evidence: [{
+      source: 'test-evidence',
+      source_url: 'https://example.test/evidence',
+      document_id: 'test-document',
+      document_version: '1',
+      retrieved_at: '2026-07-28',
+      jurisdiction: 'US',
+      excerpt: 'Source-grounded test evidence.',
+      licence: 'CC0-1.0',
+      review_status: 'clinician_reviewed',
+    }],
+    review: {
+      status: 'clinician_reviewed',
+      reviewer_id: 'clinician:test-reviewer',
+      reviewed_at: '2026-07-28',
+      source_versions: ['test-evidence:test-document:1'],
+    },
+    ...(relationship === null ? {} : {
+      interaction_family_id: relationship.interaction_family_id,
+      subject_specificity: relationship.subject_specificity,
+      subject_roles: relationship.subject_roles,
+      supersedes_rule_ids: relationship.supersedes_rule_ids,
+    }),
+  };
+}
+
 test('a verified reviewed combination maps its exact product and both product-scoped components', () => {
   const { manifest, compiled } = compileCommittedManifest();
   assert.equal(manifest.combinations.length, 1);
@@ -145,6 +212,344 @@ test('a verified reviewed combination maps its exact product and both product-sc
     status: 'resolved',
     product,
   }]).runtime_subjects, 3);
+});
+
+test('an authentic mapped combination supplements its component subjects in the checker', () => {
+  const { manifest, compiled } = compileCommittedManifest();
+  const combinationProduct = map(PMBJP_89, compiled);
+  const trimethoprimId = manifest.combinations[0].components.find(
+    (component) => component.name === 'trimethoprim',
+  ).runtime_ingredient_id;
+  const otherProductId = 'product:warfarin-methotrexate-test';
+  const otherProduct = {
+    product_id: otherProductId,
+    presentation: {
+      status: 'reviewed_override',
+      route: 'oral',
+      formulation: 'tablet',
+    },
+    ingredients: [
+      runtimeIngredient('ingredient:warfarin'),
+      runtimeIngredient('ingredient:methotrexate'),
+    ],
+  };
+  const productIds = [otherProductId, combinationProduct.product_id];
+  const combinationId = combinationProduct.combination.combination_id;
+  const sulfamethoxazoleId = manifest.combinations[0].components.find(
+    (component) => component.name === 'sulfamethoxazole',
+  ).runtime_ingredient_id;
+  const family = 'warfarin-anticoagulation-potentiation';
+  const rulePack = {
+    schema_version: '1.1.0',
+    pack_id: 'aushadhi-internal-combination-test',
+    pack_version: '0.0.0-test',
+    profile: 'internal-evaluation',
+    licence: 'CC-BY-4.0',
+    source_ids: ['test-evidence'],
+    declared_coverage: 'unknown',
+    rules: [
+      reviewedRule(
+        'ddi:test:warfarin:co-trimoxazole',
+        [combinationId, 'ingredient:warfarin'],
+        productIds,
+        {
+          interaction_family_id: family,
+          subject_specificity: 'exact_fixed_dose_combination',
+          subject_roles: {
+            object: 'ingredient:warfarin',
+            perpetrator: combinationId,
+          },
+          supersedes_rule_ids: ['ddi:test:warfarin:sulfamethoxazole'],
+        },
+      ),
+      reviewedRule(
+        'ddi:test:methotrexate:trimethoprim',
+        ['ingredient:methotrexate', trimethoprimId],
+        productIds,
+      ),
+      reviewedRule(
+        'ddi:test:warfarin:sulfamethoxazole',
+        ['ingredient:warfarin', sulfamethoxazoleId],
+        productIds,
+        {
+          interaction_family_id: family,
+          subject_specificity: 'exact_member',
+          subject_roles: {
+            object: 'ingredient:warfarin',
+            perpetrator: sulfamethoxazoleId,
+          },
+          supersedes_rule_ids: [],
+        },
+      ),
+    ],
+  };
+
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      { input: 'Warfarin plus methotrexate fixture', status: 'resolved', product: otherProduct },
+      { input: PMBJP_89.brand_name, status: 'resolved', product: combinationProduct },
+    ],
+    rulePack,
+  });
+
+  assert.deepEqual(
+    result.reviewed_findings.map((finding) => finding.rule_id),
+    ['ddi:test:methotrexate:trimethoprim', 'ddi:test:warfarin:co-trimoxazole'],
+  );
+  assert.deepEqual(
+    result.superseded_findings.map((finding) => ({
+      rule_id: finding.rule_id,
+      superseded_by: finding.superseded_by,
+    })),
+    [{
+      rule_id: 'ddi:test:warfarin:sulfamethoxazole',
+      superseded_by: 'ddi:test:warfarin:co-trimoxazole',
+    }],
+  );
+  assert.deepEqual(result.checks_performed.reviewed_rule_matching, {
+    status: 'performed',
+    matched_reviewed_finding_count: 3,
+    reviewed_finding_count: 2,
+    surviving_reviewed_finding_count: 2,
+    superseded_finding_count: 1,
+    review_candidate_count: 0,
+  });
+
+  const reversedOrder = checkResolvedProducts({
+    resolvedInputs: [
+      { input: PMBJP_89.brand_name, status: 'resolved', product: combinationProduct },
+      { input: 'Warfarin plus methotrexate fixture', status: 'resolved', product: otherProduct },
+    ],
+    rulePack: {
+      ...rulePack,
+      rules: [...rulePack.rules].reverse(),
+    },
+  });
+  assert.deepEqual(reversedOrder.reviewed_findings, result.reviewed_findings);
+  assert.deepEqual(reversedOrder.superseded_findings, result.superseded_findings);
+
+  const withoutDeclarationPack = {
+    ...rulePack,
+    rules: rulePack.rules.map((entry) => {
+      const copy = structuredClone(entry);
+      delete copy.interaction_family_id;
+      delete copy.subject_specificity;
+      delete copy.subject_roles;
+      delete copy.supersedes_rule_ids;
+      return copy;
+    }),
+  };
+  const withoutDeclaration = checkResolvedProducts({
+    resolvedInputs: [
+      { input: 'Warfarin plus methotrexate fixture', status: 'resolved', product: otherProduct },
+      { input: PMBJP_89.brand_name, status: 'resolved', product: combinationProduct },
+    ],
+    rulePack: withoutDeclarationPack,
+  });
+  assert.deepEqual(
+    withoutDeclaration.reviewed_findings.map((finding) => finding.rule_id),
+    [
+      'ddi:test:methotrexate:trimethoprim',
+      'ddi:test:warfarin:co-trimoxazole',
+      'ddi:test:warfarin:sulfamethoxazole',
+    ],
+  );
+  assert.deepEqual(withoutDeclaration.superseded_findings, []);
+
+  const standaloneProductId = 'product:standalone-sulfamethoxazole-test';
+  const targetWithAdditionalProduct = {
+    ...rulePack,
+    rules: rulePack.rules.map((entry) => (
+      entry.rule_id !== 'ddi:test:warfarin:sulfamethoxazole'
+        ? entry
+        : {
+            ...entry,
+            product_pairs: [
+              ...entry.product_pairs,
+              [otherProductId, standaloneProductId].sort(),
+            ].sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))),
+          }
+    )),
+  };
+  const additionalMatch = checkResolvedProducts({
+    resolvedInputs: [
+      { input: 'Warfarin plus methotrexate fixture', status: 'resolved', product: otherProduct },
+      { input: PMBJP_89.brand_name, status: 'resolved', product: combinationProduct },
+      {
+        input: 'Standalone sulfamethoxazole fixture',
+        status: 'resolved',
+        product: {
+          product_id: standaloneProductId,
+          presentation: {
+            status: 'reviewed_override',
+            route: 'oral',
+            formulation: 'tablet',
+          },
+          ingredients: [runtimeIngredient(sulfamethoxazoleId)],
+        },
+      },
+    ],
+    rulePack: targetWithAdditionalProduct,
+  });
+  assert.ok(additionalMatch.reviewed_findings.some(
+    (finding) => finding.rule_id === 'ddi:test:warfarin:sulfamethoxazole',
+  ));
+  assert.deepEqual(additionalMatch.superseded_findings, []);
+
+  const combinationOnlyPack = {
+    ...rulePack,
+    rules: [{
+      ...rulePack.rules[0],
+      supersedes_rule_ids: [],
+    }],
+  };
+  const productionReplay = checkResolvedProducts({
+    resolvedInputs: [
+      { input: 'Warfarin fixture', status: 'resolved', product: otherProduct },
+      { input: PMBJP_89.brand_name, status: 'resolved', product: combinationProduct },
+    ],
+    rulePack: { ...combinationOnlyPack, profile: 'production-open' },
+  });
+  assert.deepEqual(productionReplay.reviewed_findings, []);
+  assert.ok(!productionReplay.checked_pairs.some(
+    (entry) => entry.pair.includes(combinationProduct.combination.combination_id),
+  ));
+
+  const withExtraActive = {
+    ...combinationProduct,
+    ingredients: [
+      ...combinationProduct.ingredients,
+      {
+        observed_name: 'unexpected active ingredient',
+        assertion_ingredient_id: 'sha256:'.concat('f'.repeat(64)),
+        mapping_status: 'unmapped',
+        runtime_subject: null,
+      },
+    ],
+  };
+  const extraActiveResult = checkResolvedProducts({
+    resolvedInputs: [
+      { input: 'Warfarin fixture', status: 'resolved', product: otherProduct },
+      { input: 'Tampered combination fixture', status: 'resolved', product: withExtraActive },
+    ],
+    rulePack: combinationOnlyPack,
+  });
+  assert.deepEqual(extraActiveResult.reviewed_findings, []);
+  assert.ok(!extraActiveResult.checked_pairs.some(
+    (entry) => entry.pair.includes(combinationProduct.combination.combination_id),
+  ));
+
+  const transplantedProductId = 'product:forged-transplant';
+  const transplanted = {
+    ...combinationProduct,
+    product_id: transplantedProductId,
+  };
+  const transplantPack = {
+    ...combinationOnlyPack,
+    rules: [reviewedRule(
+      'ddi:test:transplanted-combination',
+      [combinationProduct.combination.combination_id, 'ingredient:warfarin'],
+      [otherProductId, transplantedProductId],
+    )],
+  };
+  const transplantResult = checkResolvedProducts({
+    resolvedInputs: [
+      { input: 'Warfarin fixture', status: 'resolved', product: otherProduct },
+      { input: 'Transplanted combination fixture', status: 'resolved', product: transplanted },
+    ],
+    rulePack: transplantPack,
+  });
+  assert.deepEqual(transplantResult.reviewed_findings, []);
+});
+
+test('the evidence gate binds each reviewed product assertion to its exact SCD and scope', () => {
+  for (const mutate of [
+    (manifest) => {
+      const [first, second] = manifest.combinations[0].presentations;
+      [first.rxnorm_scd, second.rxnorm_scd] = [second.rxnorm_scd, first.rxnorm_scd];
+    },
+    (manifest) => {
+      manifest.combinations[0].presentation_scopes[0].formulation = 'capsule';
+      for (const presentation of manifest.combinations[0].presentations) {
+        presentation.formulation = 'capsule';
+      }
+    },
+    (manifest) => {
+      manifest.combinations[0].presentation_scopes[0].route = 'intravenous';
+      for (const presentation of manifest.combinations[0].presentations) {
+        presentation.route = 'intravenous';
+      }
+    },
+  ]) {
+    const { manifest, bundles } = loadCommittedManifestAndBundles();
+    mutate(manifest);
+    const report = verifyCombinationManifestEvidence(manifest, bundles);
+    assert.equal(report.verified, false);
+  }
+});
+
+test('the evidence gate binds the runtime alias, structural id, and reviewed PMBJP source', () => {
+  const cases = [
+    ({ manifest }) => {
+      manifest.combinations[0].runtime_drug = 'warfarin';
+    },
+    ({ manifest, bundles }) => {
+      const oldId = manifest.combinations[0].combination_id;
+      const newId = 'combination:warfarin:rxnorm-10831';
+      manifest.combinations[0].runtime_drug = 'warfarin';
+      manifest.combinations[0].combination_id = newId;
+      bundles[newId] = { ...bundles[oldId], combination_id: newId };
+      delete bundles[oldId];
+    },
+    ({ manifest }) => {
+      manifest.combinations[0].presentations[0].source_identity = {
+        namespace: 'presentation:onemg-live',
+        code: '89',
+      };
+    },
+    ({ manifest }) => {
+      const presentation = manifest.combinations[0].presentations[0];
+      presentation.source_identity.code = '88';
+      presentation.product_id = productIdForRow(PMBJP_88);
+      presentation.product_assertion_sha256 = productAssertionHashForRow(PMBJP_88);
+      presentation.product_assertion = productAssertionForRow(PMBJP_88);
+    },
+  ];
+
+  for (const mutate of cases) {
+    const inputs = loadCommittedManifestAndBundles();
+    mutate(inputs);
+    assert.equal(
+      verifyCombinationManifestEvidence(inputs.manifest, inputs.bundles).verified,
+      false,
+    );
+  }
+});
+
+test('custom serialization cannot hide manifest mutation from the evidence capability', () => {
+  const { manifest, bundles } = loadCommittedManifestAndBundles();
+  const stable = structuredClone(manifest);
+  Object.defineProperty(manifest, 'toJSON', {
+    enumerable: false,
+    value() {
+      return stable;
+    },
+  });
+
+  assert.throws(() => {
+    const verificationReport = verifyCombinationManifestEvidence(manifest, bundles);
+    const scd = manifest.combinations[0].presentations[0].rxnorm_scd;
+    Object.assign(scd, {
+      name: 'forged unverified SCD',
+      dose_form: 'forged dose form',
+      properties_response_sha256: '1'.repeat(64),
+      historystatus_response_sha256: '2'.repeat(64),
+      min_relation_response_sha256: '3'.repeat(64),
+    });
+    scd.ingredients_and_strengths[0].numerator_value = '999';
+    scd.ingredients_and_strengths[0].denominator_value = '99';
+    compileCombinationIdentityManifest(manifest, { verificationReport });
+  }, /plain data|changed since evidence verification|custom serialization/u);
 });
 
 test('an unreviewed product and its components remain unmapped', () => {

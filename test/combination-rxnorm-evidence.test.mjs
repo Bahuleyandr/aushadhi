@@ -20,9 +20,35 @@ import {
   verifyCombinationManifestEvidence,
   verifyCombinationRxNormEvidence,
 } from '../src/lib/combination-rxnorm-evidence.mjs';
+import { ingredientIdForName } from '../src/lib/ingredient-identity.mjs';
+import {
+  productAssertionForRow,
+  productAssertionHashForRow,
+  productIdForRow,
+} from '../src/lib/product-resolver.mjs';
 
 const sha256 = (text) => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 const VERSION_RESPONSE = JSON.stringify({ version: '06-Jul-2026', apiVersion: '3.1.354' });
+const PMBJP_89 = {
+  brand_name: 'Co-trimoxazole (Sulphamethoxazole 800mg and Trimethoprim 160mg) Tablets IP',
+  manufacturer: 'PMBJP (Jan Aushadhi)',
+  pack_label: "10's",
+  form_raw: null,
+  ingredients: [
+    {
+      molecule: 'co-trimoxazole sulphamethoxazole',
+      strength_raw: '800mg',
+      strength_value: 800,
+      strength_unit: 'mg',
+    },
+    {
+      molecule: 'trimethoprim',
+      strength_raw: '160mg',
+      strength_value: 160,
+      strength_unit: 'mg',
+    },
+  ],
+};
 
 const properties = (rxcui, name, tty) => JSON.stringify({ properties: { rxcui, name, tty } });
 const conceptGroup = (concepts) => JSON.stringify({
@@ -122,11 +148,29 @@ const combination = (overrides = {}) => ({
     },
   },
   components: [
-    { name: 'sulfamethoxazole', rxcui: '10180', tty: 'IN' },
-    { name: 'trimethoprim', rxcui: '10829', tty: 'IN' },
+    {
+      name: 'sulfamethoxazole',
+      rxcui: '10180',
+      tty: 'IN',
+      assertion_ingredient_ids: [
+        ingredientIdForName('sulfamethoxazole'),
+        ingredientIdForName('co-trimoxazole sulphamethoxazole'),
+      ],
+    },
+    {
+      name: 'trimethoprim',
+      rxcui: '10829',
+      tty: 'IN',
+      assertion_ingredient_ids: [ingredientIdForName('trimethoprim')],
+    },
   ],
   presentations: [{
     source_identity: { namespace: 'presentation:pmbjp', code: '89' },
+    product_id: productIdForRow(PMBJP_89),
+    product_assertion_sha256: productAssertionHashForRow(PMBJP_89),
+    product_assertion: productAssertionForRow(PMBJP_89),
+    route: 'oral',
+    formulation: 'tablet',
     rxnorm_scd: {
       rxcui: '198335',
       tty: 'SCD',
@@ -152,6 +196,16 @@ const combination = (overrides = {}) => ({
       ),
     },
   }],
+  provenance: {
+    identity_sources: [{ kind: 'official_product_list', evidence_ref: 'pmbjp-list' }],
+  },
+  review: {
+    evidence: [{
+      evidence_ref: 'pmbjp-list',
+      source_id: 'janaushadhi',
+      identifier: 'pmbjp-product-list:89',
+    }],
+  },
   ...overrides,
 });
 
@@ -179,6 +233,15 @@ test('authoritative evidence has an exact classification, authority, audit flag 
     assert.ok(codes(result).includes(code), `${JSON.stringify(override)} must fail as ${code}`);
     assert.equal(result.verified, false);
   }
+});
+
+test('a capture cannot predate the RxNorm release it claims to verify', () => {
+  const result = verifyCombinationRxNormEvidence(
+    combination(),
+    bundle({ capture: { captured_at: '2000-01-01T00:00:00.000Z' } }),
+  );
+  assert.equal(result.verified, false);
+  assert.ok(codes(result).includes('capture_predates_rxnorm_release'));
 });
 
 test('a non-authoritative fixture requires an explicit test-only option', () => {

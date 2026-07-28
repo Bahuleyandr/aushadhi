@@ -144,7 +144,7 @@ test('generateCrossDrugPairs is deterministic, deduplicates pair keys, and does 
   ]);
 });
 
-test('a reviewed product-level combination supplements its exact component subjects', () => {
+test('a forged reviewed combination cannot inject a product-level subject', () => {
   const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
   const combination = {
     status: 'reviewed_override',
@@ -205,12 +205,34 @@ test('a reviewed product-level combination supplements its exact component subje
 
   assert.deepEqual(
     result.reviewed_findings.map((finding) => finding.rule_id),
-    ['ddi:methotrexate:trimethoprim', 'ddi:warfarin:co-trimoxazole'],
+    ['ddi:methotrexate:trimethoprim'],
   );
-  const combinationPair = result.checked_pairs.find((entry) => (
-    entry.pair.includes(combinationSubjectId)
+  assert.ok(!result.checked_pairs.some((entry) => entry.pair.includes(combinationSubjectId)));
+});
+
+test('the reserved combination namespace cannot enter through an ordinary ingredient mapping', () => {
+  const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Warfarin fixture', product('product:1', ['ingredient:warfarin'])),
+      resolved(
+        'Forged ordinary ingredient fixture',
+        product('product:2', [combinationSubjectId, 'ingredient:sulfamethoxazole']),
+      ),
+    ],
+    rulePack: pack({
+      rules: [rule({
+        id: 'ddi:warfarin:co-trimoxazole',
+        pair: [combinationSubjectId, 'ingredient:warfarin'],
+      })],
+    }),
+  });
+
+  assert.deepEqual(result.reviewed_findings, []);
+  assert.ok(!result.checked_pairs.some((entry) => entry.pair.includes(combinationSubjectId)));
+  assert.ok(result.unresolved_inputs.some(
+    (entry) => entry.status === 'invalid_reserved_subject_namespace',
   ));
-  assert.deepEqual(combinationPair.product_pairs, [['product:1', 'product:2']]);
 });
 
 test('unreviewed or incompletely mapped combination results never enter exact pair matching', () => {
@@ -519,6 +541,192 @@ test('empty and invalid rule packs fail closed and cannot claim complete coverag
   );
 });
 
+test('schema 1.1 supersession metadata is complete, role-bound, ordered, and graph-valid', () => {
+  const family = 'test-object-harm';
+  const target = {
+    ...rule({
+      id: 'ddi:test:object:member',
+      pair: ['ingredient:member', 'ingredient:object'],
+    }),
+    interaction_family_id: family,
+    subject_specificity: 'exact_member',
+    subject_roles: {
+      object: 'ingredient:object',
+      perpetrator: 'ingredient:member',
+    },
+    supersedes_rule_ids: [],
+  };
+  const suppressor = {
+    ...rule({
+      id: 'ddi:test:object:combination',
+      pair: ['combination:test', 'ingredient:object'],
+    }),
+    interaction_family_id: family,
+    subject_specificity: 'exact_fixed_dose_combination',
+    subject_roles: {
+      object: 'ingredient:object',
+      perpetrator: 'combination:test',
+    },
+    supersedes_rule_ids: [target.rule_id],
+  };
+  const version11 = {
+    ...pack({ rules: [suppressor, target] }),
+    schema_version: '1.1.0',
+  };
+
+  assert.equal(validateRulePack(version11), true);
+  assert.throws(
+    () => validateRulePack({ ...version11, schema_version: '1.0.0' }),
+    /unknown property interaction_family_id/i,
+  );
+
+  const partial = structuredClone(version11);
+  delete partial.rules[0].subject_roles;
+  assert.throws(
+    () => validateRulePack(partial),
+    /provide all supersession fields together/i,
+  );
+
+  const wrongRoles = structuredClone(version11);
+  wrongRoles.rules[0].subject_roles.perpetrator = 'ingredient:member';
+  assert.throws(
+    () => validateRulePack(wrongRoles),
+    /subject_roles must map exactly to pair/i,
+  );
+
+  const unknownTarget = structuredClone(version11);
+  unknownTarget.rules[0].supersedes_rule_ids = ['ddi:test:unknown'];
+  assert.throws(
+    () => validateRulePack(unknownTarget),
+    /supersedes unknown rule/i,
+  );
+
+  const selfTarget = structuredClone(version11);
+  selfTarget.rules[0].supersedes_rule_ids = [selfTarget.rules[0].rule_id];
+  assert.throws(
+    () => validateRulePack(selfTarget),
+    /must not supersede itself/i,
+  );
+
+  const targetWithoutMetadata = structuredClone(version11);
+  for (const key of [
+    'interaction_family_id',
+    'subject_specificity',
+    'subject_roles',
+    'supersedes_rule_ids',
+  ]) {
+    delete targetWithoutMetadata.rules[1][key];
+  }
+  assert.throws(
+    () => validateRulePack(targetWithoutMetadata),
+    /superseded rule.*must declare supersession metadata/i,
+  );
+
+  const notMoreSpecific = structuredClone(version11);
+  notMoreSpecific.rules[1].pair = ['combination:test-target', 'ingredient:object'];
+  notMoreSpecific.rules[1].subject_specificity = 'exact_fixed_dose_combination';
+  notMoreSpecific.rules[1].subject_roles.perpetrator = 'combination:test-target';
+  assert.throws(
+    () => validateRulePack(notMoreSpecific),
+    /must be more specific/i,
+  );
+
+  const differentFamily = structuredClone(version11);
+  differentFamily.rules[1].interaction_family_id = 'different-test-family';
+  assert.throws(
+    () => validateRulePack(differentFamily),
+    /different interaction family/i,
+  );
+
+  const differentObject = structuredClone(version11);
+  differentObject.rules[1].pair = ['ingredient:member', 'ingredient:other-object'];
+  differentObject.rules[1].subject_roles.object = 'ingredient:other-object';
+  assert.throws(
+    () => validateRulePack(differentObject),
+    /different object subject/i,
+  );
+
+  const inheritedSpecificityName = structuredClone(version11);
+  inheritedSpecificityName.rules[0].subject_specificity = 'toString';
+  assert.throws(
+    () => validateRulePack(inheritedSpecificityName),
+    /subject_specificity is invalid/i,
+  );
+
+  const fixedDoseWithoutCombinationSubject = structuredClone(version11);
+  fixedDoseWithoutCombinationSubject.rules[0].pair = [
+    'ingredient:member-two',
+    'ingredient:object',
+  ];
+  fixedDoseWithoutCombinationSubject.rules[0].subject_roles.perpetrator = 'ingredient:member-two';
+  assert.throws(
+    () => validateRulePack(fixedDoseWithoutCombinationSubject),
+    /requires exactly one combination subject/i,
+  );
+
+  const noProductOverlap = structuredClone(version11);
+  noProductOverlap.rules[1].product_pairs = [['product:3', 'product:4']];
+  assert.throws(
+    () => validateRulePack(noProductOverlap),
+    /must overlap product pairs/i,
+  );
+
+  const ambiguousSuppressors = structuredClone(version11);
+  ambiguousSuppressors.rules.push({
+    ...structuredClone(ambiguousSuppressors.rules[0]),
+    rule_id: 'ddi:test:object:second-combination',
+    pair: ['combination:test-second', 'ingredient:object'],
+    subject_roles: {
+      object: 'ingredient:object',
+      perpetrator: 'combination:test-second',
+    },
+  });
+  assert.throws(
+    () => validateRulePack(ambiguousSuppressors),
+    /multiple eligible suppressors for product pair/i,
+  );
+});
+
+test('rule-pack accessors cannot change authority between validation and matching', () => {
+  const accessorRule = rule();
+  Object.defineProperty(accessorRule, 'subject_specificity', {
+    enumerable: true,
+    get() {
+      return 'exact_fixed_dose_combination';
+    },
+  });
+  const specificityAccessorPack = {
+    ...pack({ rules: [accessorRule] }),
+    schema_version: '1.1.0',
+  };
+  assert.throws(
+    () => validateRulePack(specificityAccessorPack),
+    /accessors and custom serialization are forbidden/i,
+  );
+  assert.throws(
+    () => checkResolvedProducts({
+      resolvedInputs: [],
+      rulePack: specificityAccessorPack,
+    }),
+    /accessors and custom serialization are forbidden/i,
+  );
+
+  const targetsAccessorRule = rule();
+  Object.defineProperty(targetsAccessorRule, 'supersedes_rule_ids', {
+    enumerable: true,
+    get() {
+      return [];
+    },
+  });
+  assert.throws(
+    () => validateRulePack({
+      ...pack({ rules: [targetsAccessorRule] }),
+      schema_version: '1.1.0',
+    }),
+    /accessors and custom serialization are forbidden/i,
+  );
+});
+
 test('a reviewed rule is restricted to its exact approved product pairs', () => {
   const reviewedRule = rule();
   const approved = checkResolvedProducts({
@@ -579,4 +787,32 @@ test('the committed open rule pack is empty and declares unknown coverage', () =
   assert.equal(validateRulePack(committedPack), true);
   assert.equal(committedPack.declared_coverage, 'unknown');
   assert.deepEqual(committedPack.rules, []);
+});
+
+test('the checked-in rule schema exposes the same versioned D1 fields as the runtime validator', () => {
+  const schema = JSON.parse(fs.readFileSync(
+    new URL('../data-static/interaction-rules.schema.json', import.meta.url),
+    'utf8',
+  ));
+  assert.deepEqual(schema.properties.schema_version.enum, ['1.0.0', '1.1.0']);
+  assert.deepEqual(
+    Object.keys(schema.$defs.rule.properties)
+      .filter((key) => [
+        'interaction_family_id',
+        'subject_specificity',
+        'subject_roles',
+        'supersedes_rule_ids',
+      ].includes(key))
+      .sort(),
+    [
+      'interaction_family_id',
+      'subject_roles',
+      'subject_specificity',
+      'supersedes_rule_ids',
+    ],
+  );
+  assert.deepEqual(
+    schema.$defs.rule.properties.subject_specificity.enum,
+    ['exact_member', 'exact_fixed_dose_combination'],
+  );
 });

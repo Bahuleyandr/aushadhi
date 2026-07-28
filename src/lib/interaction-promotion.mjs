@@ -13,18 +13,23 @@ import {
   validateCombinationIdentityManifest,
 } from './interaction-combination-identity.mjs';
 import {
-  assertVerifiedCombinationManifestEvidence,
+  verifiedCombinationManifestSnapshot,
 } from './combination-rxnorm-evidence.mjs';
 import {
   assertDraftPackAttestation,
   parseDraftPackAttestation,
 } from './interaction-draft-attestation.mjs';
 import { validateDraftRules } from './interaction-draft-validation.mjs';
+import { strictPlainDataSnapshot } from './strict-plain-data.mjs';
 
 const SHA256 = /^[0-9a-f]{64}$/u;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const ROLES = ['object', 'perpetrator'];
 const COMBINATION_BINDING_KIND = 'combination_identity';
+const SUBJECT_SPECIFICITIES = new Set([
+  'exact_member',
+  'exact_fixed_dose_combination',
+]);
 const PROMOTABLE_EVIDENCE = new Map([
   ['openfda-labels', new Set([
     'machine_confirmed_openfda_reconciled_pending_clinician',
@@ -79,6 +84,15 @@ function requireStringArray(value, label, { minItems = 0 } = {}) {
     const item = requireString(value[index], `${label}[${index}]`);
     if (seen.has(item)) throw new TypeError(`${label} must contain unique values`);
     seen.add(item);
+  }
+  return value;
+}
+
+function requireSortedStringArray(value, label) {
+  requireStringArray(value, label);
+  const sorted = [...value].sort(compareStrings);
+  if (JSON.stringify(value) !== JSON.stringify(sorted)) {
+    throw new TypeError(`${label} must use deterministic sorted order`);
   }
   return value;
 }
@@ -246,25 +260,72 @@ function validateScope(value, label, schemaVersion) {
   }
 }
 
+function validateSupersession(value, label) {
+  requireObject(value, label);
+  requireExactKeys(value, [
+    'interaction_family_id',
+    'subject_specificity',
+    'supersedes_rule_ids',
+  ], label);
+  requireString(value.interaction_family_id, `${label}.interaction_family_id`);
+  if (!SUBJECT_SPECIFICITIES.has(value.subject_specificity)) {
+    throw new TypeError(
+      `${label}.subject_specificity must be exact_member `
+        + 'or exact_fixed_dose_combination',
+    );
+  }
+  requireSortedStringArray(
+    value.supersedes_rule_ids,
+    `${label}.supersedes_rule_ids`,
+  );
+}
+
 function validatePromotion(value, index, schemaVersion) {
   const label = `promotion manifest promotions[${index}]`;
   requireObject(value, label);
-  requireExactKeys(value, [
+  const keys = [
     'rule_id',
     'draft_rule_sha256',
     'approval',
     'scope',
-  ], label);
+  ];
+  const hasSupersession = (
+    schemaVersion === 2 && Object.hasOwn(value, 'supersession')
+  );
+  if (hasSupersession) keys.push('supersession');
+  requireExactKeys(value, keys, label);
   requireString(value.rule_id, `${label}.rule_id`);
   if (!SHA256.test(value.draft_rule_sha256 ?? '')) {
     throw new TypeError(`${label}.draft_rule_sha256 must be a lowercase SHA-256`);
   }
   validateApproval(value.approval, `${label}.approval`);
   validateScope(value.scope, `${label}.scope`, schemaVersion);
+  const combinationSides = value.scope.sides.filter(
+    (side) => side.binding_kind === COMBINATION_BINDING_KIND,
+  );
+  if (combinationSides.length > 1) {
+    throw new TypeError(`${label}.scope supports at most one combination-bound side`);
+  }
+  if (combinationSides.length === 1 && !hasSupersession) {
+    throw new TypeError(`${label} combination-bound promotion requires supersession metadata`);
+  }
+  if (hasSupersession) {
+    validateSupersession(value.supersession, `${label}.supersession`);
+    const expectedSpecificity = combinationSides.length === 1
+      ? 'exact_fixed_dose_combination'
+      : 'exact_member';
+    if (value.supersession.subject_specificity !== expectedSpecificity) {
+      throw new TypeError(
+        `${label}.supersession.subject_specificity must be ${expectedSpecificity} `
+          + 'for its bound subject type',
+      );
+    }
+  }
 }
 
 export function validatePromotionManifest(manifest) {
   requireObject(manifest, 'promotion manifest');
+  manifest = strictPlainDataSnapshot(manifest, 'promotion manifest');
   requireExactKeys(manifest, [
     'schema_version',
     'profile',
@@ -289,6 +350,13 @@ export function validatePromotionManifest(manifest) {
       throw new TypeError(`promotion manifest contains duplicate rule_id ${promotion.rule_id}`);
     }
     ruleIds.add(promotion.rule_id);
+  }
+  if (manifest.promotions.some((promotion) => Object.hasOwn(promotion, 'supersession'))
+      && manifest.output_pack.schema_version !== '1.1.0') {
+    throw new TypeError(
+      'promotion manifest output_pack.schema_version must be 1.1.0 '
+        + 'when supersession metadata is present',
+    );
   }
   return true;
 }
@@ -338,7 +406,7 @@ function bindScope({
   combinationById,
 }) {
   const productsByRole = new Map();
-  const pairSubjects = [];
+  const subjectsByRole = new Map();
   const seenPresentationIds = new Set();
 
   for (const side of promotion.scope.sides) {
@@ -398,7 +466,7 @@ function bindScope({
         }
         productIds.push(productId);
       }
-      pairSubjects.push(combination.combination_id);
+      subjectsByRole.set(side.draft_role, combination.combination_id);
     } else {
       const ingredientMapping = ingredientById.get(side.ingredient_mapping_id);
       if (!ingredientMapping) {
@@ -418,7 +486,10 @@ function bindScope({
           `${side.ingredient_mapping_id} does not match ${promotion.rule_id} ${side.draft_role}`,
         );
       }
-      pairSubjects.push(ingredientMapping.identity.clinical_ingredient_id);
+      subjectsByRole.set(
+        side.draft_role,
+        ingredientMapping.identity.clinical_ingredient_id,
+      );
 
       for (const presentationId of side.presentation_mapping_ids) {
         if (seenPresentationIds.has(presentationId)) {
@@ -466,9 +537,14 @@ function bindScope({
         + `product pairs but derived ${productPairs.length}`,
     );
   }
+  const subjectRoles = {
+    object: subjectsByRole.get('object'),
+    perpetrator: subjectsByRole.get('perpetrator'),
+  };
   return {
-    pair: pairSubjects.sort(compareStrings),
+    pair: Object.values(subjectRoles).sort(compareStrings),
     productPairs,
+    subjectRoles,
   };
 }
 
@@ -520,6 +596,18 @@ export function compileInteractionRuntimePack({
   combinationManifest,
   combinationEvidenceReport,
 }) {
+  promotionManifest = strictPlainDataSnapshot(
+    promotionManifest,
+    'promotion manifest',
+  );
+  ingredientManifest = strictPlainDataSnapshot(
+    ingredientManifest,
+    'ingredient mapping manifest',
+  );
+  presentationManifest = strictPlainDataSnapshot(
+    presentationManifest,
+    'product presentation manifest',
+  );
   validatePromotionManifest(promotionManifest);
   validateIngredientMappingManifest(ingredientManifest);
   validateProductPresentationManifest(presentationManifest);
@@ -530,7 +618,7 @@ export function compileInteractionRuntimePack({
   ));
   let combinationById = new Map();
   if (hasCombinationSide) {
-    assertVerifiedCombinationManifestEvidence(
+    combinationManifest = verifiedCombinationManifestSnapshot(
       combinationEvidenceReport,
       combinationManifest,
     );
@@ -600,6 +688,14 @@ export function compileInteractionRuntimePack({
       rule_id: promotion.rule_id,
       pair: scope.pair,
       product_pairs: scope.productPairs,
+      ...(promotion.supersession ? {
+        interaction_family_id: promotion.supersession.interaction_family_id,
+        subject_specificity: promotion.supersession.subject_specificity,
+        subject_roles: scope.subjectRoles,
+        supersedes_rule_ids: structuredClone(
+          promotion.supersession.supersedes_rule_ids,
+        ),
+      } : {}),
       applicability: {
         routes: [
           `${promotion.scope.route} ${promotion.scope.formulation} `
@@ -632,6 +728,7 @@ export function compileInteractionRuntimePack({
 }
 
 export function serializeInteractionRuntimePack(rulePack) {
+  rulePack = strictPlainDataSnapshot(rulePack, 'rule pack');
   validateRulePack(rulePack);
   return `${JSON.stringify(rulePack, null, 2)}\n`;
 }

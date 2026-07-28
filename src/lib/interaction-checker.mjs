@@ -1,8 +1,36 @@
+import {
+  assertReviewedCombinationMappedProduct,
+} from './interaction-mapping.mjs';
+import { strictPlainDataSnapshot } from './strict-plain-data.mjs';
+
 export const DISCLAIMER = 'No listed interaction does not establish safety. Verify with a pharmacist or clinician and current approved labeling.';
 
 const COVERAGE_VALUES = new Set(['complete', 'partial', 'unknown']);
 const MAPPED_STATUSES = new Set(['exact', 'reviewed_override']);
 const REVIEW_STATUSES = new Set(['clinician_reviewed', 'review_candidate']);
+const RULE_PACK_SCHEMA_VERSIONS = new Set(['1.0.0', '1.1.0']);
+const SUBJECT_SPECIFICITY_RANK = new Map([
+  ['exact_member', 1],
+  ['exact_fixed_dose_combination', 2],
+]);
+const BASE_RULE_KEYS = new Set([
+  'rule_id',
+  'pair',
+  'product_pairs',
+  'applicability',
+  'severity',
+  'dispense_action',
+  'mechanism',
+  'management',
+  'evidence',
+  'review',
+]);
+const SUPERSESSION_RULE_KEYS = Object.freeze([
+  'interaction_family_id',
+  'subject_specificity',
+  'subject_roles',
+  'supersedes_rule_ids',
+]);
 const DISPENSE_ACTIONS = new Set([
   'supply_with_counselling',
   'space_doses',
@@ -44,6 +72,15 @@ function assertStringArray(value, label, { minItems = 0, unique = false } = {}) 
     const item = requireString(value[index], `${label}[${index}]`);
     if (unique && seen.has(item)) throw new TypeError(`${label} must contain unique values`);
     seen.add(item);
+  }
+}
+
+function assertCanonicalStringArray(value, label) {
+  assertStringArray(value, label, { unique: true });
+  for (let index = 1; index < value.length; index += 1) {
+    if (compareStrings(value[index - 1], value[index]) >= 0) {
+      throw new TypeError(`${label} must use deterministic canonical order`);
+    }
   }
 }
 
@@ -229,21 +266,54 @@ function validateProductPairs(value, label) {
   }
 }
 
-function validateRule(value, index) {
+function validateSupersessionFields(value, label) {
+  requireString(value.interaction_family_id, `${label}.interaction_family_id`);
+  if (!SUBJECT_SPECIFICITY_RANK.has(value.subject_specificity)) {
+    throw new TypeError(`${label}.subject_specificity is invalid`);
+  }
+  const combinationSubjects = value.pair.filter((subject) => subject.startsWith('combination:'));
+  if (value.subject_specificity === 'exact_fixed_dose_combination'
+      && combinationSubjects.length !== 1) {
+    throw new TypeError(
+      `${label}.subject_specificity exact_fixed_dose_combination requires exactly one combination subject`,
+    );
+  }
+  if (value.subject_specificity === 'exact_member' && combinationSubjects.length !== 0) {
+    throw new TypeError(
+      `${label}.subject_specificity exact_member must not use a combination subject`,
+    );
+  }
+  assertObject(value.subject_roles, `${label}.subject_roles`);
+  assertExactKeys(
+    value.subject_roles,
+    new Set(['object', 'perpetrator']),
+    `${label}.subject_roles`,
+  );
+  const objectSubject = requireString(
+    value.subject_roles.object,
+    `${label}.subject_roles.object`,
+  );
+  const perpetratorSubject = requireString(
+    value.subject_roles.perpetrator,
+    `${label}.subject_roles.perpetrator`,
+  );
+  if (objectSubject === perpetratorSubject) {
+    throw new TypeError(`${label}.subject_roles must identify two different subjects`);
+  }
+  const rolePair = [objectSubject, perpetratorSubject].sort(compareStrings);
+  if (rolePair[0] !== value.pair[0] || rolePair[1] !== value.pair[1]) {
+    throw new TypeError(`${label}.subject_roles must map exactly to pair`);
+  }
+  assertCanonicalStringArray(value.supersedes_rule_ids, `${label}.supersedes_rule_ids`);
+}
+
+function validateRule(value, index, schemaVersion) {
   const label = `rules[${index}]`;
   assertObject(value, label);
-  assertExactKeys(value, new Set([
-    'rule_id',
-    'pair',
-    'product_pairs',
-    'applicability',
-    'severity',
-    'dispense_action',
-    'mechanism',
-    'management',
-    'evidence',
-    'review',
-  ]), label);
+  const allowedKeys = schemaVersion === '1.1.0'
+    ? new Set([...BASE_RULE_KEYS, ...SUPERSESSION_RULE_KEYS])
+    : BASE_RULE_KEYS;
+  assertExactKeys(value, allowedKeys, label);
   requireString(value.rule_id, `${label}.rule_id`);
   if (!Array.isArray(value.pair) || value.pair.length !== 2) {
     throw new TypeError(`${label}.pair must contain exactly two ingredient identifiers`);
@@ -300,6 +370,19 @@ function validateRule(value, index) {
     }
   }
 
+  const suppliedSupersessionFields = SUPERSESSION_RULE_KEYS.filter(
+    (key) => Object.hasOwn(value, key),
+  );
+  if (suppliedSupersessionFields.length > 0) {
+    if (suppliedSupersessionFields.length !== SUPERSESSION_RULE_KEYS.length) {
+      throw new TypeError(`${label} must provide all supersession fields together`);
+    }
+    if (value.review.status !== 'clinician_reviewed') {
+      throw new TypeError(`${label} supersession fields require clinician_reviewed status`);
+    }
+    validateSupersessionFields(value, label);
+  }
+
   for (let evidenceIndex = 0; evidenceIndex < value.evidence.length; evidenceIndex += 1) {
     validateEvidence(
       value.evidence[evidenceIndex],
@@ -311,6 +394,7 @@ function validateRule(value, index) {
 
 export function validateRulePack(rulePack) {
   if (!isObject(rulePack)) throw new TypeError('rule pack must be an object');
+  rulePack = strictPlainDataSnapshot(rulePack, 'rule pack');
   assertExactKeys(rulePack, new Set([
     'schema_version',
     'pack_id',
@@ -322,8 +406,8 @@ export function validateRulePack(rulePack) {
     'declared_coverage',
     'rules',
   ]), 'rule pack');
-  if (rulePack.schema_version !== '1.0.0') {
-    throw new TypeError('rule pack schema_version must be 1.0.0');
+  if (!RULE_PACK_SCHEMA_VERSIONS.has(rulePack.schema_version)) {
+    throw new TypeError('rule pack schema_version must be 1.0.0 or 1.1.0');
   }
   requireString(rulePack.pack_id, 'rule pack pack_id');
   requireString(rulePack.pack_version, 'rule pack pack_version');
@@ -341,15 +425,83 @@ export function validateRulePack(rulePack) {
   }
 
   const ruleIds = new Set();
+  const rulesById = new Map();
   const pairKeys = new Set();
   for (let index = 0; index < rulePack.rules.length; index += 1) {
     const value = rulePack.rules[index];
-    validateRule(value, index);
+    validateRule(value, index, rulePack.schema_version);
     if (ruleIds.has(value.rule_id)) throw new TypeError(`duplicate rule_id ${value.rule_id}`);
     ruleIds.add(value.rule_id);
+    rulesById.set(value.rule_id, value);
     const key = pairKey(value.pair);
     if (pairKeys.has(key)) throw new TypeError(`duplicate rule pair ${key}`);
     pairKeys.add(key);
+  }
+
+  if (rulePack.schema_version === '1.1.0') {
+    const suppressorsByTarget = new Map();
+    for (const suppressor of rulePack.rules) {
+      if (!Array.isArray(suppressor.supersedes_rule_ids)) continue;
+      for (const targetId of suppressor.supersedes_rule_ids) {
+        if (targetId === suppressor.rule_id) {
+          throw new TypeError(`rule ${suppressor.rule_id} must not supersede itself`);
+        }
+        const target = rulesById.get(targetId);
+        if (target === undefined) {
+          throw new TypeError(`rule ${suppressor.rule_id} supersedes unknown rule ${targetId}`);
+        }
+        if (target.review.status !== 'clinician_reviewed'
+            || suppressor.review.status !== 'clinician_reviewed') {
+          throw new TypeError('supersession endpoints must be clinician_reviewed');
+        }
+        if (!SUPERSESSION_RULE_KEYS.every((key) => Object.hasOwn(target, key))) {
+          throw new TypeError(`superseded rule ${targetId} must declare supersession metadata`);
+        }
+        if (suppressor.interaction_family_id !== target.interaction_family_id) {
+          throw new TypeError(
+            `rule ${suppressor.rule_id} must not supersede a different interaction family`,
+          );
+        }
+        if (suppressor.subject_roles.object !== target.subject_roles.object) {
+          throw new TypeError(
+            `rule ${suppressor.rule_id} must not supersede a rule with a different object subject`,
+          );
+        }
+        if (SUBJECT_SPECIFICITY_RANK.get(suppressor.subject_specificity)
+            <= SUBJECT_SPECIFICITY_RANK.get(target.subject_specificity)) {
+          throw new TypeError(
+            `rule ${suppressor.rule_id} must be more specific than superseded rule ${targetId}`,
+          );
+        }
+        const suppressorProductPairs = new Set(
+          suppressor.product_pairs.map(productPairKey),
+        );
+        if (!target.product_pairs.some((pair) => suppressorProductPairs.has(productPairKey(pair)))) {
+          throw new TypeError(
+            `rule ${suppressor.rule_id} and superseded rule ${targetId} must overlap product pairs`,
+          );
+        }
+        const suppressors = suppressorsByTarget.get(targetId) ?? [];
+        suppressors.push(suppressor);
+        suppressorsByTarget.set(targetId, suppressors);
+      }
+    }
+    for (const [targetId, suppressors] of suppressorsByTarget) {
+      const target = rulesById.get(targetId);
+      for (const pair of target.product_pairs) {
+        const key = productPairKey(pair);
+        const overlappingSuppressors = suppressors.filter(
+          (suppressor) => suppressor.product_pairs.some(
+            (suppressorPair) => productPairKey(suppressorPair) === key,
+          ),
+        );
+        if (overlappingSuppressors.length > 1) {
+          throw new TypeError(
+            `superseded rule ${targetId} has multiple eligible suppressors for product pair ${key}`,
+          );
+        }
+      }
+    }
   }
   return true;
 }
@@ -401,10 +553,15 @@ function hasReviewedRuntimeSubject(record, ingredient) {
   return ingredient.runtime_drug === undefined || subject.drug === ingredient.runtime_drug;
 }
 
-function reviewedCombinationSubjectId(record) {
+function reviewedCombinationSubjectId(record, expectedProfile) {
   const combination = record.product.combination;
   const presentation = record.product.presentation;
   if (!isObject(combination) || combination.status !== 'reviewed_override') return null;
+  try {
+    assertReviewedCombinationMappedProduct(record.product, expectedProfile);
+  } catch {
+    return null;
+  }
   if (typeof combination.combination_id !== 'string'
       || combination.combination_id.trim() === '') {
     return null;
@@ -501,10 +658,56 @@ function combineCoverage(values) {
   return 'complete';
 }
 
-function checkedPairMatchesRule(checkedPair, rule) {
-  if (!Array.isArray(rule.product_pairs)) return true;
+function matchedProductPairs(checkedPair, rule) {
+  if (!Array.isArray(rule.product_pairs)) {
+    return structuredClone(checkedPair.product_pairs);
+  }
   const allowed = new Set(rule.product_pairs.map(productPairKey));
-  return checkedPair.product_pairs.some((pair) => allowed.has(productPairKey(pair)));
+  return checkedPair.product_pairs
+    .filter((pair) => allowed.has(productPairKey(pair)))
+    .map((pair) => [...pair]);
+}
+
+function canSupersedeExactProductMatch(suppressor, candidate) {
+  if (suppressor === candidate) return false;
+  if (!Array.isArray(suppressor.rule.supersedes_rule_ids)
+      || !suppressor.rule.supersedes_rule_ids.includes(candidate.rule.rule_id)) {
+    return false;
+  }
+  if (!isObject(candidate.rule.subject_roles)) return false;
+  if (suppressor.rule.interaction_family_id !== candidate.rule.interaction_family_id) return false;
+  if (suppressor.rule.subject_roles.object !== candidate.rule.subject_roles.object) return false;
+  if (SUBJECT_SPECIFICITY_RANK.get(suppressor.rule.subject_specificity)
+      <= SUBJECT_SPECIFICITY_RANK.get(candidate.rule.subject_specificity)) {
+    return false;
+  }
+  const suppressorPairs = new Set(suppressor.matched_product_pairs.map(productPairKey));
+  return candidate.matched_product_pairs.length > 0
+    && candidate.matched_product_pairs.every(
+      (pair) => suppressorPairs.has(productPairKey(pair)),
+    );
+}
+
+function applyExactProductSupersession(matches) {
+  const surviving = [];
+  const superseded = [];
+  for (const candidate of matches) {
+    const eligibleSuppressors = matches.filter(
+      (suppressor) => canSupersedeExactProductMatch(suppressor, candidate),
+    );
+    if (eligibleSuppressors.length !== 1) {
+      surviving.push(candidate);
+      continue;
+    }
+    const [suppressor] = eligibleSuppressors;
+    superseded.push({
+      ...structuredClone(candidate.rule),
+      matched_product_pairs: structuredClone(candidate.matched_product_pairs),
+      superseded_by: suppressor.rule.rule_id,
+      superseded_reason: 'more_specific_rule_in_the_same_interaction_family',
+    });
+  }
+  return { surviving, superseded };
 }
 
 function validateReviewCandidate(value, index) {
@@ -651,6 +854,7 @@ export function checkResolvedProducts({
 } = {}) {
   if (!Array.isArray(resolvedInputs)) throw new TypeError('resolvedInputs must be an array');
   if (!Array.isArray(reviewCandidates)) throw new TypeError('reviewCandidates must be an array');
+  rulePack = strictPlainDataSnapshot(rulePack, 'rule pack');
   validateRulePack(rulePack);
 
   const resolved = [];
@@ -697,6 +901,16 @@ export function checkResolvedProducts({
           id = null;
         }
       }
+      if (id?.startsWith('combination:')) {
+        unresolvedIngredientCount += 1;
+        unresolved.push(mappingIssue(
+          record,
+          ingredient,
+          ingredientIndex,
+          'invalid_reserved_subject_namespace',
+        ));
+        continue;
+      }
       if (id !== null) {
         mappedIngredientCount += 1;
         if (hasReviewedRuntimeSubject(record, ingredient)) {
@@ -716,7 +930,7 @@ export function checkResolvedProducts({
         unresolved.push(mappingIssue(record, ingredient, ingredientIndex, issueStatus));
       }
     }
-    const combinationSubjectId = reviewedCombinationSubjectId(record);
+    const combinationSubjectId = reviewedCombinationSubjectId(record, rulePack.profile);
     if (combinationSubjectId !== null) {
       mappedIngredients.push({ ingredient_id: combinationSubjectId });
     }
@@ -729,14 +943,24 @@ export function checkResolvedProducts({
   const checked_pairs = generateCrossDrugPairs(mappedProducts);
   const checkedByKey = new Map(checked_pairs.map((entry) => [entry.pair_key, entry]));
   const checkedKeys = new Set(checkedByKey.keys());
-  const reviewed_findings = [];
+  const reviewedMatches = [];
   const packCandidates = [];
   for (const value of rulePack.rules) {
     const checkedPair = checkedByKey.get(pairKey(value.pair));
-    if (!checkedPair || !checkedPairMatchesRule(checkedPair, value)) continue;
-    if (value.review.status === 'clinician_reviewed') reviewed_findings.push(structuredClone(value));
+    if (!checkedPair) continue;
+    const matched_product_pairs = matchedProductPairs(checkedPair, value);
+    if (matched_product_pairs.length === 0) continue;
+    if (value.review.status === 'clinician_reviewed') {
+      reviewedMatches.push({
+        rule: structuredClone(value),
+        matched_product_pairs,
+      });
+    }
     else packCandidates.push(structuredClone(value));
   }
+  const supersession = applyExactProductSupersession(reviewedMatches);
+  const reviewed_findings = supersession.surviving.map(({ rule }) => rule);
+  const superseded_findings = supersession.superseded;
 
   const suppliedCandidates = reviewCandidates.map((value, index) => ({
     value,
@@ -751,6 +975,12 @@ export function checkResolvedProducts({
     .map(projectReviewCandidate)
     .sort((left, right) => compareStrings(findingSortKey(left), findingSortKey(right)));
   reviewed_findings.sort((left, right) => compareStrings(findingSortKey(left), findingSortKey(right)));
+  superseded_findings.sort(
+    (left, right) => (
+      compareStrings(findingSortKey(left), findingSortKey(right))
+      || compareStrings(left.superseded_by, right.superseded_by)
+    ),
+  );
 
   const product_resolution = coverageProductResolution(resolvedInputs, resolved.length);
   const ingredient_mapping = coverageIngredientMapping(
@@ -807,7 +1037,10 @@ export function checkResolvedProducts({
     },
     reviewed_rule_matching: {
       status: checked_pairs.length > 0 ? 'performed' : 'not_performed',
+      matched_reviewed_finding_count: reviewedMatches.length,
       reviewed_finding_count: reviewed_findings.length,
+      surviving_reviewed_finding_count: reviewed_findings.length,
+      superseded_finding_count: superseded_findings.length,
       review_candidate_count: review_candidates.length,
     },
     checked_pair_count: checked_pairs.length,
@@ -839,6 +1072,7 @@ export function checkResolvedProducts({
     capability_limitations: buildCapabilityLimitations(rulePack),
     resolved_inputs: resolved,
     reviewed_findings,
+    superseded_findings,
     review_candidates,
     unresolved_inputs: unresolved,
     duplicate_ingredients,

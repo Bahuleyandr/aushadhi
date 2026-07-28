@@ -16,6 +16,11 @@ import {
 import {
   verifyCombinationManifestEvidence,
 } from '../src/lib/combination-rxnorm-evidence.mjs';
+import {
+  productAssertionForRow,
+  productAssertionHashForRow,
+  productIdForRow,
+} from '../src/lib/product-resolver.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const COMBINATION_ID = 'combination:co-trimoxazole:rxnorm-10831';
@@ -111,7 +116,10 @@ function combinationInputs() {
   source.promotionManifest = {
     schema_version: 2,
     profile: 'internal-evaluation',
-    output_pack: structuredClone(source.promotionManifest.output_pack),
+    output_pack: {
+      ...structuredClone(source.promotionManifest.output_pack),
+      schema_version: '1.1.0',
+    },
     promotions: [{
       rule_id: draft.rule_id,
       draft_rule_sha256: createHash('sha256').update(draftLine).digest('hex'),
@@ -124,6 +132,11 @@ function combinationInputs() {
           `${evidence.source_policy_id}:`
           + `${evidence.provenance.set_id}:${evidence.provenance.version}`
         )),
+      },
+      supersession: {
+        interaction_family_id: 'warfarin-anticoagulation-potentiation',
+        subject_specificity: 'exact_fixed_dose_combination',
+        supersedes_rule_ids: [],
       },
       scope: {
         route: 'oral',
@@ -182,6 +195,31 @@ test('schema v2 binds an authenticated combination side to its exact reviewed pr
   assert.deepEqual(rule.product_pairs, expectedProductPairs(source));
 });
 
+test('schema v2 compiles clinician-approved D1 metadata with derived subject roles', () => {
+  const source = combinationInputs();
+
+  assert.equal(validatePromotionManifest(source.promotionManifest), true);
+  const compiled = compileInteractionRuntimePack(source);
+  const [rule] = compiled.rules;
+  const objectMapping = source.ingredientManifest.mappings.find(
+    (mapping) => (
+      mapping.mapping_id
+      === source.promotionManifest.promotions[0].scope.sides[0].ingredient_mapping_id
+    ),
+  );
+
+  assert.equal(
+    rule.interaction_family_id,
+    'warfarin-anticoagulation-potentiation',
+  );
+  assert.equal(rule.subject_specificity, 'exact_fixed_dose_combination');
+  assert.deepEqual(rule.subject_roles, {
+    object: objectMapping.identity.clinical_ingredient_id,
+    perpetrator: COMBINATION_ID,
+  });
+  assert.deepEqual(rule.supersedes_rule_ids, []);
+});
+
 test('schema v2 retains the exact legacy side shape and byte-identical eight-rule output', () => {
   const source = baseInputs();
   source.promotionManifest.schema_version = 2;
@@ -213,6 +251,141 @@ test('schema versions 1 and 2 enforce their exact side variants', () => {
   assert.throws(
     () => validatePromotionManifest(v2),
     /contains unknown property presentation_mapping_ids/u,
+  );
+});
+
+test('D1 promotion metadata is exact, deterministic and schema-version gated', () => {
+  const supersession = {
+    interaction_family_id: 'warfarin-anticoagulation-potentiation',
+    subject_specificity: 'exact_member',
+    supersedes_rule_ids: [],
+  };
+
+  const v1 = baseInputs().promotionManifest;
+  v1.promotions[0].supersession = structuredClone(supersession);
+  assert.throws(
+    () => validatePromotionManifest(v1),
+    /contains unknown property supersession/u,
+  );
+
+  const wrongOutputVersion = baseInputs().promotionManifest;
+  wrongOutputVersion.schema_version = 2;
+  wrongOutputVersion.promotions[0].supersession = structuredClone(supersession);
+  assert.throws(
+    () => validatePromotionManifest(wrongOutputVersion),
+    /output_pack\.schema_version must be 1\.1\.0/u,
+  );
+
+  const unsorted = baseInputs().promotionManifest;
+  unsorted.schema_version = 2;
+  unsorted.output_pack.schema_version = '1.1.0';
+  unsorted.promotions[0].supersession = {
+    ...structuredClone(supersession),
+    supersedes_rule_ids: ['ddi:test:z', 'ddi:test:a'],
+  };
+  assert.throws(
+    () => validatePromotionManifest(unsorted),
+    /supersedes_rule_ids must use deterministic sorted order/u,
+  );
+
+  const duplicate = baseInputs().promotionManifest;
+  duplicate.schema_version = 2;
+  duplicate.output_pack.schema_version = '1.1.0';
+  duplicate.promotions[0].supersession = {
+    ...structuredClone(supersession),
+    supersedes_rule_ids: ['ddi:test:a', 'ddi:test:a'],
+  };
+  assert.throws(
+    () => validatePromotionManifest(duplicate),
+    /supersedes_rule_ids must contain unique values/u,
+  );
+
+  const unknown = baseInputs().promotionManifest;
+  unknown.schema_version = 2;
+  unknown.output_pack.schema_version = '1.1.0';
+  unknown.promotions[0].supersession = {
+    ...structuredClone(supersession),
+    subject_roles: {
+      object: 'warfarin',
+      perpetrator: COMBINATION_ID,
+    },
+  };
+  assert.throws(
+    () => validatePromotionManifest(unknown),
+    /supersession contains unknown property subject_roles/u,
+  );
+
+  const emptyFamily = baseInputs().promotionManifest;
+  emptyFamily.schema_version = 2;
+  emptyFamily.output_pack.schema_version = '1.1.0';
+  emptyFamily.promotions[0].supersession = {
+    ...structuredClone(supersession),
+    interaction_family_id: ' ',
+  };
+  assert.throws(
+    () => validatePromotionManifest(emptyFamily),
+    /interaction_family_id must be a non-empty string/u,
+  );
+
+  const invalidSpecificity = baseInputs().promotionManifest;
+  invalidSpecificity.schema_version = 2;
+  invalidSpecificity.output_pack.schema_version = '1.1.0';
+  invalidSpecificity.promotions[0].supersession = {
+    ...structuredClone(supersession),
+    subject_specificity: 'brand_name_guess',
+  };
+  assert.throws(
+    () => validatePromotionManifest(invalidSpecificity),
+    /subject_specificity must be exact_member or exact_fixed_dose_combination/u,
+  );
+
+  const ingredientClaimingCombination = baseInputs().promotionManifest;
+  ingredientClaimingCombination.schema_version = 2;
+  ingredientClaimingCombination.output_pack.schema_version = '1.1.0';
+  ingredientClaimingCombination.promotions[0].supersession = {
+    ...structuredClone(supersession),
+    subject_specificity: 'exact_fixed_dose_combination',
+  };
+  assert.throws(
+    () => validatePromotionManifest(ingredientClaimingCombination),
+    /subject_specificity must be exact_member for its bound subject type/u,
+  );
+
+  const combinationClaimingMember = combinationInputs().promotionManifest;
+  combinationClaimingMember.promotions[0].supersession.subject_specificity = 'exact_member';
+  assert.throws(
+    () => validatePromotionManifest(combinationClaimingMember),
+    /subject_specificity must be exact_fixed_dose_combination for its bound subject type/u,
+  );
+
+  const combinationWithoutD1 = combinationInputs().promotionManifest;
+  delete combinationWithoutD1.promotions[0].supersession;
+  assert.throws(
+    () => validatePromotionManifest(combinationWithoutD1),
+    /combination-bound promotion requires supersession metadata/u,
+  );
+});
+
+test('promotion accessors cannot change D1 authority after validation', () => {
+  const source = combinationInputs();
+  const approved = structuredClone(
+    source.promotionManifest.promotions[0].supersession,
+  );
+  delete source.promotionManifest.promotions[0].supersession;
+  Object.defineProperty(source.promotionManifest.promotions[0], 'supersession', {
+    enumerable: true,
+    get() {
+      return approved;
+    },
+  });
+
+  assert.throws(
+    () => validatePromotionManifest(source.promotionManifest),
+    /accessors and custom serialization are forbidden/u,
+  );
+  assert.throws(
+    () => compileInteractionRuntimePack(source),
+    /accessors and custom serialization are forbidden/u,
   );
 });
 
@@ -268,11 +441,11 @@ test('combination promotion rejects unreviewed identity and profile widening', (
 test('combination promotion binds runtime drug, presentation scope and explicit products', () => {
   const wrongDrug = combinationInputs();
   wrongDrug.combinationManifest.combinations[0].runtime_drug = 'sulfamethoxazole';
-  attachAuthenticReport(wrongDrug);
-  assert.throws(
-    () => compileInteractionRuntimePack(wrongDrug),
-    /does not match .* perpetrator/u,
+  wrongDrug.combinationEvidenceReport = verifyCombinationManifestEvidence(
+    wrongDrug.combinationManifest,
+    evidenceBundles(wrongDrug.combinationManifest),
   );
+  assert.equal(wrongDrug.combinationEvidenceReport.verified, false);
 
   const wrongScope = combinationInputs();
   const [combination] = wrongScope.combinationManifest.combinations;
@@ -280,11 +453,11 @@ test('combination promotion binds runtime drug, presentation scope and explicit 
   for (const presentation of combination.presentations) {
     presentation.formulation = 'capsule';
   }
-  attachAuthenticReport(wrongScope);
-  assert.throws(
-    () => compileInteractionRuntimePack(wrongScope),
-    /differs from the approved presentation scope/u,
+  wrongScope.combinationEvidenceReport = verifyCombinationManifestEvidence(
+    wrongScope.combinationManifest,
+    evidenceBundles(wrongScope.combinationManifest),
   );
+  assert.equal(wrongScope.combinationEvidenceReport.verified, false);
 
   const widened = combinationInputs();
   widened.promotionManifest.promotions[0].scope.sides[1]
@@ -299,10 +472,34 @@ test('a later reviewed combination presentation cannot widen an existing approva
   const source = combinationInputs();
   const combination = source.combinationManifest.combinations[0];
   const additional = structuredClone(combination.presentations[0]);
+  const additionalRow = {
+    brand_name: 'Co-trimoxazole 800mg/160mg Alternate Tablets IP',
+    manufacturer: 'PMBJP (Jan Aushadhi)',
+    pack_label: "20's",
+    form_raw: null,
+    ingredients: [
+      {
+        molecule: 'co-trimoxazole sulphamethoxazole',
+        strength_raw: '800mg',
+        strength_value: 800,
+        strength_unit: 'mg',
+      },
+      {
+        molecule: 'trimethoprim',
+        strength_raw: '160mg',
+        strength_value: 160,
+        strength_unit: 'mg',
+      },
+    ],
+  };
   additional.source_identity.code = '9999';
-  additional.product_id = `sha256:${'a'.repeat(64)}`;
-  additional.product_assertion_sha256 = 'b'.repeat(64);
+  additional.product_id = productIdForRow(additionalRow);
+  additional.product_assertion_sha256 = productAssertionHashForRow(additionalRow);
+  additional.product_assertion = productAssertionForRow(additionalRow);
   combination.presentations.push(additional);
+  combination.review.evidence.find(
+    (evidence) => evidence.evidence_ref === 'pmbjp-product-list',
+  ).identifier = 'pmbjp-product-list:89,90,9999';
   attachAuthenticReport(source);
 
   const compiled = compileInteractionRuntimePack(source);

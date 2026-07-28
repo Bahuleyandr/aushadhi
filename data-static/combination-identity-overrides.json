@@ -65,6 +65,28 @@
           },
           "product_id": "sha256:f3835b624129e57ede72edc56a6106782aa9df2e6f5491ebd09bd0ac9656e03a",
           "product_assertion_sha256": "91dea78c9c4194164d7dcd131472f801478c0a2268557aae03662fcbb64b7446",
+          "product_assertion": {
+            "brand_name": "Co-trimoxazole (Sulphamethoxazole 800mg and Trimethoprim 160mg) Tablets IP",
+            "manufacturer": "PMBJP (Jan Aushadhi)",
+            "pack_label": "10's",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "co-trimoxazole sulphamethoxazole",
+                "source_field": "molecule",
+                "strength_raw": "800mg",
+                "strength_value": 800,
+                "strength_unit": "mg"
+              },
+              {
+                "observed_name": "trimethoprim",
+                "source_field": "molecule",
+                "strength_raw": "160mg",
+                "strength_value": 160,
+                "strength_unit": "mg"
+              }
+            ]
+          },
           "route": "oral",
           "formulation": "tablet",
           "rxnorm_scd": {
@@ -103,6 +125,28 @@
           },
           "product_id": "sha256:1b8857c5423094122e608d865db146fa2ffc7e434df540a2b0cf8bd821d33521",
           "product_assertion_sha256": "9f5eb20bf581a8e78decb7adcaa66e532e2098748ba8bc27a63a3483f90b0547",
+          "product_assertion": {
+            "brand_name": "Co-trimoxazole (Sulphamethoxazole 100mg and Trimethoprim 20mg) Tablets IP",
+            "manufacturer": "PMBJP (Jan Aushadhi)",
+            "pack_label": "10's",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "co-trimoxazole sulphamethoxazole",
+                "source_field": "molecule",
+                "strength_raw": "100mg",
+                "strength_value": 100,
+                "strength_unit": "mg"
+              },
+              {
+                "observed_name": "trimethoprim",
+                "source_field": "molecule",
+                "strength_raw": "20mg",
+                "strength_value": 20,
+                "strength_unit": "mg"
+              }
+            ]
+          },
           "route": "oral",
           "formulation": "tablet",
           "rxnorm_scd": {
