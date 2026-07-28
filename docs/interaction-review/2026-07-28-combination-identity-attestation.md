@@ -20,8 +20,9 @@ repository:     Bahuleyandr/aushadhi   (private)
 branch:         main
 review_range:   863a4b5abd9839e068e6afb8bb246718b3716feb
                 ..
-                <head_commit below>
-head_commit:    see HEAD_COMMIT.txt, written by the same commit as this packet
+                e90332def83337c5b8b81e619006bd9eb4f64415
+head_commit:    e90332def83337c5b8b81e619006bd9eb4f64415
+                (also recorded in docs/interaction-review/HEAD_COMMIT.txt)
 git rev-parse HEAD        == git rev-parse origin/main
 git status --porcelain    == empty
 node:           v26.5.0
