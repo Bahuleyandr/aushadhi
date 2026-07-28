@@ -368,6 +368,9 @@ function validateLicenceNotices(value) {
     }
     for (const field of ['licence_url', 'source_url']) {
       const raw = requireString(notice[field], `${label}.${field}`);
+      if (raw !== raw.trim() || !raw.startsWith('https://')) {
+        throw new TypeError(`${label}.${field} must be a canonical HTTPS URL`);
+      }
       let url;
       try {
         url = new URL(raw);

@@ -520,6 +520,18 @@ test('empty and invalid rule packs fail closed and cannot claim complete coverag
     }),
     /licence_notices\.source/u,
   );
+  for (const noticeMutation of [
+    (notice) => { notice.attribution = '   '; },
+    (notice) => { notice.licence_url = 'HTTPS://creativecommons.org/licenses/by/4.0/legalcode'; },
+    (notice) => { notice.source_url = '  https://example.test/aushadhi  '; },
+  ]) {
+    const invalidNoticePack = pack();
+    noticeMutation(invalidNoticePack.licence_notices['aushadhi-open-clinician-rules']);
+    assert.throws(
+      () => validateRulePack(invalidNoticePack),
+      /licence_notices/u,
+    );
+  }
 
   const duplicateIds = [rule(), rule()];
   assert.throws(() => validateRulePack(pack({ rules: duplicateIds })), /duplicate rule_id/i);
@@ -817,6 +829,7 @@ test('the checked-in rule schema exposes the same versioned D1 fields as the run
   ));
   assert.deepEqual(schema.properties.schema_version.enum, ['1.0.0', '1.1.0']);
   assert.ok(schema.required.includes('licence_notices'));
+  assert.equal(schema.$defs.nonEmptyString.pattern, '\\S');
   assert.deepEqual(
     Object.keys(schema.$defs.rule.properties)
       .filter((key) => [
