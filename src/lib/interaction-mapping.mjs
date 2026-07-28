@@ -295,11 +295,32 @@ export function validateIngredientMappingManifest(manifest) {
   return true;
 }
 
+export function sourceIdentityKey(identity) {
+  return `${identity.namespace}:${identity.code}`;
+}
+
+// The catalogue records PMBJP products under the source name `janaushadhi`;
+// reviewed mappings name the namespace `presentation:pmbjp`. Keep the alias
+// explicit rather than guessing at resolution time.
+const SOURCE_NAMESPACE_BY_CATALOGUE_SOURCE = new Map([['janaushadhi', 'presentation:pmbjp']]);
+
+export function productSourceIdentityKeys(product) {
+  const keys = [];
+  for (const source of product.sources ?? []) {
+    if (!isObject(source) || source.source_id === undefined || source.source_id === null) continue;
+    const namespace = SOURCE_NAMESPACE_BY_CATALOGUE_SOURCE.get(source.source);
+    if (namespace === undefined) continue;
+    keys.push(`${namespace}:${source.source_id}`);
+  }
+  return keys;
+}
+
 function validatePresentationMapping(value, index) {
   const label = `product presentation mapping ${index}`;
   requireObject(value, label);
   requireExactKeys(value, new Set([
     'mapping_id',
+    'source_identity',
     'product_id',
     'product_assertion_sha256',
     'allowed_profiles',
@@ -307,6 +328,33 @@ function validatePresentationMapping(value, index) {
     'review',
   ]), label);
   requireString(value.mapping_id, `${label}.mapping_id`);
+
+  // D2: a source-specific mapping binds the catalogue's STABLE source identity
+  // alongside the content-derived product id. product_id is content-derived, so
+  // when a reviewed product's content drifts its id changes too and an id-keyed
+  // mapping silently stops matching. The source identity survives that.
+  if (value.source_identity !== undefined) {
+    const identityLabel = `${label}.source_identity`;
+    requireObject(value.source_identity, identityLabel);
+    requireExactKeys(value.source_identity, new Set(['namespace', 'code']), identityLabel);
+    requireString(value.source_identity.namespace, `${identityLabel}.namespace`);
+    const code = requireString(value.source_identity.code, `${identityLabel}.code`);
+    const parts = value.mapping_id.split(':');
+    const namespaceFromId = `${parts[0]}:${parts[1]}`;
+    if (value.source_identity.namespace !== namespaceFromId) {
+      throw new TypeError(
+        `${identityLabel} namespace ${value.source_identity.namespace} does not match its `
+        + `mapping_id namespace ${namespaceFromId}`,
+      );
+    }
+    if (code !== parts[2]) {
+      throw new TypeError(
+        `${identityLabel} code ${code} does not match its mapping_id code ${parts[2]}`,
+      );
+    }
+  } else if (value.mapping_id.startsWith(PMBJP_MAPPING_NAMESPACE)) {
+    throw new TypeError(`${label} requires a source_identity`);
+  }
   requireLocalId(value.product_id, `${label}.product_id`);
   requireSha256(value.product_assertion_sha256, `${label}.product_assertion_sha256`);
   requireObject(value.presentation, `${label}.presentation`);
@@ -384,6 +432,7 @@ export function validateProductPresentationManifest(manifest) {
   }
   const mappingIds = new Set();
   const productIds = new Set();
+  const sourceIdentities = new Set();
   for (let index = 0; index < manifest.mappings.length; index += 1) {
     const mapping = manifest.mappings[index];
     validatePresentationMapping(mapping, index);
@@ -392,6 +441,13 @@ export function validateProductPresentationManifest(manifest) {
     }
     if (productIds.has(mapping.product_id)) {
       throw new TypeError(`duplicate product presentation mapping ${mapping.product_id}`);
+    }
+    if (mapping.source_identity !== undefined) {
+      const key = sourceIdentityKey(mapping.source_identity);
+      if (sourceIdentities.has(key)) {
+        throw new TypeError(`duplicate presentation source identity ${key}`);
+      }
+      sourceIdentities.add(key);
     }
     mappingIds.add(mapping.mapping_id);
     productIds.add(mapping.product_id);
@@ -478,29 +534,74 @@ function buildMappingIndexes(ingredientManifest, presentationManifest, profile) 
         .filter((entry) => mappingAllowedForProfile(entry, profile))
         .map((entry) => [entry.product_id, entry]),
     ),
+    presentationsBySourceIdentity: new Map(
+      presentationManifest.mappings
+        .filter((entry) => (
+          mappingAllowedForProfile(entry, profile) && entry.source_identity !== undefined
+        ))
+        .map((entry) => [sourceIdentityKey(entry.source_identity), entry]),
+    ),
   };
 }
 
-function mappedPresentation(product, entry) {
+function mappedPresentation(product, indexes) {
   const assertionSha256 = productAssertionHashForRow(product);
-  if (!entry) {
+  const productId = productIdForRow(product);
+  const unresolved = (status, error, extra = {}) => ({
+    status,
+    product_assertion_sha256: assertionSha256,
+    route: null,
+    formulation: null,
+    error,
+    ...extra,
+  });
+
+  // A source-bound mapping is authoritative and NEVER falls back to content-only
+  // resolution: the product must present the reviewed source identity.
+  const productKeys = productSourceIdentityKeys(product);
+  let sourceEntry = null;
+  for (const key of productKeys) {
+    const candidate = indexes.presentationsBySourceIdentity.get(key);
+    if (candidate) {
+      sourceEntry = candidate;
+      break;
+    }
+  }
+  if (sourceEntry) {
+    if (sourceEntry.product_id !== productId
+        || sourceEntry.product_assertion_sha256 !== assertionSha256) {
+      return unresolved('stale', 'product_content_changed_since_review', {
+        mapping_id: sourceEntry.mapping_id,
+        source_identity: sourceEntry.source_identity,
+      });
+    }
     return {
-      status: 'unmapped',
+      status: 'reviewed_override',
+      mapping_id: sourceEntry.mapping_id,
+      source_identity: sourceEntry.source_identity,
       product_assertion_sha256: assertionSha256,
-      route: null,
-      formulation: null,
-      error: 'reviewed_product_presentation_mapping_required',
+      route: sourceEntry.presentation.route,
+      formulation: sourceEntry.presentation.formulation,
     };
   }
+
+  const entry = indexes.presentations.get(productId);
+  if (!entry) {
+    return unresolved('unmapped', 'reviewed_product_presentation_mapping_required');
+  }
+  if (entry.source_identity !== undefined) {
+    // the content matches a reviewed mapping, but this product does not carry the
+    // reviewed source identity, so the mapping does not apply to it
+    return unresolved(
+      'unmapped',
+      productKeys.length === 0 ? 'reviewed_source_identity_absent' : 'source_identity_mismatch',
+      { mapping_id: entry.mapping_id, source_identity: entry.source_identity },
+    );
+  }
   if (entry.product_assertion_sha256 !== assertionSha256) {
-    return {
-      status: 'stale',
+    return unresolved('stale', 'product_assertion_changed_since_review', {
       mapping_id: entry.mapping_id,
-      product_assertion_sha256: assertionSha256,
-      route: null,
-      formulation: null,
-      error: 'product_assertion_changed_since_review',
-    };
+    });
   }
   return {
     status: 'reviewed_override',
@@ -578,6 +679,9 @@ export function mapResolvedProducts({
 }) {
   if (!Array.isArray(records)) throw new TypeError('records must be an array');
   const indexes = buildMappingIndexes(ingredientManifest, presentationManifest, profile);
+  // a source identity must be unique across the catalogue: two rows claiming one
+  // reviewed identity is an ambiguity, never something to guess between
+  const seenSourceIdentities = new Set();
   return records.map((record, recordIndex) => {
     requireObject(record, `record ${recordIndex}`);
     if (record.status !== 'resolved') return structuredClone(record);
@@ -589,10 +693,13 @@ export function mapResolvedProducts({
     if (!Array.isArray(record.product.ingredients) || record.product.ingredients.length === 0) {
       throw new TypeError(`record ${recordIndex}.product.ingredients must be non-empty`);
     }
-    const presentation = mappedPresentation(
-      record.product,
-      indexes.presentations.get(expectedProductId),
-    );
+    for (const key of productSourceIdentityKeys(record.product)) {
+      if (seenSourceIdentities.has(key)) {
+        throw new TypeError(`duplicate source identity ${key} across catalogue records`);
+      }
+      seenSourceIdentities.add(key);
+    }
+    const presentation = mappedPresentation(record.product, indexes);
     const seenOccurrences = new Set();
     const ingredients = record.product.ingredients.map((ingredient) => {
       const assertion = createIngredientIdentity(ingredient);

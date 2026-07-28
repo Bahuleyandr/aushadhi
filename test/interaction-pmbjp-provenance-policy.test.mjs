@@ -38,6 +38,10 @@ const manifestWith = (evidenceRecords, mappingId = 'presentation:pmbjp:9999:oral
     .product_assertion_namespace,
   mappings: [{
     mapping_id: mappingId,
+    // D2: a PMBJP mapping binds the catalogue's stable source identity
+    ...(mappingId.startsWith('presentation:pmbjp:')
+      ? { source_identity: { namespace: 'presentation:pmbjp', code: mappingId.split(':')[2] } }
+      : {}),
     product_id: `sha256:${'b'.repeat(64)}`,
     product_assertion_sha256: 'c'.repeat(64),
     allowed_profiles: ['internal-evaluation'],

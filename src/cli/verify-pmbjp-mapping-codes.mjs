@@ -89,9 +89,15 @@ async function loadOfficialList(listPath) {
   return byCode;
 }
 
-async function loadCatalogueByProductId(cataloguePath, wantedProductIds) {
-  const { productIdForRow } = await import('../lib/product-resolver.mjs');
-  const found = new Map();
+// D2: the check is on the RESOLVER BINDING, not merely on a code appearing in a
+// list. A reviewed mapping is located by the catalogue's stable source identity,
+// and the catalogue is swept in full so a source identity claimed by two rows is an
+// error rather than whichever row happened to be read first.
+async function loadCatalogueBindings(cataloguePath, wantedSourceKeys) {
+  const { productIdForRow, productAssertionHashForRow } = await import('../lib/product-resolver.mjs');
+  const { productSourceIdentityKeys } = await import('../lib/interaction-mapping.mjs');
+  const bySourceKey = new Map();
+  const duplicates = new Set();
   const stream = readline.createInterface({
     input: fs.createReadStream(cataloguePath),
     crlfDelay: Infinity,
@@ -100,12 +106,20 @@ async function loadCatalogueByProductId(cataloguePath, wantedProductIds) {
     if (!line.includes('janaushadhi')) continue;
     let row;
     try { row = JSON.parse(line); } catch { continue; }
-    const productId = productIdForRow(row);
-    if (!wantedProductIds.has(productId)) continue;
-    found.set(productId, row);
-    if (found.size === wantedProductIds.size) break;
+    for (const key of productSourceIdentityKeys(row)) {
+      if (!wantedSourceKeys.has(key)) continue;
+      if (bySourceKey.has(key)) {
+        duplicates.add(key);
+        continue;
+      }
+      bySourceKey.set(key, {
+        row,
+        product_id: productIdForRow(row),
+        product_assertion_sha256: productAssertionHashForRow(row),
+      });
+    }
   }
-  return found;
+  return { bySourceKey, duplicates };
 }
 
 export async function verifyPmbjpMappingCodes({ listPath, expectedSha256, cataloguePath }) {
@@ -118,20 +132,33 @@ export async function verifyPmbjpMappingCodes({ listPath, expectedSha256, catalo
 
   const manifest = JSON.parse(fs.readFileSync(MAPPING_PATH, 'utf8'));
   const officialByCode = await loadOfficialList(listPath);
-  const wanted = new Set(manifest.mappings.map((mapping) => mapping.product_id));
-  const catalogue = await loadCatalogueByProductId(cataloguePath, wanted);
+  const wantedSourceKeys = new Set(
+    manifest.mappings
+      .filter((mapping) => mapping.source_identity !== undefined)
+      .map((mapping) => `${mapping.source_identity.namespace}:${mapping.source_identity.code}`),
+  );
+  const { bySourceKey, duplicates } = await loadCatalogueBindings(cataloguePath, wantedSourceKeys);
 
   const results = [];
   for (const mapping of manifest.mappings) {
     const codeMatch = MAPPING_ID_RE.exec(mapping.mapping_id);
     const code = codeMatch ? codeMatch[1] : null;
-    const row = catalogue.get(mapping.product_id);
+    const sourceKey = mapping.source_identity === undefined
+      ? null
+      : `${mapping.source_identity.namespace}:${mapping.source_identity.code}`;
+    const binding = sourceKey === null ? undefined : bySourceKey.get(sourceKey);
+    const row = binding?.row;
     const officialName = code ? officialByCode.get(code) ?? null : null;
 
     let status;
     if (!code) status = 'unparseable_mapping_id';
-    else if (!row) status = 'catalogue_row_missing';
-    else if (officialName === null) status = 'code_absent_from_source_list';
+    else if (sourceKey === null) status = 'mapping_not_source_bound';
+    else if (duplicates.has(sourceKey)) status = 'source_identity_claimed_by_several_rows';
+    else if (!binding) status = 'source_identity_absent_from_catalogue';
+    else if (binding.product_id !== mapping.product_id) status = 'bound_product_id_changed';
+    else if (binding.product_assertion_sha256 !== mapping.product_assertion_sha256) {
+      status = 'bound_product_assertion_changed';
+    } else if (officialName === null) status = 'code_absent_from_source_list';
     else {
       status = namesAgree(row.brand_name, officialName)
         ? 'confirmed'
@@ -141,6 +168,7 @@ export async function verifyPmbjpMappingCodes({ listPath, expectedSha256, catalo
     results.push({
       mapping_id: mapping.mapping_id,
       pmbjp_code: code,
+      source_identity: sourceKey,
       mapped_product: row?.brand_name ?? null,
       source_list_product: officialName,
       status,
