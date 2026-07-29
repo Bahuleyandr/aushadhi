@@ -1,0 +1,65 @@
+{
+  "schema_id": "aushadhi.interaction-approval-draft-package-status",
+  "schema_version": "1.0.0",
+  "package_id": "warfarin-cotrimoxazole-vnext-2026-07-29",
+  "prepared_at": "2026-07-29",
+  "package_status": "draft_non_authorizing",
+  "clinician_review_sha256_profile": "UTF-8-NFC-LF-no-trailing-LF",
+  "clinician_review_sha256": "58e83f86cfd16a633f4ba7f4fd72f9e6e7a75f0fca8031b24471ff4b9f332a9b",
+  "policy_signoff_ready": false,
+  "rule_signoff_ready": false,
+  "promotion_ready": false,
+  "authority": {
+    "clinical_use": "none",
+    "production": "none",
+    "deployment": "none"
+  },
+  "implemented_controls": [
+    "repository-native draft artifacts with exact non-authorizing value validation",
+    "exact current-check-only temporal scope",
+    "no age-derived population branch",
+    "six explicitly enumerated PMBJP oral-tablet product pairs",
+    "rehashed committed RxNorm and combination-identity objects plus current-manifest product and assertion bindings, draft-row hash, and repository-base relationship",
+    "default-deny audience allowlists with explicit intersection-only composition and precedence, distinct unreviewed or identity-unresolved and exposure-unresolved rendering, per-state evidence plus exposure and confirmation-method compatibility, and trusted order-event and authorized-actor correction-path and terminal evidence requirements",
+    "complete clinician-rendering equivalence checks plus a normalized whole-document SHA-256 binding for canonical clinical text, all workflow mappings, optional audit fields, change control, and all requested sign-off items",
+    "duplicate-member-rejecting raw JSON parsing, exact schema discriminators, and deeply immutable validated snapshots",
+    "detached event, signature-envelope, receipt, and checkpoint templates",
+    "implemented-versus-required status separation",
+    "production-open remains empty"
+  ],
+  "required_before_policy_signoff": [
+    "approve a bootstrap governance policy and governance approver quorum",
+    "pin a conformant RFC 8785 implementation and conformance vectors",
+    "pin signature, signer-registry, authorization-registry, and event-store trust profiles",
+    "approve the exact approval-record container and approval-statement hash-normalization profile",
+    "define reviewer credential validity, revocation, replay, and trusted-time controls",
+    "define append-only retention and externally retained signed checkpoints"
+  ],
+  "required_before_rule_signoff": [
+    "complete and approve the governance policy",
+    "replace the draft policy binding with the final policy JCS SHA-256",
+    "clinically approve or reject PMBJP 90 strength extrapolation explicitly",
+    "clinically approve the exact classification, scope, text, and workflow boundary",
+    "finalize the exact approval statement without placeholders",
+    "commit the final policy and subject before creating any approval event",
+    "reverify the captured openFDA payload and fragment hashes against the retained source objects"
+  ],
+  "required_before_promotion": [
+    "create a new immutable authenticated approval event; do not mutate this template",
+    "verify the detached signature against pinned trust and authorization records",
+    "append the record to the approved store and retain a valid signed checkpoint",
+    "reconcile the non-authorizing JSONL row and pin its new hash",
+    "implement a medication-status or intended-use input contract before claiming temporal enforcement",
+    "implement structured audience rendering with distinct unreviewed or identity-unresolved and exposure-unresolved behavior without flattening clinical authority",
+    "implement per-state exposure and confirmation-method compatibility plus trusted order-event and authorized-actor validation for cancellation or correction terminal states",
+    "implement the evaluation watermark and exact draft-package gate runner",
+    "run source, identity, six-pair, negative-case, supersession, and full regression gates",
+    "confirm data-static/interaction-rules.json remains empty"
+  ],
+  "required_before_production": [
+    "obtain separate India-specific clinical, regulatory, pharmacy, antimicrobial-stewardship, privacy, and security governance review",
+    "complete shadow-mode, human-factors, alert-burden, rollback, kill-switch, and drift-monitoring validation",
+    "define numerical production acceptance criteria and accountable owners",
+    "obtain separate production and deployment authorization"
+  ]
+}
