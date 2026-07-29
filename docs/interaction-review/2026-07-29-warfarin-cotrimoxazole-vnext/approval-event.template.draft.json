@@ -1,0 +1,95 @@
+{
+  "schema_id": "aushadhi.interaction-approval-event-template",
+  "schema_version": "1.0.0",
+  "template_only": true,
+  "event_body_template": {
+    "schema_id": "aushadhi.interaction-approval-event",
+    "schema_version": "1.0.0",
+    "event_id": null,
+    "event_type": null,
+    "decision": null,
+    "subject_kind": null,
+    "subject_id": null,
+    "subject_version": null,
+    "subject_jcs_sha256": null,
+    "governance_policy_jcs_sha256": null,
+    "approval_statement": null,
+    "approval_statement_sha256": null,
+    "approval_statement_sha256_profile": "UTF-8-NFC-LF-no-trailing-LF",
+    "authority_granted": null,
+    "reviewer_id": null,
+    "reviewer_role": null,
+    "reviewed_at_utc": null,
+    "approval_artifact_commit": null,
+    "supersedes_event_id": null,
+    "supersedes_approval_record_jcs_sha256": null,
+    "review_due_at_utc": null,
+    "authority_not_after_utc": null
+  },
+  "detached_signature_envelope_template": {
+    "schema_id": "aushadhi.interaction-approval-signature-envelope",
+    "schema_version": "1.0.0",
+    "event_body_jcs_sha256": null,
+    "signature_profile_id": null,
+    "signature_input_domain": "aushadhi.approval-event.v1\u0000",
+    "signer_principal_id": null,
+    "signer_key_id": null,
+    "authentication_assertion_id": null,
+    "authentication_assertion_issuer": null,
+    "authentication_assertion_sha256": null,
+    "authorization_assertion_sha256": null,
+    "signature_algorithm": null,
+    "signature_base64": null
+  },
+  "approval_record_template": {
+    "schema_id": "aushadhi.interaction-approval-record",
+    "schema_version": "1.0.0",
+    "canonicalization": "RFC8785-JCS",
+    "digest_algorithm": "SHA-256",
+    "event_body": null,
+    "detached_signature_envelope": null,
+    "excluded_members": [
+      "append_only_store_receipt",
+      "signed_checkpoint"
+    ]
+  },
+  "append_only_store_receipt_template": {
+    "receipt_body_template": {
+      "schema_id": "aushadhi.interaction-approval-store-receipt",
+      "schema_version": "1.0.0",
+      "receipt_id": null,
+      "event_store_id": null,
+      "event_store_configuration_sha256": null,
+      "stream_id": null,
+      "sequence": null,
+      "approval_record_jcs_sha256": null,
+      "accepted_at_utc": null,
+      "previous_approval_record_jcs_sha256": null,
+      "verification": null
+    },
+    "detached_store_signature_template": {
+      "receipt_body_jcs_sha256": null,
+      "signature_algorithm": null,
+      "store_key_id": null,
+      "signature_base64": null
+    }
+  },
+  "signed_checkpoint_template": {
+    "checkpoint_body_template": {
+      "schema_id": "aushadhi.interaction-approval-store-checkpoint",
+      "schema_version": "1.0.0",
+      "stream_id": null,
+      "through_sequence": null,
+      "head_approval_record_jcs_sha256": null,
+      "record_count": null,
+      "checkpointed_at_utc": null,
+      "previous_checkpoint_jcs_sha256": null
+    },
+    "detached_store_signature_template": {
+      "checkpoint_body_jcs_sha256": null,
+      "signature_algorithm": null,
+      "store_key_id": null,
+      "signature_base64": null
+    }
+  }
+}

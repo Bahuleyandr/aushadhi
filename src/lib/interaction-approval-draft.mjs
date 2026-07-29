@@ -1,0 +1,1869 @@
+import crypto from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+
+const POLICY_KEYS = new Set([
+  'schema_id',
+  'schema_version',
+  'policy_id',
+  'policy_version',
+  'supersedes_policy_jcs_sha256',
+  'operational_profile',
+  'authority_ceiling',
+  'canonicalization_profile',
+  'trust_profile_bindings',
+  'status_model',
+  'failure_semantics',
+  'runtime_safety',
+  'applicability_model',
+  'workflow_contract',
+  'gate_policy',
+  'profile_requirements',
+  'change_control',
+  'review_policy',
+]);
+
+const SUBJECT_KEYS = new Set([
+  'schema_id',
+  'schema_version',
+  'rule_family_id',
+  'subject_version',
+  'supersedes_subject_jcs_sha256',
+  'governance_policy_binding',
+  'requested_profile',
+  'authority_ceiling',
+  'repository_provenance',
+  'clinical_classification',
+  'temporal_scope',
+  'population_scope',
+  'identity_scope',
+  'product_pairs',
+  'clinical_text',
+  'audience_bindings',
+  'workflow_requirements',
+  'evidence_boundary',
+  'identity_evidence_bindings',
+  'supersession',
+  'exclusions',
+  'change_control',
+]);
+
+const EVENT_TEMPLATE_KEYS = new Set([
+  'schema_id',
+  'schema_version',
+  'template_only',
+  'event_body_template',
+  'detached_signature_envelope_template',
+  'approval_record_template',
+  'append_only_store_receipt_template',
+  'signed_checkpoint_template',
+]);
+
+const STATUS_KEYS = new Set([
+  'schema_id',
+  'schema_version',
+  'package_id',
+  'prepared_at',
+  'package_status',
+  'clinician_review_sha256_profile',
+  'clinician_review_sha256',
+  'policy_signoff_ready',
+  'rule_signoff_ready',
+  'promotion_ready',
+  'authority',
+  'implemented_controls',
+  'required_before_policy_signoff',
+  'required_before_rule_signoff',
+  'required_before_promotion',
+  'required_before_production',
+]);
+
+const AUTHORITY_CEILING_KEYS = new Set([
+  'clinical_use',
+  'production',
+  'deployment',
+]);
+const POLICY_CANONICALIZATION_KEYS = new Set([
+  'method',
+  'encoding',
+  'digest_algorithm',
+  'implementation_profile_id',
+  'conformance_vectors_sha256',
+]);
+const POLICY_TRUST_BINDING_KEYS = new Set([
+  'bootstrap_governance_policy_jcs_sha256',
+  'signature_profile_id',
+  'event_store_profile_id',
+  'signer_registry_id',
+  'authorization_registry_id',
+]);
+const POLICY_STATUS_MODEL_KEYS = new Set([
+  'independent_dimensions',
+  'historical_event_authenticity_is_immutable',
+  'current_authority_is_derived_from_lifecycle_events',
+  'promotion_eligibility_is_derived_from_current_gates',
+]);
+const POLICY_FAILURE_KEYS = new Set([
+  'technical_gate_failure',
+  'source_or_identity_drift',
+  'invalid_signature_or_subject_binding',
+  'historical_event_mutation',
+  'missing_or_conflicting_applicability',
+]);
+const POLICY_RUNTIME_SAFETY_KEYS = new Set([
+  'missing_stale_ambiguous_or_drifted_identity',
+  'unreviewed_clinical_content_hidden',
+  'fuzzy_identity_acceptance',
+  'brand_to_systemic_route_inference',
+  'blank_result_means_safe',
+  'therapeutic_duplication_is_interaction',
+]);
+const POLICY_APPLICABILITY_KEYS = new Set([
+  'initial_temporal_mode',
+  'recent_exposure_supported',
+  'episode_state_supported',
+  'age_derived_branch_supported',
+  'current_check_meaning',
+]);
+const POLICY_WORKFLOW_KEYS = new Set([
+  'pending_states',
+  'terminal_states',
+  'urgent_supply_escalated_is_terminal',
+  'free_text_only_resolution_allowed',
+  'pharmacy_can_change_or_stop_medicine_independently',
+]);
+const POLICY_GATE_KEYS = new Set([
+  'required_before_promotion',
+  'passing_gates_create_clinical_authority',
+  'failed_or_stale_gate_invalidates_historical_approval',
+]);
+const POLICY_PROFILE_KEYS = new Set([
+  'evaluation_watermark',
+  'production_open_required_empty',
+  'output_on_missing_stale_ambiguous_or_drifted_scope',
+  'prohibited_output_on_unreviewed_scope',
+]);
+const POLICY_CHANGE_CONTROL_KEYS = new Set([
+  'material_subject_change_requires_new_approval_event',
+  'policy_replacement_does_not_migrate_existing_subjects',
+  'completed_event_mutation',
+  'correction_model',
+]);
+const POLICY_REVIEW_KEYS = new Set([
+  'governance_policy_approval_required',
+  'rule_subject_approval_required',
+  'policy_approver_requirements_resolved',
+  'rule_approver_requirements_resolved',
+  'signature_profile_resolved',
+  'event_store_profile_resolved',
+]);
+
+const SUBJECT_POLICY_BINDING_KEYS = new Set([
+  'policy_id',
+  'policy_version',
+  'policy_jcs_sha256',
+]);
+const SUBJECT_REPOSITORY_PROVENANCE_KEYS = new Set([
+  'original_review_base',
+  'verified_source_repository_base',
+  'current_non_authorizing_draft_row_sha256',
+]);
+const SUBJECT_CLASSIFICATION_KEYS = new Set([
+  'severity',
+  'severity_meaning',
+  'dispense_action',
+  'classification_authority',
+]);
+const SUBJECT_IDENTITY_SCOPE_KEYS = new Set([
+  'expected_exact_product_pair_count',
+  'object',
+  'perpetrator',
+  'route',
+  'formulation',
+]);
+const SUBJECT_OBJECT_IDENTITY_KEYS = new Set([
+  'binding_kind',
+  'ingredient_mapping_id',
+  'ingredient_id',
+  'presentation_mapping_ids',
+  'product_assertions',
+]);
+const SUBJECT_OBJECT_PRODUCT_KEYS = new Set([
+  'pmbjp_code',
+  'mapping_id',
+  'product_id',
+  'product_assertion_sha256',
+]);
+const SUBJECT_PERPETRATOR_IDENTITY_KEYS = new Set([
+  'binding_kind',
+  'combination_id',
+  'rxnorm_min_rxcui',
+  'match_mode',
+  'product_assertions',
+]);
+const SUBJECT_PERPETRATOR_PRODUCT_KEYS = new Set([
+  'pmbjp_code',
+  'product_id',
+  'product_assertion_sha256',
+  'rxnorm_scd_rxcui',
+  'evidence_alignment',
+  'direct_strength_and_dose_form_alignment',
+  'direct_pmbjp_product_label_evidence',
+  'requires_strength_extrapolation_approval',
+  'requires_explicit_clinician_approval',
+]);
+const SUBJECT_PRODUCT_PAIR_KEYS = new Set([
+  'perpetrator_pmbjp_code',
+  'perpetrator_product_id',
+  'object_pmbjp_code',
+  'object_product_id',
+]);
+const SUBJECT_WORKFLOW_KEYS = new Set([
+  'resolution_model',
+  'pending_states',
+  'terminal_states',
+  'terminal_state_requirements',
+  'optional_audit_fields',
+  'free_text_only_resolution_allowed',
+  'urgent_supply_pathway',
+]);
+const SUBJECT_URGENT_PATHWAY_KEYS = new Set([
+  'authority',
+  'pathway_id',
+  'can_resolve_clinical_review',
+  'meaning',
+]);
+const SUBJECT_IDENTITY_BINDING_KEYS = new Set([
+  'rxnorm_combination_bundle',
+  'combination_identity_manifest',
+  'pmbjp_product_source',
+]);
+const SUBJECT_RXNORM_BUNDLE_KEYS = new Set([
+  'path',
+  'committed_blob_content_sha256',
+  'git_blob_oid_sha1',
+  'rxnorm_release',
+  'rxnorm_api_version',
+  'authority',
+]);
+const SUBJECT_COMBINATION_MANIFEST_KEYS = new Set([
+  'path',
+  'committed_blob_content_sha256',
+  'git_blob_oid_sha1',
+]);
+const SUBJECT_PMBJP_SOURCE_KEYS = new Set([
+  'pdf_sha256',
+  'xpdf_table_extract_sha256',
+  'parsed_ledger_sha256',
+  'parsed_row_count',
+]);
+const SUBJECT_SUPERSESSION_KEYS = new Set([
+  'interaction_family_id',
+  'subject_specificity',
+  'supplements_component_subjects',
+  'supersedes_rule_ids',
+]);
+const SUBJECT_CHANGE_CONTROL_KEYS = new Set([
+  'new_approval_required_for',
+  'source_or_identity_drift_blocks_promotion',
+  'draft_row_reconciliation_required_before_promotion',
+]);
+
+const EVENT_BODY_KEYS = new Set([
+  'schema_id',
+  'schema_version',
+  'event_id',
+  'event_type',
+  'decision',
+  'subject_kind',
+  'subject_id',
+  'subject_version',
+  'subject_jcs_sha256',
+  'governance_policy_jcs_sha256',
+  'approval_statement',
+  'approval_statement_sha256',
+  'authority_granted',
+  'reviewer_id',
+  'reviewer_role',
+  'reviewed_at_utc',
+  'approval_artifact_commit',
+  'supersedes_event_id',
+  'supersedes_event_record_jcs_sha256',
+  'review_due_at_utc',
+  'authority_not_after_utc',
+]);
+const SIGNATURE_ENVELOPE_KEYS = new Set([
+  'schema_id',
+  'schema_version',
+  'event_body_jcs_sha256',
+  'signature_profile_id',
+  'signature_input_domain',
+  'signer_principal_id',
+  'signer_key_id',
+  'authentication_assertion_id',
+  'authentication_assertion_issuer',
+  'authentication_assertion_sha256',
+  'authorization_assertion_sha256',
+  'signature_algorithm',
+  'signature_base64',
+]);
+const STORE_RECEIPT_TEMPLATE_KEYS = new Set([
+  'receipt_body_template',
+  'detached_store_signature_template',
+]);
+const STORE_RECEIPT_BODY_KEYS = new Set([
+  'schema_id',
+  'schema_version',
+  'receipt_id',
+  'event_store_id',
+  'event_store_configuration_sha256',
+  'stream_id',
+  'sequence',
+  'approval_record_jcs_sha256',
+  'accepted_at_utc',
+  'previous_record_jcs_sha256',
+  'verification',
+]);
+const STORE_RECEIPT_SIGNATURE_KEYS = new Set([
+  'receipt_body_jcs_sha256',
+  'signature_algorithm',
+  'store_key_id',
+  'signature_base64',
+]);
+const STORE_CHECKPOINT_TEMPLATE_KEYS = new Set([
+  'checkpoint_body_template',
+  'detached_store_signature_template',
+]);
+const STORE_CHECKPOINT_BODY_KEYS = new Set([
+  'schema_id',
+  'schema_version',
+  'stream_id',
+  'through_sequence',
+  'head_record_jcs_sha256',
+  'record_count',
+  'checkpointed_at_utc',
+  'previous_checkpoint_jcs_sha256',
+]);
+const STORE_CHECKPOINT_SIGNATURE_KEYS = new Set([
+  'checkpoint_body_jcs_sha256',
+  'signature_algorithm',
+  'store_key_id',
+  'signature_base64',
+]);
+const PACKAGE_AUTHORITY_KEYS = new Set([
+  'clinical_use',
+  'production',
+  'deployment',
+]);
+
+const EXPECTED_TEMPORAL_SCOPE = {
+  mode: 'current_check_only',
+  recent_exposure_trigger_enabled: false,
+  lookback_days: 0,
+  course_end_inference: 'prohibited',
+  operational_definition:
+    'both exact products are represented in the same current interaction check',
+  missing_or_conflicting_status: 'unresolved',
+};
+
+const EXPECTED_POPULATION_SCOPE = {
+  mode: 'not_parameterized',
+  age_filter: null,
+  age_inference: 'prohibited',
+  meaning:
+    'this subject authorizes no adult-only, paediatric-only, or age-derived branch',
+};
+
+const EXPECTED_POLICY_CANONICALIZATION = {
+  method: 'RFC8785-JCS',
+  encoding: 'UTF-8',
+  digest_algorithm: 'SHA-256',
+  implementation_profile_id: null,
+  conformance_vectors_sha256: null,
+};
+
+const EXPECTED_POLICY_TRUST_BINDINGS = {
+  bootstrap_governance_policy_jcs_sha256: null,
+  signature_profile_id: null,
+  event_store_profile_id: null,
+  signer_registry_id: null,
+  authorization_registry_id: null,
+};
+
+const EXPECTED_POLICY_STATUS_MODEL = {
+  independent_dimensions: [
+    'event_authenticity',
+    'clinical_approval_authority',
+    'subject_binding_status',
+    'technical_gate_status',
+    'promotion_eligibility',
+    'activation_status',
+  ],
+  historical_event_authenticity_is_immutable: true,
+  current_authority_is_derived_from_lifecycle_events: true,
+  promotion_eligibility_is_derived_from_current_gates: true,
+};
+
+const EXPECTED_POLICY_FAILURE_SEMANTICS = {
+  technical_gate_failure: 'block_promotion_only',
+  source_or_identity_drift: 'block_current_binding_and_promotion_pending_review',
+  invalid_signature_or_subject_binding: 'event_has_no_approval_effect',
+  historical_event_mutation: 'prohibited',
+  missing_or_conflicting_applicability: 'unresolved',
+};
+
+const EXPECTED_POLICY_RUNTIME_SAFETY = {
+  missing_stale_ambiguous_or_drifted_identity: 'unresolved',
+  unreviewed_clinical_content_hidden: true,
+  fuzzy_identity_acceptance: false,
+  brand_to_systemic_route_inference: false,
+  blank_result_means_safe: false,
+  therapeutic_duplication_is_interaction: false,
+};
+
+const EXPECTED_POLICY_APPLICABILITY = {
+  initial_temporal_mode: 'current_check_only',
+  recent_exposure_supported: false,
+  episode_state_supported: false,
+  age_derived_branch_supported: false,
+  current_check_meaning:
+    'both exact products are represented in the same current interaction check',
+};
+
+const EXPECTED_POLICY_WORKFLOW = {
+  pending_states: [
+    'manual_review_required',
+    'clinician_confirmation_pending',
+    'urgent_supply_escalated',
+    'correction_recheck_pending',
+  ],
+  terminal_states: [
+    'review_confirmed',
+    'no_concurrent_exposure_verified',
+    'order_cancelled',
+    'order_corrected_pair_absent_after_recheck',
+  ],
+  terminal_state_compatibility_required: true,
+  pending_state_requirements_required: true,
+  state_specific_exposure_compatibility_required: true,
+  state_specific_confirmation_method_compatibility_required: true,
+  terminal_order_state_requires_trusted_event_and_authorized_actor: true,
+  pharmacy_self_attestation_can_satisfy_terminal_order_state: false,
+  urgent_supply_escalated_is_terminal: false,
+  free_text_only_resolution_allowed: false,
+  pharmacy_can_change_or_stop_medicine_independently: false,
+};
+
+const EXPECTED_POLICY_GATES = {
+  required_before_promotion: [
+    'subject_policy_and_approval_event_integrity',
+    'repository_source_identity_and_product_bindings',
+    'exact_six_product_pairs',
+    'current_check_only_temporal_scope',
+    'medication_status_or_intent_input_contract',
+    'negative_identity_and_presentation_cases',
+    'workflow_and_audience_binding',
+    'supersession_and_duplicate_behavior',
+    'evaluation_watermark',
+    'production_open_empty',
+    'full_regression_suite',
+  ],
+  passing_gates_create_clinical_authority: false,
+  failed_or_stale_gate_invalidates_historical_approval: false,
+};
+
+const EXPECTED_POLICY_PROFILE_REQUIREMENTS = {
+  evaluation_watermark: 'INTERNAL EVALUATION — NOT FOR CLINICAL USE',
+  production_open_required_empty: true,
+  output_on_missing_stale_ambiguous_or_drifted_scope: [
+    'not_evaluated',
+    'unresolved',
+  ],
+  prohibited_output_on_unreviewed_scope: [
+    'safe',
+    'no_interaction',
+  ],
+};
+
+const EXPECTED_POLICY_CHANGE_CONTROL = {
+  material_subject_change_requires_new_approval_event: true,
+  policy_replacement_does_not_migrate_existing_subjects: true,
+  completed_event_mutation: 'prohibited',
+  correction_model: 'new_superseding_event',
+};
+
+const EXPECTED_POLICY_REVIEW = {
+  governance_policy_approval_required: true,
+  rule_subject_approval_required: true,
+  policy_approver_requirements_resolved: false,
+  rule_approver_requirements_resolved: false,
+  signature_profile_resolved: false,
+  event_store_profile_resolved: false,
+};
+
+const EXPECTED_EVIDENCE_BOUNDARY = {
+  evidence_jurisdiction: 'US',
+  product_catalogue: 'PMBJP',
+  product_market: 'India',
+  deployment_jurisdiction: 'none',
+  source_policy_id: 'openfda-labels',
+  set_id: '7f82e5e0-b627-a3f3-e053-2991aa0abaa5',
+  spl_version: 6,
+  effective_time: '20260209',
+  source_version: 'openfda-labels:7f82e5e0-b627-a3f3-e053-2991aa0abaa5:6',
+  payload_sha256: '63dfc42563d6fb406df816f4d801878e9a33bae39cdae3abb01ffe0e0dbb706e',
+  fragment_sha256: [
+    'c0fb47f494a1a43f71d48d9298a92854e3e9c0de8ec40cd99e032dd3e23b3d02',
+    'ab592d24f03eaccf6fcc91f344da320fa27b38226884ae501853bbcd07b62a25',
+  ],
+};
+
+const EXPECTED_OBJECT_PRODUCTS = new Map([
+  ['2141', {
+    mapping_id: 'presentation:pmbjp:2141:oral-tablet',
+    product_id: 'sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca',
+    product_assertion_sha256:
+      'ed9ac49f1fe53f1f4c720641ad5e1bee54ed362e69e4357f36ffeab9022e76cb',
+  }],
+  ['2142', {
+    mapping_id: 'presentation:pmbjp:2142:oral-tablet',
+    product_id: 'sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548',
+    product_assertion_sha256:
+      '13e88c7899c9974b4fd1378a47b2b09fa3045199460a02f7b7df6a7cb787e6a5',
+  }],
+  ['452', {
+    mapping_id: 'presentation:pmbjp:452:oral-tablet',
+    product_id: 'sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141',
+    product_assertion_sha256:
+      '7aaa9f346fd2bb665c97551bcfd57bc6c088b5dcb91019769360364014f48b01',
+  }],
+]);
+
+const EXPECTED_PERPETRATOR_PRODUCTS = new Map([
+  ['89', {
+    product_id: 'sha256:f3835b624129e57ede72edc56a6106782aa9df2e6f5491ebd09bd0ac9656e03a',
+    product_assertion_sha256:
+      '91dea78c9c4194164d7dcd131472f801478c0a2268557aae03662fcbb64b7446',
+    rxnorm_scd_rxcui: '198335',
+    evidence_alignment: 'direct_strength_and_dose_form_alignment',
+    direct_strength_and_dose_form_alignment: true,
+    direct_pmbjp_product_label_evidence: false,
+    requires_strength_extrapolation_approval: false,
+    requires_explicit_clinician_approval: true,
+  }],
+  ['90', {
+    product_id: 'sha256:1b8857c5423094122e608d865db146fa2ffc7e434df540a2b0cf8bd821d33521',
+    product_assertion_sha256:
+      '9f5eb20bf581a8e78decb7adcaa66e532e2098748ba8bc27a63a3483f90b0547',
+    rxnorm_scd_rxcui: '142118',
+    evidence_alignment: 'strength_extrapolation',
+    direct_strength_and_dose_form_alignment: false,
+    direct_pmbjp_product_label_evidence: false,
+    requires_strength_extrapolation_approval: true,
+    requires_explicit_clinician_approval: true,
+  }],
+]);
+
+const EXPECTED_SUBJECT_POLICY_BINDING = {
+  policy_id: 'aushadhi-interaction-governance-internal-evaluation',
+  policy_version: '1.0.0-draft',
+  policy_jcs_sha256: null,
+};
+
+const EXPECTED_SUBJECT_REPOSITORY_PROVENANCE = {
+  original_review_base: '80d06815f222e739ca055239c9f92b7b57ebd502',
+  verified_source_repository_base: 'a2cdb1dd8291aba73423c220f9e4976459802fdc',
+  current_non_authorizing_draft_row_sha256:
+    'cfc5c958f5cb939353716b324669906fd5043a1a605ff1d776549299d018004e',
+};
+
+const EXPECTED_CLINICAL_CLASSIFICATION = {
+  severity: 'major',
+  severity_meaning:
+    'a potentially clinically important consequence requiring timely clinician review; not a contraindication, automatic stop, automatic refusal to dispense, or instruction never to co-prescribe',
+  dispense_action: 'confirm_and_monitor',
+  classification_authority:
+    'proposed_local_clinical_workflow_mapping_requiring_explicit_approval',
+};
+
+const EXPECTED_CLINICAL_TEXT = {
+  mechanism:
+    'Sulfamethoxazole inhibits CYP2C9. The cited U.S. sulfamethoxazole/trimethoprim label reports that the combination may prolong prothrombin time in patients receiving warfarin and directs that coagulation time be reassessed.',
+  pharmacy_management_current_check:
+    'Verify whether the two selected exact products represent current or intended concurrent use. If current or intended overlap is confirmed, confirm that the prescriber or anticoagulation service has reviewed the combination and arranged a patient-specific PT/INR monitoring plan. The pharmacy must not change a dose or stop either medicine independently.',
+  pharmacy_escalation_context:
+    'If current or intended overlap is confirmed or cannot be resolved from available information, escalate the finding to the responsible prescriber or anticoagulation service. This context does not authorize the pharmacy to select alternative therapy or independently direct warfarin management.',
+  prescriber_information:
+    'If current or intended overlap is confirmed, the prescriber or anticoagulation service directs any warfarin review or adjustment and determines patient-specific PT/INR follow-up. No universal monitoring schedule or fixed post-discontinuation interval is asserted.',
+  patient_counselling:
+    'If current or intended overlap is confirmed, counsel the patient to seek prompt clinical advice for bleeding symptoms and not to stop warfarin without clinical advice.',
+};
+
+const EXPECTED_AUDIENCE_BINDINGS = {
+  render_allowlist: {
+    pharmacy: [
+      'mechanism',
+      'pharmacy_management_current_check',
+      'pharmacy_escalation_context',
+      'patient_counselling',
+    ],
+    prescriber_or_anticoagulation_service: [
+      'mechanism',
+      'prescriber_information',
+      'patient_counselling',
+    ],
+    patient: [
+      'patient_counselling',
+    ],
+  },
+  fields_not_in_audience_allowlist: 'prohibited',
+  conditional_render_allowlist: {
+    unreviewed_subject_or_identity_unresolved: {
+      pharmacy: [],
+      prescriber_or_anticoagulation_service: [],
+      patient: [],
+    },
+    reviewed_subject_with_resolved_identity_and_unresolved_exposure: {
+      pharmacy: [
+        'pharmacy_escalation_context',
+      ],
+      prescriber_or_anticoagulation_service: [],
+      patient: [],
+    },
+  },
+  render_composition: {
+    condition_precedence: [
+      'unreviewed_subject_or_identity_unresolved',
+      'reviewed_subject_with_resolved_identity_and_unresolved_exposure',
+      'reviewed_subject_with_resolved_identity_and_resolved_exposure',
+    ],
+    conditional_with_general_operator: 'intersection',
+    general_allowlist_fallback_condition:
+      'reviewed_subject_with_resolved_identity_and_resolved_exposure',
+    unknown_or_conflicting_condition: 'render_no_clinical_content',
+    union_allowed: false,
+  },
+};
+
+const EXPECTED_WORKFLOW_REQUIREMENTS = {
+  resolution_model: 'structured',
+  pending_states: [
+    'manual_review_required',
+    'clinician_confirmation_pending',
+    'urgent_supply_escalated',
+    'correction_recheck_pending',
+  ],
+  terminal_states: [
+    'review_confirmed',
+    'no_concurrent_exposure_verified',
+    'order_cancelled',
+    'order_corrected_pair_absent_after_recheck',
+  ],
+  pending_state_requirements: {
+    manual_review_required: [
+      'concomitant_exposure_status',
+    ],
+    clinician_confirmation_pending: [
+      'confirmation_method',
+      'concomitant_exposure_status',
+    ],
+    urgent_supply_escalated: [
+      'concomitant_exposure_status',
+      'escalation_reference',
+    ],
+    correction_recheck_pending: [
+      'confirmation_method',
+      'concomitant_exposure_status',
+      'authorized_order_actor_id',
+      'authorized_order_actor_role',
+      'trusted_order_event_id',
+      'trusted_order_event_store_id',
+      'order_correction_reference',
+    ],
+  },
+  terminal_state_requirements: {
+    review_confirmed: [
+      'responsible_clinician_or_service',
+      'confirmation_method',
+      'concomitant_exposure_status',
+      'monitoring_plan_summary',
+    ],
+    no_concurrent_exposure_verified: [
+      'confirmation_method',
+      'concomitant_exposure_status',
+      'disposition_rationale',
+    ],
+    order_cancelled: [
+      'confirmation_method',
+      'concomitant_exposure_status',
+      'authorized_order_actor_id',
+      'authorized_order_actor_role',
+      'trusted_order_event_id',
+      'trusted_order_event_store_id',
+      'order_cancellation_reference',
+    ],
+    order_corrected_pair_absent_after_recheck: [
+      'confirmation_method',
+      'concomitant_exposure_status',
+      'authorized_order_actor_id',
+      'authorized_order_actor_role',
+      'trusted_order_event_id',
+      'trusted_order_event_store_id',
+      'order_correction_reference',
+      'post_correction_recheck_result',
+    ],
+  },
+  confirmation_method_allowed_values: [
+    'responsible_clinician_or_service_confirmation',
+    'verified_current_order_or_medication_record',
+    'trusted_order_cancellation_event',
+    'trusted_order_correction_event',
+  ],
+  concomitant_exposure_status_allowed_values: [
+    'current_or_intended_overlap_confirmed',
+    'no_current_or_intended_overlap_verified',
+    'order_cancelled_before_overlap',
+    'corrected_order_pair_absent_after_recheck',
+    'unresolved',
+  ],
+  state_exposure_status_compatibility: {
+    manual_review_required: [
+      'unresolved',
+    ],
+    clinician_confirmation_pending: [
+      'current_or_intended_overlap_confirmed',
+    ],
+    urgent_supply_escalated: [
+      'current_or_intended_overlap_confirmed',
+      'unresolved',
+    ],
+    correction_recheck_pending: [
+      'unresolved',
+    ],
+    review_confirmed: [
+      'current_or_intended_overlap_confirmed',
+    ],
+    no_concurrent_exposure_verified: [
+      'no_current_or_intended_overlap_verified',
+    ],
+    order_cancelled: [
+      'order_cancelled_before_overlap',
+    ],
+    order_corrected_pair_absent_after_recheck: [
+      'corrected_order_pair_absent_after_recheck',
+    ],
+  },
+  state_confirmation_method_compatibility: {
+    manual_review_required: [],
+    clinician_confirmation_pending: [
+      'verified_current_order_or_medication_record',
+    ],
+    urgent_supply_escalated: [
+      'responsible_clinician_or_service_confirmation',
+      'verified_current_order_or_medication_record',
+    ],
+    correction_recheck_pending: [
+      'trusted_order_correction_event',
+    ],
+    review_confirmed: [
+      'responsible_clinician_or_service_confirmation',
+    ],
+    no_concurrent_exposure_verified: [
+      'responsible_clinician_or_service_confirmation',
+      'verified_current_order_or_medication_record',
+    ],
+    order_cancelled: [
+      'trusted_order_cancellation_event',
+    ],
+    order_corrected_pair_absent_after_recheck: [
+      'trusted_order_correction_event',
+    ],
+  },
+  order_event_authorization: {
+    actor_authorization_source: 'trusted_authorization_registry_required',
+    event_source: 'trusted_order_system_required',
+    pharmacy_self_attestation_satisfies_terminal_state: false,
+  },
+  optional_audit_fields: [
+    'latest_inr_value_when_available',
+    'latest_inr_at_when_available',
+    'next_planned_assessment_or_documented_rationale_when_available',
+  ],
+  free_text_only_resolution_allowed: false,
+  urgent_supply_pathway: {
+    authority: 'none',
+    pathway_id: null,
+    can_resolve_clinical_review: false,
+    meaning: 'urgent-supply handling is not authorized by this subject',
+  },
+};
+
+const EXPECTED_IDENTITY_EVIDENCE_BINDINGS = {
+  rxnorm_combination_bundle: {
+    path:
+      'data-static/combination-rxnorm-evidence/combination_co-trimoxazole_rxnorm-10831.json',
+    committed_blob_content_sha256:
+      'be734f07cceffad4f8309008a9d4df994f8141cef24b842b8d3797dea0758cbb',
+    git_blob_oid_sha1: '85fc2e2b66c93c85f4f9651e10e8270c0d23dfcc',
+    rxnorm_release: '06-Jul-2026',
+    rxnorm_api_version: '3.1.354',
+    authority: 'identity_only',
+  },
+  combination_identity_manifest: {
+    path: 'data-static/combination-identity-overrides.json',
+    committed_blob_content_sha256:
+      'a0813b2a4d80198c6793d6e576b41847da31415f51a68ee75c744a8656223466',
+    git_blob_oid_sha1: 'd4ed178993ffdb5891845fa7dbf077d6ec2252bb',
+  },
+  pmbjp_product_source: {
+    pdf_sha256:
+      'f54a140d9dc82880dcbb7672c18942417e8c9fe904376c742b6319665cdf9a08',
+    xpdf_table_extract_sha256:
+      'bb5a5eabbda1802313b546c6b3605315c8bf4f113825ca1794724dab84e1f299',
+    parsed_ledger_sha256:
+      '336b9ea72d2a249edac467bc9ec2c2c052520878ea13d7fdb4c8a4d7f8281688',
+    parsed_row_count: 2111,
+  },
+};
+
+const EXPECTED_SUPERSESSION = {
+  interaction_family_id: 'warfarin-anticoagulation-potentiation',
+  subject_specificity: 'exact_fixed_dose_combination',
+  supplements_component_subjects: true,
+  supersedes_rule_ids: [],
+};
+
+const EXPECTED_EXCLUSIONS = [
+  'PMBJP 88 co-trimoxazole oral suspension',
+  'intravenous co-trimoxazole',
+  'single-ingredient trimethoprim',
+  'single-ingredient sulfamethoxazole',
+  'every unreviewed product or presentation',
+  'fuzzy or component-only inheritance',
+  'independently inferred systemic presentation',
+  'recent or completed exposure',
+  'post-course or fixed lookback trigger',
+  'adult-only, paediatric-only, or age-derived branch',
+];
+
+const EXPECTED_SUBJECT_CHANGE_CONTROL = {
+  new_approval_required_for: [
+    'clinical classification',
+    'clinical text',
+    'temporal or population scope',
+    'product or identity scope',
+    'PMBJP 90 strength extrapolation',
+    'evidence source or jurisdiction',
+    'workflow or audience boundaries',
+    'supersession semantics',
+  ],
+  source_or_identity_drift_blocks_promotion: true,
+  draft_row_reconciliation_required_before_promotion: true,
+};
+
+const EXPECTED_EVENT_BODY_TEMPLATE = {
+  schema_id: 'aushadhi.interaction-approval-event',
+  schema_version: '1.0.0',
+  event_id: null,
+  event_type: null,
+  decision: null,
+  subject_kind: null,
+  subject_id: null,
+  subject_version: null,
+  subject_jcs_sha256: null,
+  governance_policy_jcs_sha256: null,
+  approval_statement: null,
+  approval_statement_sha256: null,
+  approval_statement_sha256_profile: 'UTF-8-NFC-LF-no-trailing-LF',
+  authority_granted: null,
+  reviewer_id: null,
+  reviewer_role: null,
+  reviewed_at_utc: null,
+  approval_artifact_commit: null,
+  supersedes_event_id: null,
+  supersedes_approval_record_jcs_sha256: null,
+  review_due_at_utc: null,
+  authority_not_after_utc: null,
+};
+
+const EXPECTED_SIGNATURE_ENVELOPE_TEMPLATE = {
+  schema_id: 'aushadhi.interaction-approval-signature-envelope',
+  schema_version: '1.0.0',
+  event_body_jcs_sha256: null,
+  signature_profile_id: null,
+  signature_input_domain: 'aushadhi.approval-event.v1\u0000',
+  signer_principal_id: null,
+  signer_key_id: null,
+  authentication_assertion_id: null,
+  authentication_assertion_issuer: null,
+  authentication_assertion_sha256: null,
+  authorization_assertion_sha256: null,
+  signature_algorithm: null,
+  signature_base64: null,
+};
+
+const EXPECTED_APPROVAL_RECORD_TEMPLATE = {
+  schema_id: 'aushadhi.interaction-approval-record',
+  schema_version: '1.0.0',
+  canonicalization: 'RFC8785-JCS',
+  digest_algorithm: 'SHA-256',
+  event_body: null,
+  detached_signature_envelope: null,
+  excluded_members: [
+    'append_only_store_receipt',
+    'signed_checkpoint',
+  ],
+};
+
+const EXPECTED_STORE_RECEIPT_TEMPLATE = {
+  receipt_body_template: {
+    schema_id: 'aushadhi.interaction-approval-store-receipt',
+    schema_version: '1.0.0',
+    receipt_id: null,
+    event_store_id: null,
+    event_store_configuration_sha256: null,
+    stream_id: null,
+    sequence: null,
+    approval_record_jcs_sha256: null,
+    accepted_at_utc: null,
+    previous_approval_record_jcs_sha256: null,
+    verification: null,
+  },
+  detached_store_signature_template: {
+    receipt_body_jcs_sha256: null,
+    signature_algorithm: null,
+    store_key_id: null,
+    signature_base64: null,
+  },
+};
+
+const EXPECTED_STORE_CHECKPOINT_TEMPLATE = {
+  checkpoint_body_template: {
+    schema_id: 'aushadhi.interaction-approval-store-checkpoint',
+    schema_version: '1.0.0',
+    stream_id: null,
+    through_sequence: null,
+    head_approval_record_jcs_sha256: null,
+    record_count: null,
+    checkpointed_at_utc: null,
+    previous_checkpoint_jcs_sha256: null,
+  },
+  detached_store_signature_template: {
+    checkpoint_body_jcs_sha256: null,
+    signature_algorithm: null,
+    store_key_id: null,
+    signature_base64: null,
+  },
+};
+
+const EXPECTED_PACKAGE_STATUS = {
+  schema_id: 'aushadhi.interaction-approval-draft-package-status',
+  schema_version: '1.0.0',
+  package_id: 'warfarin-cotrimoxazole-vnext-2026-07-29',
+  prepared_at: '2026-07-29',
+  package_status: 'draft_non_authorizing',
+  clinician_review_sha256_profile: 'UTF-8-NFC-LF-no-trailing-LF',
+  clinician_review_sha256:
+    '58e83f86cfd16a633f4ba7f4fd72f9e6e7a75f0fca8031b24471ff4b9f332a9b',
+  policy_signoff_ready: false,
+  rule_signoff_ready: false,
+  promotion_ready: false,
+  authority: {
+    clinical_use: 'none',
+    production: 'none',
+    deployment: 'none',
+  },
+  implemented_controls: [
+    'repository-native draft artifacts with exact non-authorizing value validation',
+    'exact current-check-only temporal scope',
+    'no age-derived population branch',
+    'six explicitly enumerated PMBJP oral-tablet product pairs',
+    'rehashed committed RxNorm and combination-identity objects plus current-manifest product and assertion bindings, draft-row hash, and repository-base relationship',
+    'default-deny audience allowlists with explicit intersection-only composition and precedence, distinct unreviewed or identity-unresolved and exposure-unresolved rendering, per-state evidence plus exposure and confirmation-method compatibility, and trusted order-event and authorized-actor correction-path and terminal evidence requirements',
+    'complete clinician-rendering equivalence checks plus a normalized whole-document SHA-256 binding for canonical clinical text, all workflow mappings, optional audit fields, change control, and all requested sign-off items',
+    'duplicate-member-rejecting raw JSON parsing, exact schema discriminators, and deeply immutable validated snapshots',
+    'detached event, signature-envelope, receipt, and checkpoint templates',
+    'implemented-versus-required status separation',
+    'production-open remains empty',
+  ],
+  required_before_policy_signoff: [
+    'approve a bootstrap governance policy and governance approver quorum',
+    'pin a conformant RFC 8785 implementation and conformance vectors',
+    'pin signature, signer-registry, authorization-registry, and event-store trust profiles',
+    'approve the exact approval-record container and approval-statement hash-normalization profile',
+    'define reviewer credential validity, revocation, replay, and trusted-time controls',
+    'define append-only retention and externally retained signed checkpoints',
+  ],
+  required_before_rule_signoff: [
+    'complete and approve the governance policy',
+    'replace the draft policy binding with the final policy JCS SHA-256',
+    'clinically approve or reject PMBJP 90 strength extrapolation explicitly',
+    'clinically approve the exact classification, scope, text, and workflow boundary',
+    'finalize the exact approval statement without placeholders',
+    'commit the final policy and subject before creating any approval event',
+    'reverify the captured openFDA payload and fragment hashes against the retained source objects',
+  ],
+  required_before_promotion: [
+    'create a new immutable authenticated approval event; do not mutate this template',
+    'verify the detached signature against pinned trust and authorization records',
+    'append the record to the approved store and retain a valid signed checkpoint',
+    'reconcile the non-authorizing JSONL row and pin its new hash',
+    'implement a medication-status or intended-use input contract before claiming temporal enforcement',
+    'implement structured audience rendering with distinct unreviewed or identity-unresolved and exposure-unresolved behavior without flattening clinical authority',
+    'implement per-state exposure and confirmation-method compatibility plus trusted order-event and authorized-actor validation for cancellation or correction terminal states',
+    'implement the evaluation watermark and exact draft-package gate runner',
+    'run source, identity, six-pair, negative-case, supersession, and full regression gates',
+    'confirm data-static/interaction-rules.json remains empty',
+  ],
+  required_before_production: [
+    'obtain separate India-specific clinical, regulatory, pharmacy, antimicrobial-stewardship, privacy, and security governance review',
+    'complete shadow-mode, human-factors, alert-burden, rollback, kill-switch, and drift-monitoring validation',
+    'define numerical production acceptance criteria and accountable owners',
+    'obtain separate production and deployment authorization',
+  ],
+};
+
+function isObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function fail(kind, message) {
+  throw new TypeError(`${kind}: ${message}`);
+}
+
+export function parseDraftApprovalJson(text, label = 'draft approval JSON') {
+  if (typeof text !== 'string') {
+    throw new TypeError(`${label}: JSON source must be a string`);
+  }
+
+  let offset = 0;
+
+  function syntax(message) {
+    throw new SyntaxError(`${label}: ${message} at offset ${offset}`);
+  }
+
+  function skipWhitespace() {
+    while (offset < text.length && /[\t\n\r ]/u.test(text[offset])) offset += 1;
+  }
+
+  function parseString() {
+    if (text[offset] !== '"') syntax('expected a JSON string');
+    const start = offset;
+    offset += 1;
+    while (offset < text.length) {
+      const code = text.charCodeAt(offset);
+      if (text[offset] === '"') {
+        offset += 1;
+        return JSON.parse(text.slice(start, offset));
+      }
+      if (text[offset] === '\\') {
+        offset += 1;
+        if (offset >= text.length) syntax('unterminated escape sequence');
+        const escape = text[offset];
+        if (escape === 'u') {
+          const digits = text.slice(offset + 1, offset + 5);
+          if (!/^[0-9a-fA-F]{4}$/u.test(digits)) syntax('invalid Unicode escape');
+          offset += 5;
+          continue;
+        }
+        if (!/["\\/bfnrt]/u.test(escape)) syntax('invalid string escape');
+        offset += 1;
+        continue;
+      }
+      if (code < 0x20) syntax('unescaped control character in string');
+      offset += 1;
+    }
+    syntax('unterminated JSON string');
+  }
+
+  function parseNumber() {
+    const match = text.slice(offset).match(
+      /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/u,
+    );
+    if (match === null) syntax('invalid JSON number');
+    offset += match[0].length;
+    const value = Number(match[0]);
+    if (!Number.isFinite(value)) syntax('non-finite JSON number');
+    return value;
+  }
+
+  function parseValue() {
+    skipWhitespace();
+    const token = text[offset];
+    if (token === '{') return parseObject();
+    if (token === '[') return parseArray();
+    if (token === '"') return parseString();
+    if (token === '-' || /[0-9]/u.test(token ?? '')) return parseNumber();
+    for (const [literal, value] of [
+      ['true', true],
+      ['false', false],
+      ['null', null],
+    ]) {
+      if (text.startsWith(literal, offset)) {
+        offset += literal.length;
+        return value;
+      }
+    }
+    syntax('unexpected JSON token');
+  }
+
+  function parseArray() {
+    const values = [];
+    offset += 1;
+    skipWhitespace();
+    if (text[offset] === ']') {
+      offset += 1;
+      return values;
+    }
+    while (true) {
+      values.push(parseValue());
+      skipWhitespace();
+      if (text[offset] === ']') {
+        offset += 1;
+        return values;
+      }
+      if (text[offset] !== ',') syntax('expected comma or closing bracket');
+      offset += 1;
+    }
+  }
+
+  function parseObject() {
+    const value = {};
+    const members = new Set();
+    offset += 1;
+    skipWhitespace();
+    if (text[offset] === '}') {
+      offset += 1;
+      return value;
+    }
+    while (true) {
+      skipWhitespace();
+      const key = parseString();
+      if (members.has(key)) syntax(`duplicate JSON member ${JSON.stringify(key)}`);
+      members.add(key);
+      skipWhitespace();
+      if (text[offset] !== ':') syntax('expected colon after JSON member');
+      offset += 1;
+      const memberValue = parseValue();
+      Object.defineProperty(value, key, {
+        value: memberValue,
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
+      skipWhitespace();
+      if (text[offset] === '}') {
+        offset += 1;
+        return value;
+      }
+      if (text[offset] !== ',') syntax('expected comma or closing brace');
+      offset += 1;
+    }
+  }
+
+  skipWhitespace();
+  const result = parseValue();
+  skipWhitespace();
+  if (offset !== text.length) syntax('unexpected trailing JSON content');
+  return result;
+}
+
+function deepFreeze(value) {
+  if (value === null || typeof value !== 'object' || Object.isFrozen(value)) {
+    return value;
+  }
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+function immutableValidatedSnapshot(value) {
+  return deepFreeze(structuredClone(value));
+}
+
+function normalizedTextSha256(text) {
+  if (typeof text !== 'string') {
+    throw new TypeError('clinician review rendering: source must be a string');
+  }
+  const normalized = text
+    .normalize('NFC')
+    .replace(/\r\n?/gu, '\n')
+    .replace(/\n+$/gu, '');
+  return crypto.createHash('sha256').update(normalized, 'utf8').digest('hex');
+}
+
+export function assertClinicianReviewRendering(text) {
+  const expected =
+    '58e83f86cfd16a633f4ba7f4fd72f9e6e7a75f0fca8031b24471ff4b9f332a9b';
+  if (normalizedTextSha256(text) !== expected) {
+    fail(
+      'clinician review rendering',
+      'normalized whole-document SHA-256 does not match the reviewed rendering',
+    );
+  }
+  return Object.freeze({
+    sha256_profile: 'UTF-8-NFC-LF-no-trailing-LF',
+    sha256: expected,
+  });
+}
+
+function requireObject(value, kind, label) {
+  if (!isObject(value)) fail(kind, `${label} must be an object`);
+  return value;
+}
+
+function requireExactKeys(value, allowed, kind, label) {
+  requireObject(value, kind, label);
+  const actual = Object.keys(value);
+  const unknown = actual.filter((key) => !allowed.has(key));
+  const missing = [...allowed].filter((key) => !Object.hasOwn(value, key));
+  if (unknown.length > 0) {
+    fail(kind, `${label} contains unknown ${unknown.join(', ')}`);
+  }
+  if (missing.length > 0) {
+    fail(kind, `${label} is missing ${missing.join(', ')}`);
+  }
+}
+
+function firstDifference(actual, expected, label) {
+  if (Object.is(actual, expected)) return null;
+  if (Array.isArray(actual) || Array.isArray(expected)) {
+    if (!Array.isArray(actual) || !Array.isArray(expected)) return label;
+    if (actual.length !== expected.length) return `${label}.length`;
+    for (let index = 0; index < actual.length; index += 1) {
+      const difference = firstDifference(actual[index], expected[index], `${label}[${index}]`);
+      if (difference !== null) return difference;
+    }
+    return null;
+  }
+  if (isObject(actual) || isObject(expected)) {
+    if (!isObject(actual) || !isObject(expected)) return label;
+    const keys = new Set([...Object.keys(actual), ...Object.keys(expected)]);
+    for (const key of keys) {
+      if (!Object.hasOwn(actual, key) || !Object.hasOwn(expected, key)) {
+        return `${label}.${key}`;
+      }
+      const difference = firstDifference(actual[key], expected[key], `${label}.${key}`);
+      if (difference !== null) return difference;
+    }
+    return null;
+  }
+  return label;
+}
+
+function requireExactObject(value, expected, kind, label) {
+  requireExactKeys(value, new Set(Object.keys(expected)), kind, label);
+  if (!isDeepStrictEqual(value, expected)) {
+    const difference = firstDifference(value, expected, label);
+    fail(kind, `${difference} does not match the fixed draft boundary`);
+  }
+}
+
+function requireFalse(value, kind, label) {
+  if (value !== false) fail(kind, `${label} must be false`);
+}
+
+function requireNull(value, kind, label) {
+  if (value !== null) fail(kind, `${label} must remain null in a template`);
+}
+
+function requireNonEmptyString(value, kind, label) {
+  if (typeof value !== 'string' || value.trim() === '') {
+    fail(kind, `${label} must be a non-empty string`);
+  }
+}
+
+function requireStringArray(value, kind, label, { allowEmpty = false } = {}) {
+  if (!Array.isArray(value) || (!allowEmpty && value.length === 0)) {
+    fail(kind, `${label} must be ${allowEmpty ? 'an' : 'a non-empty'} array`);
+  }
+  const seen = new Set();
+  for (const item of value) {
+    requireNonEmptyString(item, kind, `${label} entry`);
+    if (seen.has(item)) fail(kind, `${label} contains duplicate ${item}`);
+    seen.add(item);
+  }
+}
+
+function assertNoOwn(value, keys, kind, label) {
+  for (const key of keys) {
+    if (Object.hasOwn(value, key)) fail(kind, `${label} must not contain ${key}`);
+  }
+}
+
+function assertNoKeyRecursively(value, keys, kind, label) {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => (
+      assertNoKeyRecursively(entry, keys, kind, `${label}[${index}]`)
+    ));
+    return;
+  }
+  if (!isObject(value)) return;
+  for (const [key, entry] of Object.entries(value)) {
+    if (keys.has(key)) fail(kind, `${label} must not contain ${key}`);
+    assertNoKeyRecursively(entry, keys, kind, `${label}.${key}`);
+  }
+}
+
+function assertAuthorityCeiling(authority, kind) {
+  requireExactKeys(
+    authority,
+    AUTHORITY_CEILING_KEYS,
+    kind,
+    'authority_ceiling',
+  );
+  requireFalse(authority.clinical_use, kind, 'clinical-use authority');
+  if (authority.production !== false) {
+    fail(kind, 'production authority must be false');
+  }
+  requireFalse(authority.deployment, kind, 'deployment authority');
+}
+
+function assertExactProductAssertions(actual, expected, allowedKeys, kind, label) {
+  if (!Array.isArray(actual) || actual.length !== expected.size) {
+    fail(kind, `${label} must contain exactly ${expected.size} entries`);
+  }
+  const expectedCodes = [...expected.keys()];
+  for (let index = 0; index < expectedCodes.length; index += 1) {
+    if (actual[index]?.pmbjp_code !== expectedCodes[index]) {
+      fail(kind, `${label} order must be deterministic`);
+    }
+  }
+  const seen = new Set();
+  for (const product of actual) {
+    requireExactKeys(product, allowedKeys, kind, `${label} entry`);
+    const code = product.pmbjp_code;
+    const expectedProduct = expected.get(code);
+    if (!expectedProduct || seen.has(code)) {
+      fail(kind, `${label} contains an unexpected or duplicate PMBJP code`);
+    }
+    seen.add(code);
+    for (const [key, expectedValue] of Object.entries(expectedProduct)) {
+      if (product[key] !== expectedValue) {
+        fail(kind, `${label} PMBJP ${code} has invalid ${key}`);
+      }
+    }
+  }
+}
+
+function pairKey(pair) {
+  return `${pair.object_pmbjp_code}__${pair.perpetrator_pmbjp_code}`;
+}
+
+function assertExactProductPairs(subject) {
+  const kind = 'draft clinical rule subject';
+  if (!Array.isArray(subject.product_pairs) || subject.product_pairs.length !== 6) {
+    fail(kind, 'subject must enumerate six exact product pairs');
+  }
+  const expectedOrder = [];
+  for (const perpetratorCode of EXPECTED_PERPETRATOR_PRODUCTS.keys()) {
+    for (const objectCode of EXPECTED_OBJECT_PRODUCTS.keys()) {
+      expectedOrder.push(`${objectCode}__${perpetratorCode}`);
+    }
+  }
+  const expected = new Set(expectedOrder);
+  const seen = new Set();
+  for (let index = 0; index < subject.product_pairs.length; index += 1) {
+    const pair = subject.product_pairs[index];
+    requireExactKeys(pair, SUBJECT_PRODUCT_PAIR_KEYS, kind, 'product_pairs entry');
+    const key = pairKey(pair);
+    if (key !== expectedOrder[index]) {
+      fail(kind, 'product_pairs order must be deterministic');
+    }
+    if (!expected.has(key) || seen.has(key)) {
+      fail(kind, 'subject must enumerate six exact product pairs without extras or duplicates');
+    }
+    const object = EXPECTED_OBJECT_PRODUCTS.get(pair.object_pmbjp_code);
+    const perpetrator = EXPECTED_PERPETRATOR_PRODUCTS.get(pair.perpetrator_pmbjp_code);
+    if (pair.object_product_id !== object.product_id
+      || pair.perpetrator_product_id !== perpetrator.product_id) {
+      fail(kind, `product pair ${key} does not bind the reviewed product IDs`);
+    }
+    seen.add(key);
+  }
+}
+
+function assertClinicalText(clinicalText) {
+  const kind = 'draft clinical rule subject';
+  const keys = new Set([
+    'mechanism',
+    'pharmacy_management_current_check',
+    'pharmacy_escalation_context',
+    'prescriber_information',
+    'patient_counselling',
+  ]);
+  requireExactKeys(clinicalText, keys, kind, 'clinical_text');
+  for (const [key, value] of Object.entries(clinicalText)) {
+    requireNonEmptyString(value, kind, `clinical_text.${key}`);
+  }
+  const text = Object.values(clinicalText).join('\n');
+  const required = [
+    /sulfamethoxazole inhibits CYP2C9/iu,
+    /may prolong prothrombin time/iu,
+    /coagulation time.*reassessed/iu,
+    /prescriber or anticoagulation service/iu,
+    /patient-specific PT\/INR/iu,
+    /pharmacy must not change a dose or stop either medicine independently/iu,
+    /not to stop warfarin without clinical advice/iu,
+    /no universal monitoring schedule/iu,
+  ];
+  for (const pattern of required) {
+    if (!pattern.test(text)) fail(kind, `clinical_text is missing ${pattern.source}`);
+  }
+  const unsupported =
+    /raises? warfarin exposure|high bleeding risk especially|choose an alternative|intensive INR|after start and after stop|Child-Pugh|14[- ]day/iu;
+  if (unsupported.test(text)) {
+    fail(kind, 'clinical_text contains an unsupported or unapproved claim');
+  }
+}
+
+export function assertDraftGovernancePolicy(policy) {
+  const kind = 'draft governance policy';
+  policy = immutableValidatedSnapshot(policy);
+  requireExactKeys(policy, POLICY_KEYS, kind, 'policy');
+  assertNoOwn(
+    policy,
+    ['policy_jcs_sha256', 'approval_status', 'approval_artifact_commit'],
+    kind,
+    'policy',
+  );
+  if (policy.schema_id !== 'aushadhi.interaction-governance-policy') {
+    fail(kind, 'schema_id is not the pinned draft schema');
+  }
+  if (policy.schema_version !== '1.0.0') {
+    fail(kind, 'schema_version is not 1.0.0');
+  }
+  if (policy.policy_id !== 'aushadhi-interaction-governance-internal-evaluation') {
+    fail(kind, 'policy_id is not the internal-evaluation governance policy');
+  }
+  if (policy.policy_version !== '1.0.0-draft') {
+    fail(kind, 'policy_version is not the reviewed draft version');
+  }
+  if (policy.supersedes_policy_jcs_sha256 !== null) {
+    fail(kind, 'the first draft policy must not claim a superseded policy');
+  }
+  if (policy.operational_profile !== 'internal-evaluation') {
+    fail(kind, 'operational_profile must be internal-evaluation');
+  }
+  assertAuthorityCeiling(policy.authority_ceiling, kind);
+  requireExactObject(
+    policy.canonicalization_profile,
+    EXPECTED_POLICY_CANONICALIZATION,
+    kind,
+    'canonicalization_profile',
+  );
+  requireExactObject(
+    policy.trust_profile_bindings,
+    EXPECTED_POLICY_TRUST_BINDINGS,
+    kind,
+    'trust_profile_bindings',
+  );
+  requireExactObject(
+    policy.status_model,
+    EXPECTED_POLICY_STATUS_MODEL,
+    kind,
+    'status_model',
+  );
+  requireExactObject(
+    policy.failure_semantics,
+    EXPECTED_POLICY_FAILURE_SEMANTICS,
+    kind,
+    'failure_semantics',
+  );
+  requireExactObject(
+    policy.runtime_safety,
+    EXPECTED_POLICY_RUNTIME_SAFETY,
+    kind,
+    'runtime_safety',
+  );
+  requireExactObject(
+    policy.applicability_model,
+    EXPECTED_POLICY_APPLICABILITY,
+    kind,
+    'applicability_model',
+  );
+  requireExactObject(
+    policy.workflow_contract,
+    EXPECTED_POLICY_WORKFLOW,
+    kind,
+    'workflow_contract',
+  );
+  requireExactObject(policy.gate_policy, EXPECTED_POLICY_GATES, kind, 'gate_policy');
+  requireExactObject(
+    policy.profile_requirements,
+    EXPECTED_POLICY_PROFILE_REQUIREMENTS,
+    kind,
+    'profile_requirements',
+  );
+  requireExactObject(
+    policy.change_control,
+    EXPECTED_POLICY_CHANGE_CONTROL,
+    kind,
+    'change_control',
+  );
+  requireExactObject(policy.review_policy, EXPECTED_POLICY_REVIEW, kind, 'review_policy');
+  if (policy.failure_semantics.technical_gate_failure !== 'block_promotion_only') {
+    fail(kind, 'technical gate failure must block promotion only');
+  }
+  if (
+    policy.failure_semantics.invalid_signature_or_subject_binding
+    !== 'event_has_no_approval_effect'
+  ) {
+    fail(kind, 'an invalid signature or binding must confer no approval effect');
+  }
+  requireFalse(
+    policy.workflow_contract.urgent_supply_escalated_is_terminal,
+    kind,
+    'urgent_supply_escalated_is_terminal',
+  );
+  requireFalse(
+    policy.workflow_contract.free_text_only_resolution_allowed,
+    kind,
+    'free_text_only_resolution_allowed',
+  );
+  if (
+    policy.profile_requirements.evaluation_watermark
+    !== 'INTERNAL EVALUATION — NOT FOR CLINICAL USE'
+  ) {
+    fail(kind, 'evaluation watermark is not the fixed internal-evaluation watermark');
+  }
+  if (policy.profile_requirements.production_open_required_empty !== true) {
+    fail(kind, 'production-open must be required to remain empty');
+  }
+  if (policy.gate_policy.passing_gates_create_clinical_authority !== false) {
+    fail(kind, 'passing technical gates must not create clinical authority');
+  }
+  return policy;
+}
+
+export function assertDraftClinicalRuleSubject(subject) {
+  const kind = 'draft clinical rule subject';
+  subject = immutableValidatedSnapshot(subject);
+  requireExactKeys(subject, SUBJECT_KEYS, kind, 'subject');
+  assertNoKeyRecursively(
+    subject,
+    new Set([
+      'approval_artifact_commit',
+      'subject_jcs_sha256',
+      'approval_status',
+      'signature',
+    ]),
+    kind,
+    'subject',
+  );
+  if (/clinician_authorized/iu.test(JSON.stringify(subject))) {
+    fail(kind, 'draft subject must not claim clinician_authorized status');
+  }
+  if (subject.schema_id !== 'aushadhi.interaction-clinical-rule-subject') {
+    fail(kind, 'schema_id is not the pinned clinical-rule subject schema');
+  }
+  if (subject.schema_version !== '1.0.0') {
+    fail(kind, 'schema_version is not 1.0.0');
+  }
+  if (subject.rule_family_id !== 'warfarin__cotrimoxazole'
+    || subject.subject_version !== '1.0.0-draft') {
+    fail(kind, 'rule family or subject version is not the reviewed draft');
+  }
+  if (subject.supersedes_subject_jcs_sha256 !== null) {
+    fail(kind, 'draft subject must not claim a superseded subject');
+  }
+  if (subject.requested_profile !== 'internal-evaluation') {
+    fail(kind, 'requested_profile must be internal-evaluation');
+  }
+  assertAuthorityCeiling(subject.authority_ceiling, kind);
+  requireExactObject(
+    subject.governance_policy_binding,
+    EXPECTED_SUBJECT_POLICY_BINDING,
+    kind,
+    'governance_policy_binding',
+  );
+  requireExactObject(
+    subject.repository_provenance,
+    EXPECTED_SUBJECT_REPOSITORY_PROVENANCE,
+    kind,
+    'repository_provenance',
+  );
+  requireExactObject(
+    subject.clinical_classification,
+    EXPECTED_CLINICAL_CLASSIFICATION,
+    kind,
+    'clinical_classification',
+  );
+  requireObject(subject.temporal_scope, kind, 'temporal_scope');
+  if (subject.temporal_scope.lookback_days !== 0) {
+    fail(kind, 'lookback_days must remain zero');
+  }
+  requireExactObject(subject.temporal_scope, EXPECTED_TEMPORAL_SCOPE, kind, 'temporal_scope');
+  requireExactObject(
+    subject.population_scope,
+    EXPECTED_POPULATION_SCOPE,
+    kind,
+    'population_scope',
+  );
+  requireExactKeys(
+    subject.identity_scope,
+    SUBJECT_IDENTITY_SCOPE_KEYS,
+    kind,
+    'identity_scope',
+  );
+  if (subject.identity_scope.expected_exact_product_pair_count !== 6) {
+    fail(kind, 'identity scope must require six exact product pairs');
+  }
+  if (subject.identity_scope.route !== 'oral'
+    || subject.identity_scope.formulation !== 'tablet') {
+    fail(kind, 'identity scope must remain oral tablet only');
+  }
+  const object = subject.identity_scope.object;
+  requireExactKeys(
+    object,
+    SUBJECT_OBJECT_IDENTITY_KEYS,
+    kind,
+    'identity_scope.object',
+  );
+  if (object.ingredient_mapping_id !== 'ingredient:warfarin:rxnorm-11289') {
+    fail(kind, 'object ingredient mapping is not the reviewed warfarin mapping');
+  }
+  if (object.binding_kind !== 'ingredient_with_exact_presentations'
+    || object.ingredient_id
+      !== 'sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06') {
+    fail(kind, 'object identity is not the reviewed exact warfarin identity');
+  }
+  const expectedMappingIds = [...EXPECTED_OBJECT_PRODUCTS.values()]
+    .map((product) => product.mapping_id);
+  if (JSON.stringify(object.presentation_mapping_ids) !== JSON.stringify(expectedMappingIds)) {
+    fail(kind, 'object presentation mappings are not the three reviewed warfarin tablets');
+  }
+  assertExactProductAssertions(
+    object.product_assertions,
+    EXPECTED_OBJECT_PRODUCTS,
+    SUBJECT_OBJECT_PRODUCT_KEYS,
+    kind,
+    'identity_scope.object.product_assertions',
+  );
+  const perpetrator = subject.identity_scope.perpetrator;
+  requireExactKeys(
+    perpetrator,
+    SUBJECT_PERPETRATOR_IDENTITY_KEYS,
+    kind,
+    'identity_scope.perpetrator',
+  );
+  if (perpetrator.combination_id !== 'combination:co-trimoxazole:rxnorm-10831'
+    || perpetrator.match_mode !== 'exact_active_set') {
+    fail(kind, 'perpetrator must use the reviewed exact-active-set combination');
+  }
+  if (perpetrator.binding_kind !== 'combination_identity'
+    || perpetrator.rxnorm_min_rxcui !== '10831') {
+    fail(kind, 'perpetrator is not the reviewed RxNorm MIN combination identity');
+  }
+  assertExactProductAssertions(
+    perpetrator.product_assertions,
+    EXPECTED_PERPETRATOR_PRODUCTS,
+    SUBJECT_PERPETRATOR_PRODUCT_KEYS,
+    kind,
+    'identity_scope.perpetrator.product_assertions',
+  );
+  assertExactProductPairs(subject);
+  assertClinicalText(subject.clinical_text);
+  requireExactObject(subject.clinical_text, EXPECTED_CLINICAL_TEXT, kind, 'clinical_text');
+  requireExactObject(
+    subject.audience_bindings,
+    EXPECTED_AUDIENCE_BINDINGS,
+    kind,
+    'audience_bindings',
+  );
+  requireExactObject(
+    subject.workflow_requirements,
+    EXPECTED_WORKFLOW_REQUIREMENTS,
+    kind,
+    'workflow_requirements',
+  );
+  if (subject.workflow_requirements.urgent_supply_pathway.authority !== 'none'
+    || subject.workflow_requirements.urgent_supply_pathway.can_resolve_clinical_review
+      !== false) {
+    fail(kind, 'urgent-supply pathway must confer no authority');
+  }
+  requireExactObject(
+    subject.evidence_boundary,
+    EXPECTED_EVIDENCE_BOUNDARY,
+    kind,
+    'evidence_boundary',
+  );
+  const bindings = subject.identity_evidence_bindings;
+  requireExactObject(
+    bindings,
+    EXPECTED_IDENTITY_EVIDENCE_BINDINGS,
+    kind,
+    'identity_evidence_bindings',
+  );
+  assertNoKeyRecursively(
+    bindings,
+    new Set(['git_blob_sha256']),
+    kind,
+    'identity_evidence_bindings',
+  );
+  if (
+    bindings.rxnorm_combination_bundle?.committed_blob_content_sha256
+    !== 'be734f07cceffad4f8309008a9d4df994f8141cef24b842b8d3797dea0758cbb'
+  ) {
+    fail(kind, 'RxNorm combination bundle content hash does not match the reviewed object');
+  }
+  if (
+    bindings.combination_identity_manifest?.committed_blob_content_sha256
+    !== 'a0813b2a4d80198c6793d6e576b41847da31415f51a68ee75c744a8656223466'
+  ) {
+    fail(kind, 'combination identity manifest content hash does not match the reviewed object');
+  }
+  requireExactObject(
+    subject.supersession,
+    EXPECTED_SUPERSESSION,
+    kind,
+    'supersession',
+  );
+  if (!isDeepStrictEqual(subject.exclusions, EXPECTED_EXCLUSIONS)) {
+    fail(kind, 'exclusions do not match the reviewed fail-closed boundary');
+  }
+  requireExactObject(
+    subject.change_control,
+    EXPECTED_SUBJECT_CHANGE_CONTROL,
+    kind,
+    'change_control',
+  );
+  return subject;
+}
+
+export function assertApprovalEventTemplate(template) {
+  const kind = 'draft approval-event template';
+  template = immutableValidatedSnapshot(template);
+  requireExactKeys(template, EVENT_TEMPLATE_KEYS, kind, 'template');
+  if (template.schema_id !== 'aushadhi.interaction-approval-event-template') {
+    fail(kind, 'schema_id is not the pinned approval-event template schema');
+  }
+  if (template.schema_version !== '1.0.0') {
+    fail(kind, 'schema_version is not 1.0.0');
+  }
+  if (template.template_only !== true) fail(kind, 'template_only must be true');
+  const body = template.event_body_template;
+  requireObject(body, kind, 'event_body_template');
+  if (body.decision !== null) {
+    fail(kind, 'template decision must remain null');
+  }
+  requireExactObject(body, EXPECTED_EVENT_BODY_TEMPLATE, kind, 'event_body_template');
+  assertNoKeyRecursively(
+    body,
+    new Set([
+      'signature',
+      'authentication_method',
+      'key_status_at_signing',
+      'previous_event_hash',
+      'promotion_eligible',
+    ]),
+    kind,
+    'event_body_template',
+  );
+  const signature = template.detached_signature_envelope_template;
+  requireExactObject(
+    signature,
+    EXPECTED_SIGNATURE_ENVELOPE_TEMPLATE,
+    kind,
+    'detached_signature_envelope_template',
+  );
+  assertNoKeyRecursively(
+    signature,
+    new Set(['authentication_method', 'key_status_at_signing']),
+    kind,
+    'detached_signature_envelope_template',
+  );
+  requireExactObject(
+    template.approval_record_template,
+    EXPECTED_APPROVAL_RECORD_TEMPLATE,
+    kind,
+    'approval_record_template',
+  );
+  const receipt = template.append_only_store_receipt_template;
+  requireExactObject(
+    receipt,
+    EXPECTED_STORE_RECEIPT_TEMPLATE,
+    kind,
+    'append_only_store_receipt_template',
+  );
+  const receiptBody = receipt.receipt_body_template;
+  requireNull(
+    receiptBody.sequence,
+    kind,
+    'append_only_store_receipt_template.receipt_body_template.sequence',
+  );
+  const checkpoint = template.signed_checkpoint_template;
+  requireExactObject(
+    checkpoint,
+    EXPECTED_STORE_CHECKPOINT_TEMPLATE,
+    kind,
+    'signed_checkpoint_template',
+  );
+  const checkpointBody = checkpoint.checkpoint_body_template;
+  requireNull(
+    checkpointBody.through_sequence,
+    kind,
+    'signed_checkpoint_template.checkpoint_body_template.through_sequence',
+  );
+  return template;
+}
+
+function assertPackageStatus(status) {
+  const kind = 'draft approval package status';
+  status = immutableValidatedSnapshot(status);
+  requireExactObject(status, EXPECTED_PACKAGE_STATUS, kind, 'status');
+  if (status.package_status !== 'draft_non_authorizing') {
+    fail(kind, 'package_status must be draft_non_authorizing');
+  }
+  for (const key of ['policy_signoff_ready', 'rule_signoff_ready', 'promotion_ready']) {
+    requireFalse(status[key], kind, key);
+  }
+  requireExactKeys(status.authority, PACKAGE_AUTHORITY_KEYS, kind, 'authority');
+  for (const key of ['clinical_use', 'production', 'deployment']) {
+    if (status.authority[key] !== 'none') {
+      fail(kind, `${key} authority must be none`);
+    }
+  }
+  for (const key of [
+    'implemented_controls',
+    'required_before_policy_signoff',
+    'required_before_rule_signoff',
+    'required_before_promotion',
+    'required_before_production',
+  ]) {
+    requireStringArray(status[key], kind, key);
+  }
+  return status;
+}
+
+export function validateDraftApprovalPackage({
+  policy,
+  subject,
+  eventTemplate,
+  status,
+  clinicianReviewText,
+}) {
+  assertDraftGovernancePolicy(policy);
+  assertDraftClinicalRuleSubject(subject);
+  assertApprovalEventTemplate(eventTemplate);
+  const validatedStatus = assertPackageStatus(status);
+  const validatedRendering = assertClinicianReviewRendering(clinicianReviewText);
+  if (
+    validatedStatus.clinician_review_sha256_profile
+      !== validatedRendering.sha256_profile
+    || validatedStatus.clinician_review_sha256 !== validatedRendering.sha256
+  ) {
+    fail(
+      'draft approval package',
+      'clinician review rendering binding does not match package status',
+    );
+  }
+  return Object.freeze({
+    package_status: validatedStatus.package_status,
+    structurally_valid: true,
+    policy_signoff_ready: false,
+    rule_signoff_ready: false,
+    promotion_ready: false,
+    clinical_use_authority: 'none',
+    production_authority: 'none',
+    deployment_authority: 'none',
+  });
+}
