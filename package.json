@@ -20,6 +20,7 @@
     "stats": "node src/cli/stats.mjs",
     "report": "node src/cli/report.mjs",
     "fleet": "node src/cli/fleet-status.mjs",
+    "cdci:index": "node --max-old-space-size=6144 src/cli/build-cdci-index.mjs --profile internal-evaluation",
     "interactions": "node src/cli/interactions.mjs",
     "interactions:catalogue": "node src/cli/build-interaction-catalogue.mjs",
     "interactions:mappings:backlog": "node src/cli/build-interaction-mapping-backlog.mjs",

@@ -16,6 +16,9 @@ npm run build     # normalize -> merge -> emit dist/<date>/
 npm run stats     # summary of latest dist
 npm test          # node:test suite
 
+# build the separately licensed CDCI identity index (never writes dist/)
+npm run cdci:index
+
 # local, read-only interaction check (current dist is private/internal)
 # call Node directly on PowerShell because npm 11 consumes repeated --drug flags
 node src/cli/interactions.mjs --profile internal-evaluation --drug "Augmentin 625 Duo Tablet" --drug "Azithral 500 Tablet"
@@ -32,6 +35,24 @@ node src/cli/gapfill.mjs --audit-sample 50        # measure the 2-slot truncatio
 
 NEVER run two gapfill/discover processes at once — the politeness rate limiter
 and state file are per-process.
+
+## Restricted CDCI identity index
+
+`npm run cdci:index` builds a separate, identity-only index from the licensed
+Common Drug Codes for India SNOMED CT extension. The pinned archive paths and
+hashes live in `data-static/cdci-release.internal-evaluation.json`; the source
+archives and generated outputs remain below `data/restricted/cdci/`, which is
+gitignored. CDCI content is non-redistributable, internal-evaluation data and is
+never read by the ordinary catalogue build or written to `dist/`.
+
+The June 15, 2026 CDCI extension declares a dependency on the June 1, 2026
+International Edition. The pinned July International archive is used only as a
+Full-history source to reconstruct that exact June dependency view. Its July
+Snapshot is never substituted for the declared base. Missing, inactive, or
+ambiguous references are quarantined and cannot authorize runtime mappings.
+The release config also pins expected identity counts and a SHA-256 of the
+sorted quarantine concept IDs (LF-delimited with a trailing LF), so parser
+drift aborts before replacing a previously valid index.
 
 ## Interaction checker
 

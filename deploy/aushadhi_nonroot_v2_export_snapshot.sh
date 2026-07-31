@@ -12,6 +12,7 @@ if [ "${AUSHADHI_EXPORT_TESTING:-0}" = "1" ]; then
   readonly DIST_ROOT="$REPO/dist"
   readonly STATE_ROOT="$REPO/data"
   readonly STAGING="${AUSHADHI_EXPORT_STAGING:?test staging required}"
+  readonly ZSTD="${AUSHADHI_EXPORT_ZSTD:-/usr/bin/zstd}"
 else
   [ "$(/usr/bin/id -un)" = "aushadhi" ] || {
     printf '%s\n' 'REFUSED: exporter must run as aushadhi' >&2
@@ -21,9 +22,11 @@ else
   readonly DIST_ROOT="/var/lib/aushadhi/dist"
   readonly STATE_ROOT="/var/lib/aushadhi/data"
   readonly STAGING="/var/lib/aushadhi-export"
+  readonly ZSTD="/usr/bin/zstd"
 fi
 readonly RETAIN=14
 readonly STATE_CAP_BYTES=$((2 * 1024 * 1024 * 1024))
+readonly -a STATE_EXCLUDE_ARGS=(--exclude=pages --exclude=restricted)
 
 log() { printf '%s %s\n' "$(/bin/date -u '+%FT%TZ')" "$*"; }
 
@@ -31,7 +34,7 @@ log() { printf '%s %s\n' "$(/bin/date -u '+%FT%TZ')" "$*"; }
 # side-metadata json (record_count/size/sha256 of source and artifact). Shared by the
 # primary drugs.jsonl and the optional prescribable.jsonl so both get identical hardening.
 compress_dist_file() {  # $1=dist-relative path  $2=output .zst  $3=metadata json
-  /usr/bin/python3 - "$DIST_ROOT" "$1" "$2" "$3" <<'PYSOURCE'
+  /usr/bin/python3 - "$DIST_ROOT" "$1" "$2" "$3" "$ZSTD" <<'PYSOURCE'
 import hashlib
 import json
 import os
@@ -40,7 +43,7 @@ import subprocess
 import sys
 from pathlib import PurePosixPath
 
-root, relative, output, metadata = sys.argv[1:5]
+root, relative, output, metadata, zstd = sys.argv[1:6]
 parts = PurePosixPath(relative).parts
 if not parts or PurePosixPath(relative).is_absolute() or any(part in {"", ".", ".."} for part in parts):
     raise SystemExit("REFUSED: invalid relative export path")
@@ -64,7 +67,7 @@ try:
     output_fd = os.open(output, output_flags, 0o600)
     opened.append(output_fd)
     process = subprocess.Popen(
-        ["/usr/bin/zstd", "-q", "-T0", "-19", "-c"],
+        [zstd, "-q", "-T0", "-19", "-c"],
         stdin=subprocess.PIPE,
         stdout=output_fd,
     )
@@ -202,7 +205,7 @@ target.close()
 source.close()
 PYBK
   then
-    /usr/bin/zstd -q -T0 -3 --rm -- "$snap"
+    "$ZSTD" -q -T0 -3 --rm -- "$snap"
     /bin/chmod 0600 "$snap.zst"
     db_entries=$(/usr/bin/python3 - "$db_entries" "$base" "$db_rel" "$db" "$snap.zst" <<'PYDB'
 import hashlib, json, os, sys
@@ -224,9 +227,10 @@ PYDB
     log "WARN: sqlite backup failed for $db"
     /bin/rm -f -- "$snap"
   fi
-done < <(/usr/bin/find -P "$STATE_ROOT" -maxdepth 4 -type f \
-  \( -name '*.db' -o -name '*.db3' -o -name '*.sqlite' -o -name '*.sqlite3' \) \
-  -not -name '*-wal' -not -name '*-shm' 2>/dev/null)
+done < <(/usr/bin/find -P "$STATE_ROOT" -maxdepth 4 \
+  -path "$STATE_ROOT/restricted" -prune -o \
+  -type f \( -name '*.db' -o -name '*.db3' -o -name '*.sqlite' -o -name '*.sqlite3' \) \
+  -not -name '*-wal' -not -name '*-shm' -print 2>/dev/null)
 
 state_note=ok
 state_file_rel=''
@@ -236,12 +240,12 @@ set_size=''
 if [ ! -d "$STATE_ROOT" ] || [ -L "$STATE_ROOT" ]; then
   state_note=no-data-dir
 else
-  set_size=$(/usr/bin/du -sb --exclude=pages "$STATE_ROOT" 2>/dev/null | /usr/bin/cut -f1)
+  set_size=$(/usr/bin/du -sb "${STATE_EXCLUDE_ARGS[@]}" "$STATE_ROOT" 2>/dev/null | /usr/bin/cut -f1)
   if [ -n "$set_size" ] && [ "$set_size" -gt "$STATE_CAP_BYTES" ]; then
     state_note="skipped-oversize:${set_size}B>${STATE_CAP_BYTES}B"
   else
-    if /usr/bin/tar -C "$STATE_ROOT" --exclude=pages --warning=no-file-changed -cf - . 2>/dev/null \
-      | /usr/bin/zstd -q -T0 -6 -o "$tmp/state.tar.zst"; then
+    if /usr/bin/tar -C "$STATE_ROOT" "${STATE_EXCLUDE_ARGS[@]}" --warning=no-file-changed -cf - . 2>/dev/null \
+      | "$ZSTD" -q -T0 -6 -o "$tmp/state.tar.zst"; then
       state_note=ok
     elif [ -s "$tmp/state.tar.zst" ]; then
       state_note=ok-livewarn
@@ -292,7 +296,7 @@ doc = {
   "review_shortlist": review_shortlist,
   "databases": json.loads(dbs),
   "state_snapshot": ({"filename": state_file,
-                      "format": "zstd-compressed tar of data/ minus pages/",
+                      "format": "zstd-compressed tar of data/ minus pages/ and restricted/",
                       "size_bytes": int(state_size), "sha256": state_sha}
                      if state_file else None),
   "state_note": state_note,
