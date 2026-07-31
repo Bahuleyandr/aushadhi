@@ -5,6 +5,14 @@ import crypto from 'node:crypto';
 
 export class BlockedError extends Error {}
 export class CapReachedError extends Error {}
+export class HttpStatusError extends Error {
+  constructor(status, requestPath) {
+    super(`giving up on ${requestPath}: HTTP ${status}`);
+    this.name = 'HttpStatusError';
+    this.status = status;
+    this.requestPath = requestPath;
+  }
+}
 
 export function parseRobots(txt) {
   const dis = [];
@@ -111,7 +119,7 @@ export class PoliteFetcher {
       attempt++;
       if (attempt > this.maxRetries) {
         await this.persist();
-        throw new Error(`giving up on ${p}: HTTP ${res.status}`);
+        throw new HttpStatusError(res.status, p);
       }
       await this.sleep(1000 * 2 ** attempt);
     }

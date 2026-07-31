@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { parseRobots, isAllowed, PoliteFetcher, BlockedError, CapReachedError } from '../src/lib/politeness.mjs';
+import {
+  parseRobots, isAllowed, PoliteFetcher, BlockedError, CapReachedError, HttpStatusError,
+} from '../src/lib/politeness.mjs';
 
 const ROBOTS = [
   'User-agent: *',
@@ -101,6 +103,22 @@ test('PoliteFetcher: backoff retries 5xx then succeeds', async () => {
   await pf.init();
   assert.equal(await pf.get('/drugs/d-4'), 'recovered');
   assert.ok(sleeps.some((ms) => ms >= 2000), 'exponential backoff sleep');
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
+});
+
+test('PoliteFetcher: exhausted HTTP response retains typed status evidence', async () => {
+  fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
+  const { pf } = makeFetcher([
+    { status: 200, body: ROBOTS },
+    { status: 404 },
+  ], { maxRetries: 0 });
+  await pf.init();
+  await assert.rejects(
+    pf.get('/drugs/gone'),
+    (error) => error instanceof HttpStatusError
+      && error.status === 404
+      && error.requestPath === '/drugs/gone',
+  );
   fs.rmSync('test/.tmp-cache', { recursive: true, force: true });
 });
 
