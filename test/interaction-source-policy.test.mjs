@@ -1110,6 +1110,47 @@ test('keeps conditional CDCI/SNOMED data user-supplied and out of open artifacts
     use: 'identity',
     storagePath: 'data/restricted/cdci/mappings.jsonl',
   }));
+  for (const use of ['catalogue', 'ingredient-index', 'product-resolution']) {
+    assert.throws(
+      () => allowed(manifest, 'cdci-snomed-ct', {
+        profile: 'internal-evaluation',
+        use,
+        storagePath: 'data/restricted/cdci/mappings.jsonl',
+      }),
+      new RegExp(`cdci-snomed-ct.*${use}`, 'i'),
+    );
+  }
+  for (const storagePath of [
+    'dist/latest/cdci.jsonl',
+    'data-static/cdci.jsonl',
+    'data/interaction/internal-evaluation/cdci.jsonl',
+  ]) {
+    assert.throws(
+      () => allowed(manifest, 'cdci-snomed-ct', {
+        profile: 'internal-evaluation',
+        use: 'identity',
+        storagePath,
+      }),
+      /cdci-snomed-ct.*required storage zone/i,
+    );
+  }
+  assert.deepEqual(
+    assertArtifactProvenance(manifest, {
+      sourceIds: ['cdci-snomed-ct'],
+      profile: 'internal-evaluation',
+      use: 'identity',
+      storagePath: 'data/restricted/cdci/index',
+    }),
+    {
+      profile: 'internal-evaluation',
+      use: 'identity',
+      storage_path: 'data/restricted/cdci/index',
+      source_ids: ['cdci-snomed-ct'],
+      artifact_pack: 'user-licensed',
+      redistributable: false,
+      licence_obligations: [],
+    },
+  );
 });
 
 test('keeps DDInter disabled even for internal evaluation', () => {

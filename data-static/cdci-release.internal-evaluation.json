@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "source_id": "cdci-snomed-ct",
+  "profile": "internal-evaluation",
+  "extension": {
+    "storage_path": "data/restricted/cdci/source/SnomedCT_IndiaDrugExtensionRF2_PRODUCTION_IN1000189_20260615T120000Z.zip",
+    "sha256": "f6f552485799e155781d4006f6e7803a45b4eccf2064397a577c5c0fd4ea00c5",
+    "package_effective_time": "20260615"
+  },
+  "international": {
+    "storage_path": "data/restricted/cdci/source/SnomedCT_InternationalRF2_PRODUCTION_20260701T120000Z.zip",
+    "sha256": "f1597cf959fdb1f870a59526a3957cf605181c4a3fd9bc9c20c8a77f7fdfb653",
+    "package_effective_time": "20260701",
+    "dependency_view_effective_time": "20260601",
+    "selection_strategy": "full_as_of_dependency"
+  },
+  "output": {
+    "storage_path": "data/restricted/cdci/index"
+  },
+  "expected_output": {
+    "active_extension_concept_count": 249330,
+    "identity_count": 249317,
+    "identity_kinds": {
+      "brand_name": 71503,
+      "branded_medicine": 93016,
+      "branded_product": 74877,
+      "generic_medicine": 1800,
+      "supplier": 8121
+    },
+    "quarantined_concept_count": 6,
+    "quarantined_concept_ids_sha256": "1e5f6802e6e15cd4dc46ede19cf137ef00db5c8fa41d13f022682d7dfeb84ee5",
+    "artifact_sha256": {
+      "identities": "d2c4850da73b2c7772b747450eb278da411da642544762b40b4a8d2ced64af2b",
+      "quarantine": "6be94870a1e2aed602cd0f59706b6a02db1d01699a65c968292cb8b6312305eb"
+    }
+  }
+}
