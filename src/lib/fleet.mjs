@@ -6,12 +6,20 @@
 const fmt = (n) => (n === null || n === undefined ? '—' : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','));
 
 export function renderFleet(crawlers = []) {
-  const L = ['| crawler | today | cap | progress | rows | ETA |', '|---|---:|---:|---|---:|---:|'];
+  const L = [
+    '| crawler | today | cap | progress | rows | terminal | quarantine | ETA |',
+    '|---|---:|---:|---|---:|---:|---:|---:|',
+  ];
   for (const c of crawlers) {
     const hasProg = c.total != null && c.cursor != null && c.total > 0;
     const progress = hasProg ? `${fmt(c.cursor)}/${fmt(c.total)} (${((100 * c.cursor) / c.total).toFixed(1)}%)` : '—';
-    const eta = hasProg && c.cap ? `~${Math.ceil((c.total - c.cursor) / c.cap)}d` : '—';
-    L.push(`| ${c.name} | ${fmt(c.today)} | ${fmt(c.cap)} | ${progress} | ${fmt(c.rows)} | ${eta} |`);
+    const eta = (c.quarantined ?? 0) > 0
+      ? 'unresolved'
+      : hasProg && c.cap ? `~${Math.ceil((c.total - c.cursor) / c.cap)}d` : '—';
+    L.push(
+      `| ${c.name} | ${fmt(c.today)} | ${fmt(c.cap)} | ${progress} | ${fmt(c.rows)} `
+      + `| ${fmt(c.tombstones)} | ${fmt(c.quarantined)} | ${eta} |`,
+    );
   }
   return L.join('\n');
 }

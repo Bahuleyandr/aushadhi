@@ -13,7 +13,7 @@ const readState = (src) => {
   try { return JSON.parse(fs.readFileSync(path.join(raw, src, 'state.json'), 'utf8')); } catch { return {}; }
 };
 const wcl = (f) => { try { return fs.readFileSync(f, 'utf8').split('\n').filter((l) => l.trim()).length; } catch { return null; } };
-const indexSize = (src) => wcl(path.join(raw, src, 'product-index.jsonl'));
+const indexSize = (src, filename = 'product-index.jsonl') => wcl(path.join(raw, src, filename));
 const rowsWritten = (src) => {
   const root = path.join(raw, src);
   if (!fs.existsSync(root)) return null;
@@ -22,6 +22,11 @@ const rowsWritten = (src) => {
   return n || null;
 };
 const cap = (envName, def) => Number(process.env[envName] ?? def);
+const lengthOf = (value) => Array.isArray(value) ? value.length : null;
+const outcomes = (state, source) => ({
+  tombstones: lengthOf(state[source]?.tombstones),
+  quarantined: lengthOf(state[source]?.quarantine),
+});
 
 const onemg = readState('onemg');
 const apollo = readState('apollo');
@@ -29,10 +34,10 @@ const pharmeasy = readState('pharmeasy');
 const netmeds = readState('netmeds');
 
 const crawlers = [
-  { name: '1mg', today: onemg.count ?? null, cap: cap('AUSHADHI_DAILY_CAP', 20000), cursor: null, total: null, rows: rowsWritten('onemg') },
-  { name: 'apollo', today: apollo.count ?? null, cap: cap('AUSHADHI_APOLLO_CAP', 10000), cursor: apollo.apollo?.saltCursor ?? null, total: 3930, rows: rowsWritten('apollo') },
-  { name: 'pharmeasy', today: pharmeasy.count ?? null, cap: cap('AUSHADHI_PHARMEASY_CAP', 20000), cursor: pharmeasy.pharmeasy?.cursor ?? null, total: indexSize('pharmeasy'), rows: rowsWritten('pharmeasy') },
-  { name: 'netmeds', today: netmeds.count ?? null, cap: cap('AUSHADHI_NETMEDS_CAP', 20000), cursor: netmeds.netmeds?.cursor ?? null, total: indexSize('netmeds'), rows: rowsWritten('netmeds') },
+  { name: '1mg', today: onemg.count ?? null, cap: cap('AUSHADHI_DAILY_CAP', 20000), cursor: null, total: null, rows: rowsWritten('onemg'), ...outcomes(onemg, 'onemg') },
+  { name: 'apollo', today: apollo.count ?? null, cap: cap('AUSHADHI_APOLLO_CAP', 10000), cursor: apollo.apollo?.saltCursor ?? null, total: indexSize('apollo', 'salt-index.jsonl'), rows: rowsWritten('apollo'), ...outcomes(apollo, 'apollo') },
+  { name: 'pharmeasy', today: pharmeasy.count ?? null, cap: cap('AUSHADHI_PHARMEASY_CAP', 20000), cursor: pharmeasy.pharmeasy?.cursor ?? null, total: indexSize('pharmeasy'), rows: rowsWritten('pharmeasy'), ...outcomes(pharmeasy, 'pharmeasy') },
+  { name: 'netmeds', today: netmeds.count ?? null, cap: cap('AUSHADHI_NETMEDS_CAP', 20000), cursor: netmeds.netmeds?.cursor ?? null, total: indexSize('netmeds'), rows: rowsWritten('netmeds'), ...outcomes(netmeds, 'netmeds') },
 ];
 
 const dates = [onemg, apollo, pharmeasy, netmeds].map((s) => s.date).filter(Boolean);

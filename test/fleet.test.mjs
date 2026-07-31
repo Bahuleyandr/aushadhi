@@ -20,3 +20,19 @@ test('renderFleet: missing total/cursor -> no % or ETA, still lists the crawler'
   assert.match(md, /145,793/);
   assert.doesNotMatch(md, /NaN/);
 });
+
+test('renderFleet: unresolved quarantine remains visible at 100% cursor progress', () => {
+  const md = renderFleet([{
+    name: 'apollo',
+    today: 56,
+    cap: 10000,
+    cursor: 3931,
+    total: 3931,
+    rows: 14835,
+    quarantined: 1,
+    tombstones: 0,
+  }]);
+  assert.match(md, /100\.0%/);
+  assert.match(md, /quarantine/i);
+  assert.match(md, /\|\s*1\s*\|/);
+});
