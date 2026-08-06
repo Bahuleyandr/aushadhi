@@ -106,14 +106,26 @@ and stays `null` otherwise.
 
 | Source | `type: 'allopathy'` iff | Rows left `null` |
 |---|---|---|
-| `onemg-live` | the product page carries a schema.org `Drug` JSON-LD block or `"pageType":"drug"` in its embedded router state | pages with neither marker |
-| `apollo` | always on a parsed row — the parser hard-requires the schema.org `Drug` block, which is itself the page's category statement | n/a (pages without the block never produce a row) |
-| `netmeds` | payload states drug schedule `G`/`H`/`H1`/`X` (never `E1`, the ayurvedic/unani poisons schedule), or `mstar-rxrequired` = "Rx required", or a CIMS taxonomy category | rows with none of those explicit fields — passing the composition digit-filter alone is not category evidence |
+| `onemg-live` | the product page carries a schema.org `Drug` JSON-LD block, or `pageType: 'drug'` read structurally from the parsed embedded app state (`window.__INITIAL_STATE__` → `drugPageReducer.dynamicData.pageType` — never a raw-HTML substring grep) | pages with neither marker, including pages that merely embed the `"pageType":"drug"` substring elsewhere |
+| `apollo` | the parser hard-requires the schema.org `Drug` block (the page's category statement) **and** none of the page's own JSON-LD blocks (Drug, breadcrumbs, FAQ) name an AYUSH system (Ayurveda/Homoeopathy/Unani/Siddha) — an untrusted field may withhold the claim, never make it | Drug-templated pages whose structured data names an AYUSH system (pages without the block never produce a row) |
+| `netmeds` | payload does **not** state schedule `E`/`E1` (the ASU poisons schedule is an unconditional veto no other signal can override), and states schedule `G`/`H`/`H1`/`X`, or `mstar-rxrequired` = "Rx required", or a non-placeholder CIMS taxonomy category | any row stating schedule `E`/`E1` regardless of Rx/CIMS signals; rows whose only CIMS value is placeholder-shaped ("NA", "-", "None", "Misc", …); rows with no explicit field — passing the composition digit-filter alone is not category evidence |
 | `pharmeasy` | product node states `isRxRequired: true` (Rx-only sale under the D&C Rules schedules) | OTC rows; `productType` (unlabelled enum) and `therapy` (unverified vocabulary) are not trusted |
+
+**PharmEasy caveat:** the `isRxRequired` gate is a **strong proxy, not a
+guarantee**. Schedule E1 (ASU poisons) is also part of the D&C Rules, so
+Rx-marked ayurvedic products exist, and the PharmEasy payload carries no
+schedule field to cross-check (unlike netmeds, where E/E1 vetoes). The gate
+additionally leans on discovery scope: the crawl seeds only from the medicine
+sitemaps, which is assumed — not verified per row — to exclude the ayurveda
+catalog.
 
 Because the signals live in the raw page cache (`data/raw/<source>/pages/`),
 already-crawled products can be re-derived offline with
 `node src/cli/backfill-type.mjs` — no re-crawl needed for cached pages.
+Provenance nuance: the cache holds the **latest** capture per request path, so
+a backfilled `type` may derive from a page fetched *after* the row's preserved
+`seen_at`; `seen_at` still describes the original observation of the row's
+other fields, not the capture the `type` patch was parsed from.
 
 ## 6. 1mg gap-filler
 

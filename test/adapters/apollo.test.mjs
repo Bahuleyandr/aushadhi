@@ -57,6 +57,40 @@ test('parseApolloProduct: extracts brand, manufacturer, composition from the Dru
   assert.equal(r.type, 'allopathy');
 });
 
+test('parseApolloProduct: AYUSH-named JSON-LD withholds the allopathy claim (fail safe)', () => {
+  const drugBlock = {
+    '@type': 'Drug',
+    name: 'Liv.52 Tablet',
+    nonProprietaryName: 'HIMSRA-500MG',
+  };
+  const breadcrumb = (categoryName) => ({
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.apollopharmacy.in/' },
+      { '@type': 'ListItem', position: 2, name: categoryName, item: 'https://www.apollopharmacy.in/shop-by-category/x' },
+    ],
+  });
+  const pageFor = (categoryName) => `<script type="application/ld+json">${JSON.stringify(drugBlock)}</script>`
+    + `<script type="application/ld+json">${JSON.stringify(breadcrumb(categoryName))}</script>`;
+  // a Drug block alone still claims allopathy...
+  assert.equal(parseApolloProduct(pageFor('LIVER CARE')).type, 'allopathy');
+  // ...but an AYUSH system named in the page's own structured data withholds it
+  for (const category of ['Ayurvedic Products', 'Ayurveda', 'Homeopathy', 'Homoeopathic Remedies', 'Unani', 'Siddha']) {
+    const row = parseApolloProduct(pageFor(category));
+    assert.notEqual(row, null, `${category}: row is still emitted`);
+    assert.equal(row.type, null, `${category}: allopathy claim must be withheld`);
+  }
+  // an AYUSH term inside the Drug block itself also withholds
+  const ayushDrug = `<script type="application/ld+json">${JSON.stringify({
+    ...drugBlock, description: 'An Ayurvedic proprietary medicine.',
+  })}</script>`;
+  assert.equal(parseApolloProduct(ayushDrug).type, null);
+  // the scan is confined to JSON-LD: the real fixture's site-wide nav says
+  // "Ayurvedic Products" in plain HTML, yet its clean JSON-LD keeps the claim
+  assert.match(medHtml, /Ayurvedic Products/);
+  assert.equal(parseApolloProduct(medHtml).type, 'allopathy');
+});
+
 test('parseApolloProduct: binds the Drug JSON-LD identity to the requested product path', () => {
   assert.ok(parseApolloProduct(medHtml, { expectedPath: FIXTURE_PRODUCT_PATH }));
   assert.equal(

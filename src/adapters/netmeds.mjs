@@ -28,6 +28,36 @@ function retainLatestSourceProduct(byProduct, row) {
 // "+"-joined for combos ("Amoxicillin 500 mg+Clavulanic Acid 125 mg").
 const PART_RE = /^(.+?)\s+([\d.]+)\s*(mg|mcg|g|ml|iu|kiu|%|units?)\b/i;
 
+// Indian drug-schedule letters (Drugs & Cosmetics Rules). G/H/H1/X govern
+// modern (allopathic) medicines; E1 is the poisons schedule for
+// Ayurvedic/Siddha/Unani medicines — a row stating it is affirmatively NOT
+// modern medicine. Plain "E" is treated the same, conservatively: it is not a
+// modern-medicine schedule, and a value that close to E1 must never slip
+// through as anything else.
+const MODERN_SCHEDULES = new Set(['G', 'H', 'H1', 'X']);
+const ASU_SCHEDULES = new Set(['E', 'E1']);
+
+// CIMS therapeutic-class names are alphabetic phrases ("Endocrine & Metabolic
+// System" is the fixture-pinned observed value). The field is Netmeds catalog
+// data, not CIMS itself — its population discipline is unverified and the full
+// CIMS vocabulary cannot be allowlisted from the committed fixtures — so the
+// gate rejects placeholder-shaped values instead of accepting any non-empty
+// string. Real categories a placeholder word happens to shadow (e.g. a genuine
+// "Miscellaneous" class) are sacrificed to fail-closed: those rows keep type
+// null unless schedule/Rx evidence qualifies them.
+const CIMS_PLACEHOLDER_VALUES = new Set([
+  'na', 'n a', 'n.a', 'n.a.', 'n/a', 'none', 'null', 'nil', 'nan',
+  'no', 'yes', 'tbd', 'todo', 'test', 'default', 'unknown', 'unclassified',
+  'uncategorized', 'uncategorised', 'not available', 'not applicable',
+  'not classified', 'misc', 'miscellaneous', 'other', 'others', 'general',
+]);
+
+function isCimsCategoryEvidence(value) {
+  const v = String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!/[a-z]/.test(v)) return false; // '', '-', digits: never a class name
+  return !CIMS_PLACEHOLDER_VALUES.has(v);
+}
+
 export function parseNetmedsComposition(generic) {
   const parts = String(generic ?? '').split(/\s*\+\s*/).map((s) => s.trim()).filter(Boolean);
   const ingredients = [];
@@ -77,16 +107,20 @@ export function parseNetmedsProduct(html, expectedProductId = null, expectedProd
   const ingredients = parseNetmedsComposition(generic);
   if (!ingredients.length) return null; // device / herbal / no composition -> skip
   // Category evidence must be an explicit per-row field, never the crawl scope
-  // or the composition filter above: an Indian drug-schedule letter (G/H/H1/X —
-  // modern-medicine schedules only; E1, the ayurvedic/unani poisons schedule,
-  // is deliberately not accepted), an explicit "Rx required" flag, or a CIMS
-  // taxonomy entry (CIMS indexes allopathic medicines). Rows carrying none of
-  // these keep type null (fail closed).
+  // or the composition filter above. Order matters: a stated ASU schedule
+  // (E/E1) is an unconditional VETO — Schedule E1 ayurvedic preparations are
+  // exactly the products e-pharmacies mark "Rx required" (the D&C Rules demand
+  // medical supervision for them), so no other signal may override it.
+  // Otherwise positive evidence is a modern-medicine schedule (G/H/H1/X), an
+  // explicit "Rx required" flag, or a plausible CIMS therapeutic-class entry
+  // (placeholder-shaped values rejected). Rows carrying none of these keep
+  // type null (fail closed).
   const schedule = (a.schedule ?? '').toString().trim().toUpperCase();
   const rxRequired = (a['mstar-rxrequired'] ?? '').toString().trim().toLowerCase();
-  const cimsCategory = (a.cimscategoryname ?? '').toString().trim();
-  const type = ['G', 'H', 'H1', 'X'].includes(schedule)
-    || rxRequired === 'rx required' || cimsCategory !== '' ? 'allopathy' : null;
+  const type = ASU_SCHEDULES.has(schedule) ? null
+    : MODERN_SCHEDULES.has(schedule)
+      || rxRequired === 'rx required'
+      || isCimsCategoryEvidence(a.cimscategoryname) ? 'allopathy' : null;
   return {
     source: 'netmeds',
     ...(embeddedProductId === null ? {} : { source_id: embeddedProductId }),

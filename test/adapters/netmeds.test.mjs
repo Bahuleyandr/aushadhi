@@ -61,6 +61,59 @@ test('parseNetmedsProduct: type only from explicit schedule/Rx/CIMS evidence', (
   );
 });
 
+test('parseNetmedsProduct: ASU schedule E/E1 is an unconditional veto, never overridden', () => {
+  const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
+    productDetailsPage: { product: { attributes } },
+  })};</script></html>`;
+  const base = {
+    'mstar-displaynamewops': 'Kamini Vidrawan Ras', manufacturername: 'X',
+    // standardized-extract listing passes the digit filter
+    genericnamewithdosage: 'Ashwagandha 500 mg',
+  };
+  // Schedule E1 ASU preparations are exactly what e-pharmacies mark Rx-required
+  // — the Rx flag must NOT reach 'allopathy' through the OR
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: 'E1', 'mstar-rxrequired': 'Rx required',
+  })).type, null);
+  // nor may a CIMS category entry override the veto
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: 'E1', cimscategoryname: 'Endocrine & Metabolic System',
+  })).type, null);
+  // all signals at once still lose to the veto; legacy 'E' vetoes the same way
+  assert.equal(parseNetmedsProduct(page({
+    ...base,
+    schedule: 'E1',
+    'mstar-rxrequired': 'Rx required',
+    cimscategoryname: 'Endocrine & Metabolic System',
+  })).type, null);
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: 'E', 'mstar-rxrequired': 'Rx required',
+  })).type, null);
+});
+
+test('parseNetmedsProduct: placeholder CIMS category values are not evidence', () => {
+  const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
+    productDetailsPage: { product: { attributes } },
+  })};</script></html>`;
+  const base = {
+    'mstar-displaynamewops': 'Aciformin 500', manufacturername: 'Acidus',
+    genericnamewithdosage: 'Metformin 500 mg',
+  };
+  for (const placeholder of ['NA', 'N.A.', 'n/a', '-', '--', 'None', 'null', 'NIL',
+    'Misc', 'Miscellaneous', 'Others', 'General', 'Not Available', 'Not  Applicable', '123', '.']) {
+    assert.equal(
+      parseNetmedsProduct(page({ ...base, cimscategoryname: placeholder })).type,
+      null,
+      `placeholder ${JSON.stringify(placeholder)} must not qualify as CIMS evidence`,
+    );
+  }
+  // a real therapeutic-class phrase still qualifies
+  assert.equal(
+    parseNetmedsProduct(page({ ...base, cimscategoryname: 'Cardiovascular System' })).type,
+    'allopathy',
+  );
+});
+
 test('parseSitemapLocs extracts <loc> entries', () => {
   const locs = parseSitemapLocs(sitemapXml);
   assert.equal(locs.length, 2);

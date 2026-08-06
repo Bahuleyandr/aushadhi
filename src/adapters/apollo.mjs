@@ -56,17 +56,25 @@ export function parseApolloComposition(nonProprietaryName) {
   return ingredients;
 }
 
-function drugSchema($) {
-  let drug = null;
+function ldBlocks($) {
+  const blocks = [];
   $('script[type="application/ld+json"]').each((_, el) => {
-    if (drug) return;
     try {
       const j = JSON.parse($(el).text());
-      for (const b of Array.isArray(j) ? j : [j]) if (b && b['@type'] === 'Drug') { drug = b; break; }
+      blocks.push(...(Array.isArray(j) ? j : [j]));
     } catch { /* skip bad JSON */ }
   });
-  return drug;
+  return blocks;
 }
+
+// Fail-safe negative signal: schema.org `Drug` is not allopathy-specific, and
+// a template catalog can stamp it on any product page — so if the page's OWN
+// structured data (any JSON-LD block: the Drug block, breadcrumb trail, FAQ)
+// names an AYUSH system, the allopathy claim is withheld and the row keeps
+// type null. Untrusted fields may only ever WITHHOLD a claim, never make one.
+// The scan is confined to parsed JSON-LD — the site-wide nav names "Ayurveda"
+// on every page, so a raw-HTML grep would false-positive universally.
+const AYUSH_TERM_RE = /ayurved|homoeopath|homeopath|unani|siddha/i;
 
 export function apolloProductUrlMatches(value, expectedPath) {
   if (typeof value !== 'string' || !APOLLO_PRODUCT_PATH.test(String(expectedPath))) return false;
@@ -93,7 +101,8 @@ function drugIdentityMatches(drug, expectedPath) {
 // Parse an Apollo /medicine/<slug> product page -> common row shape (source='apollo').
 export function parseApolloProduct(html, { expectedPath = null } = {}) {
   const $ = cheerio.load(html);
-  const drug = drugSchema($);
+  const blocks = ldBlocks($);
+  const drug = blocks.find((b) => b && b['@type'] === 'Drug') ?? null;
   if (!drug) return null;
   if (expectedPath !== null && !drugIdentityMatches(drug, expectedPath)) return null;
   const comp = typeof drug.nonProprietaryName === 'string' ? drug.nonProprietaryName : '';
@@ -110,11 +119,12 @@ export function parseApolloProduct(html, { expectedPath = null } = {}) {
     composition_status: ingredients.length ? 'complete' : 'missing',
     substitutes_raw: [],
     is_discontinued: null,
-    // drugSchema above hard-requires a schema.org `Drug` block, so reaching
-    // this return means the page itself typed the product as a drug — a
-    // per-page category statement, not a crawl-scope inference. Listings
-    // without that block never produce a row at all.
-    type: 'allopathy',
+    // Reaching this return means the page carried a schema.org `Drug` block —
+    // a per-page category statement, not a crawl-scope inference; listings
+    // without it never produce a row at all. But the claim is withheld when
+    // the page's own JSON-LD names an AYUSH system (see AYUSH_TERM_RE): a
+    // Drug-templated ayurvedic/homoeopathic proprietary keeps type null.
+    type: blocks.some((b) => AYUSH_TERM_RE.test(JSON.stringify(b))) ? null : 'allopathy',
   };
 }
 

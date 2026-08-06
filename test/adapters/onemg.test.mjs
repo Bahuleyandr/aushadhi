@@ -44,14 +44,32 @@ test('parseDrugPage: Augmentin (combo + substitutes)', () => {
 });
 
 test('parseDrugPage: type requires per-page evidence, else stays null (fail closed)', () => {
-  // no Drug JSON-LD and no "pageType":"drug" router marker -> unknown category
+  // no Drug JSON-LD and no pageType marker in the app state -> unknown category
   const minimal = '<html><head><meta property="og:title" content="Some Product - 1mg"/></head></html>';
   assert.equal(parseDrugPage(minimal).type, null);
   // browse listing page carries neither per-drug marker
   assert.equal(parseDrugPage(browse).type, null);
-  // router pageType alone still counts when the Drug JSON-LD block is absent
+  // app-state pageType alone still counts when the Drug JSON-LD block is absent
   const noLd = augmentin.replaceAll('"@type":"Drug"', '"@type":"Thing"');
   assert.equal(parseDrugPage(noLd).type, 'allopathy');
+});
+
+test('parseDrugPage: "pageType":"drug" outside the parsed app state is not evidence', () => {
+  // the raw substring embedded in an unrelated blob (e.g. serialized
+  // cross-page references) must not qualify — only the pinned path in the
+  // parsed window.__INITIAL_STATE__ counts
+  const crossRef = '<html><script>var related = {"pages":[{"pageType":"drug","url":"/drugs/foo-1"}]};</script></html>';
+  assert.equal(parseDrugPage(crossRef).type, null);
+  // even inside a real __INITIAL_STATE__, the substring at any OTHER path
+  // (here a search-results blob) is not the page's own category statement
+  const wrongPath = '<html><script>window.__INITIAL_STATE__ = '
+    + '{"searchReducer":{"results":[{"pageType":"drug"}]},"drugPageReducer":{"dynamicData":{"pageType":"otc"}}};'
+    + '</script></html>';
+  assert.equal(parseDrugPage(wrongPath).type, null);
+  // the pinned path itself still qualifies without a Drug JSON-LD block
+  const pinned = '<html><script>window.__INITIAL_STATE__ = '
+    + '{"drugPageReducer":{"dynamicData":{"pageType":"drug"}}};</script></html>';
+  assert.equal(parseDrugPage(pinned).type, 'allopathy');
 });
 
 test('readOnemgNormalized: last fetch per identity wins across dates', () => {
