@@ -305,10 +305,21 @@ export function verifyPmbjpCombinationEvidenceFiles(
     strictPlainDataSnapshot(manifest, 'combination identity manifest'),
   );
   if (presentations.length === 0) return verifyPmbjpCombinationEvidence(manifest);
-  const trustedRoot = assertPhysicalDirectoryPath(
-    TRUSTED_RESTRICTED_ROOT,
-    'verifier-owned restricted source root',
-  );
+  // A restricted root that does not exist at all (fresh clone: data/ is
+  // gitignored and never committed) means the operator-provisioned sources are
+  // absent — the same fail-closed degradation as missing source files below:
+  // return an unverified report instead of leaking a raw ENOENT. Any other
+  // lstat failure (symlink, non-directory, permission) still throws.
+  let trustedRoot;
+  try {
+    trustedRoot = assertPhysicalDirectoryPath(
+      TRUSTED_RESTRICTED_ROOT,
+      'verifier-owned restricted source root',
+    );
+  } catch (error) {
+    if (error?.code === 'ENOENT') return verifyPmbjpCombinationEvidence(manifest);
+    throw error;
+  }
   if (restrictedRoot !== undefined) {
     if (typeof restrictedRoot !== 'string' || restrictedRoot.trim() === '') {
       throw new TypeError('restrictedRoot must be a non-empty string when supplied');
