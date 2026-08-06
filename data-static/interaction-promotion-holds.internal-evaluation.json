@@ -4,7 +4,7 @@
   "profile": "internal-evaluation",
   "draft_pack_sha256": "eaacb97372717cc4dd3f2aba6c10e5cd3c7d394c0e24f0b0feaa4d5895b3b756",
   "evidence_digest_sha256": "8bda060f96f1fcddccb897233316c3a96d17864a33c7b2f396c362e3b4f47fdb",
-  "source_policy_sha256": "c1ede6a424db18be166a1aef775c3d6163d4d539a5c19546cbcbd615d0faa6c4",
+  "source_policy_sha256": "8a4fc02e2110deaded7f74f6f2c21090258e327717549083d29a22a6f559210b",
   "runtime_hold_scope_sha256": "256faf2ae557d528b5c94765e4fe8e5f1af731e430b1120a610701f6488b52db",
   "holds": [
     {

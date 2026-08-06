@@ -47,20 +47,20 @@ test('internal catalogue filter excludes an unknown source and any mixed row con
   const rows = [
     product('Open', ['github-jr']),
     product('Restricted', ['onemg-live']),
-    product('Unknown', ['apollo']),
-    product('Mixed', ['github-jr', 'apollo']),
+    product('Unknown', ['unlisted-source-example']),
+    product('Mixed', ['github-jr', 'unlisted-source-example']),
   ];
   const fixture = await writeFixture(dir, rows, {
     'github-jr': 2,
     'onemg-live': 1,
-    apollo: 2,
+    'unlisted-source-example': 2,
   });
   const result = await runFilter(dir, 'internal-evaluation', fixture);
   assert.equal(result.summary.total_rows, 2);
   assert.equal(result.summary.exclusions.row_count, 2);
   assert.deepEqual(result.summary.sources, { 'github-jr': 1, 'onemg-live': 1 });
-  assert.deepEqual(result.summary.exclusions.source_counts, { apollo: 2 });
-  assert.match(result.summary.exclusions.reasons.apollo, /unknown interaction source/);
+  assert.deepEqual(result.summary.exclusions.source_counts, { 'unlisted-source-example': 2 });
+  assert.match(result.summary.exclusions.reasons['unlisted-source-example'], /unknown interaction source/);
   const output = (await fs.readFile(result.output_path, 'utf8'))
     .trim()
     .split('\n')
