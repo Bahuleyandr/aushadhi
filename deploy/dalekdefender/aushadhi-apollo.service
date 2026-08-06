@@ -5,13 +5,54 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=/root/aushadhi
+User=aushadhi
+Group=aushadhi
+WorkingDirectory=/opt/aushadhi
+Environment=HOME=/var/cache/aushadhi/apollo
+Environment=XDG_CACHE_HOME=/var/cache/aushadhi/apollo
+Environment=AUSHADHI_RAW_ROOT=/var/lib/aushadhi/data/raw
+Environment=AUSHADHI_DIST_ROOT=/var/lib/aushadhi/dist
 Environment=AUSHADHI_APOLLO_CAP=10000
-ExecStart=/usr/bin/bash /root/aushadhi/scripts/apollo-loop.sh
+ExecStartPre=+/usr/local/libexec/aushadhi-network-hook aushadhi-apollo.service start
+ExecStart=/usr/bin/bash /opt/aushadhi/scripts/apollo-loop.sh
+ExecStopPost=+/usr/local/libexec/aushadhi-network-hook aushadhi-apollo.service stop
 Restart=always
 RestartSec=30
-StandardOutput=append:/root/aushadhi/logs/apollo.log
-StandardError=append:/root/aushadhi/logs/apollo.log
+StandardOutput=append:/var/log/aushadhi/apollo/apollo.log
+StandardError=append:/var/log/aushadhi/apollo/apollo.log
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RemoveIPC=true
+KeyringMode=private
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+StateDirectory=aushadhi/data/raw/apollo
+StateDirectoryMode=0750
+LogsDirectory=aushadhi/apollo
+LogsDirectoryMode=0750
+CacheDirectory=aushadhi/apollo
+CacheDirectoryMode=0750
+ReadOnlyPaths=/opt/aushadhi /var/lib/aushadhi/dist /var/lib/aushadhi/data/raw
+ReadWritePaths=/var/lib/aushadhi/data/raw/apollo /var/log/aushadhi/apollo /var/cache/aushadhi/apollo
+InaccessiblePaths=/root
+MemoryHigh=2500M
+MemoryMax=3500M
 
 [Install]
 WantedBy=multi-user.target

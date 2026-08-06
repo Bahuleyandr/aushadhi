@@ -66,6 +66,29 @@ test('renderReport: strength verification section when the model ran', () => {
   assert.match(md, /\b300\b/);
 });
 
+test('renderReport: strength signals are limited to internal evaluation and do not authorize auto-fill', () => {
+  const md = renderReport({
+    ...summary,
+    strength_verified_rows: 240000, strength_unverified_rows: 20000,
+    strength_no_strength_rows: 7618, strength_conflict_rows: 300,
+  });
+
+  assert.doesNotMatch(md, /safe to auto-fill/i);
+  assert.match(md, /internal-evaluation quality signals only/i);
+  assert.match(md, /do not authorize auto-fill or other runtime action/i);
+  assert.match(md, /`unverified`, `no_strength`, and `strength_conflict` remain unresolved limitations/i);
+});
+
+test('renderReport: single-source, conflict, and truncation limitations are explicit', () => {
+  const md = renderReport(summary, { composition_disagreement: 900 });
+
+  assert.match(md, /`single_source` means no cross-source corroboration/i);
+  assert.match(md, /`conflict` means sources disagree/i);
+  assert.match(md, /conflicts remain unresolved internal-evaluation limitations/i);
+  assert.match(md, /`likely_truncated` rows may omit ingredients/i);
+  assert.match(md, /do not treat their recorded composition as complete/i);
+});
+
 test('renderReport: no strength section when the fields are absent (backward compatible)', () => {
   const md = renderReport(summary);  // base summary has no strength_* fields
   assert.doesNotMatch(md, /Strength verification/i);

@@ -1,118 +1,187 @@
 #!/usr/bin/env bash
-# aushadhi crawler health check — designed for a periodic watchdog (Hermes).
-#
-# Emits ONE line and sets exit code:
-#   exit 0  -> healthy (OK: ...)          — no action
-#   exit 1  -> unhealthy (ALERT: ...)     — forward to the configured alert channel
-#
-# It is STATELESS except for NRestarts trending: the caller should remember the
-# printed nrestarts=N and raise its own alert if it climbs by >=3 between runs
-# (that is a crash-loop; a single occasional restart is normal — Restart=always).
-#
-# Run locally on dalekdefender (where Hermes runs). From elsewhere, wrap in:
-#   ssh root@dd 'bash /root/aushadhi/scripts/healthcheck.sh'
+# Stateless crawler watchdog. Emits exactly one OK/ALERT line for Hermes.
 set -uo pipefail
 
 SVC="${AUSHADHI_SERVICE:-aushadhi-crawl.service}"
-LOG="${AUSHADHI_LOG:-/root/aushadhi/logs/crawl.log}"
-STATE="${AUSHADHI_STATE:-/root/aushadhi/data/raw/onemg/state.json}"
-OUTPUT="${AUSHADHI_OUTPUT:-/root/aushadhi/data/raw/onemg/$(date -u +%F)/normalized.jsonl}"
-# derive the real cap from the running unit so this never drifts from the service
-CAP="${AUSHADHI_DAILY_CAP:-$(systemctl show "$SVC" -p Environment --value 2>/dev/null | tr ' ' '\n' | sed -n 's/^AUSHADHI_DAILY_CAP=//p')}"
-CAP="${CAP:-12000}"
-STALE_SECS="${AUSHADHI_STALE_SECS:-1800}"   # 30m of log silence BELOW cap = wedged
-case "$CAP" in ''|*[!0-9]*) CAP=12000 ;; esac
-case "$STALE_SECS" in ''|*[!0-9]*) STALE_SECS=1800 ;; esac
+RAW_ROOT="${AUSHADHI_RAW_ROOT:-/var/lib/aushadhi/data/raw}"
+LOG_ROOT="${AUSHADHI_LOG_ROOT:-/var/log/aushadhi}"
+
+case "$SVC" in
+  aushadhi-crawl.service) default_source=onemg; log_name=crawl; cap_var=AUSHADHI_DAILY_CAP; default_cap=20000; index_name=slug-index.jsonl ;;
+  aushadhi-apollo.service) default_source=apollo; log_name=apollo; cap_var=AUSHADHI_APOLLO_CAP; default_cap=10000; index_name=salt-index.jsonl ;;
+  aushadhi-pharmeasy.service) default_source=pharmeasy; log_name=pharmeasy; cap_var=AUSHADHI_PHARMEASY_CAP; default_cap=20000; index_name=product-index.jsonl ;;
+  aushadhi-netmeds.service) default_source=netmeds; log_name=netmeds; cap_var=AUSHADHI_NETMEDS_CAP; default_cap=20000; index_name=product-index.jsonl ;;
+  *) default_source=unknown; log_name=crawl; cap_var=AUSHADHI_DAILY_CAP; default_cap=20000; index_name=product-index.jsonl ;;
+esac
+
+SOURCE="${AUSHADHI_SOURCE:-$default_source}"
+SOURCE_ROOT="${AUSHADHI_SOURCE_ROOT:-$RAW_ROOT/$SOURCE}"
+LOG="${AUSHADHI_LOG:-$LOG_ROOT/$SOURCE/$log_name.log}"
+STATE="${AUSHADHI_STATE:-$SOURCE_ROOT/state.json}"
+INDEX="${AUSHADHI_INDEX:-$SOURCE_ROOT/$index_name}"
+HOLD_MARKER="${AUSHADHI_HOLD_MARKER:-$SOURCE_ROOT/operator-hold}"
+OUTPUT="${AUSHADHI_OUTPUT:-}"
+STALE_SECS="${AUSHADHI_STALE_SECS:-1800}"
+PRODUCTIVE_STALE_SECS="${AUSHADHI_PRODUCTIVE_STALE_SECS:-21600}"
+INDEX_STALE_SECS="${AUSHADHI_INDEX_STALE_SECS:-172800}"
 MISSING_AGE=2147483647
 now=$(date -u +%s)
 
-active=$(systemctl is-active "$SVC" 2>/dev/null || true)
-restarts=$(systemctl show "$SVC" -p NRestarts --value 2>/dev/null || echo '?')
+unit_environment=$(systemctl show "$SVC" -p Environment --value 2>/dev/null || true)
+CAP="${AUSHADHI_CAP:-}"
+if [ -z "$CAP" ]; then CAP=$(printenv "$cap_var" 2>/dev/null || true); fi
+if [ -z "$CAP" ]; then
+  CAP=$(printf '%s\n' "$unit_environment" | tr ' ' '\n' | sed -n "s/^${cap_var}=//p" | tail -n1)
+fi
+CAP="${CAP:-$default_cap}"
+case "$CAP" in ''|*[!0-9]*) CAP=$default_cap ;; esac
+if [ "$SOURCE" != onemg ] && [ "$CAP" -gt "$default_cap" ]; then CAP=$default_cap; fi
+case "$STALE_SECS" in ''|*[!0-9]*) STALE_SECS=1800 ;; esac
+case "$PRODUCTIVE_STALE_SECS" in ''|*[!0-9]*) PRODUCTIVE_STALE_SECS=21600 ;; esac
+case "$INDEX_STALE_SECS" in ''|*[!0-9]*) INDEX_STALE_SECS=172800 ;; esac
 
-# 1) service must be up. Restart=always means a healthy service is 'active';
-#    'failed'/'inactive'/stuck 'activating' = it is NOT running our loop.
-if [ "$active" != "active" ]; then
-  detail=$(systemctl show "$SVC" -p ActiveState,SubState,Result,ExecMainStatus --value 2>/dev/null | tr '\n' ' ')
-  echo "ALERT: aushadhi-crawl is '$active' (nrestarts=$restarts) [$detail] last='$(tail -n1 "$LOG" 2>/dev/null)'"
+active=$(systemctl is-active "$SVC" 2>/dev/null || true)
+enabled=$(systemctl is-enabled "$SVC" 2>/dev/null || true)
+substate=$(systemctl show "$SVC" -p SubState --value 2>/dev/null || true)
+restarts=$(systemctl show "$SVC" -p NRestarts --value 2>/dev/null || echo '?')
+last=$(tail -n 1 "$LOG" 2>/dev/null || true)
+if [ -e "$HOLD_MARKER" ] || [ -L "$HOLD_MARKER" ]; then
+  if [ -f "$HOLD_MARKER" ] && [ ! -L "$HOLD_MARKER" ]; then marker_kind=regular; else marker_kind=unsafe; fi
+  echo "ALERT: $SOURCE operator-hold marker present human-hold required marker='$HOLD_MARKER' marker_kind=$marker_kind liveness=${active:-unknown}/${substate:-unknown} nrestarts=$restarts last='$last'"
+  exit 1
+fi
+if [ "$SOURCE" = onemg ] && [ "$active" = inactive ] \
+  && { [ "$enabled" = disabled ] || [ "$enabled" = masked ]; }; then
+  echo "OK: onemg intentionally-disabled liveness=$active/${substate:-unknown} enablement=$enabled nrestarts=$restarts last='$last'"
+  exit 0
+fi
+if [ "$active" != active ] || [ "$substate" != running ]; then
+  detail=$(systemctl show "$SVC" -p ActiveState,SubState,Result,ExecMainStatus 2>/dev/null | tr '\n' ' ')
+  echo "ALERT: $SOURCE liveness=${active:-unknown}/${substate:-unknown} service=$SVC nrestarts=$restarts detail='$detail' last='$last'"
   exit 1
 fi
 
-count=$(grep -oE '"count"[[:space:]]*:[[:space:]]*[0-9]+' "$STATE" 2>/dev/null | grep -oE '[0-9]+' | head -n1 || true)
+state_fields=$(node - "$STATE" "$SOURCE" 2>/dev/null <<'NODE' || true
+const fs = require('node:fs');
+const [file, source] = process.argv.slice(2);
+try {
+  const state = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const refresh = source === 'onemg'
+    ? (state.discover ?? {}) : (state[source]?.indexRefresh ?? {});
+  const fields = [state.count, state.date, refresh.completedAt ?? refresh.completed_at, refresh.startedAt ?? refresh.started_at];
+  process.stdout.write(fields.map((value) => value ?? '').join('|'));
+} catch {}
+NODE
+)
+IFS='|' read -r count state_date index_completed index_started <<< "$state_fields"
 state_valid=1
-if [ -z "$count" ]; then
-  count=0
-  state_valid=0
+case "$count" in ''|*[!0-9]*) count=0; state_valid=0 ;; esac
+if [ "$state_valid" -ne 1 ]; then
+  echo "ALERT: $SOURCE state-invalid liveness=active/running service=$SVC state='$STATE' nrestarts=$restarts last='$last'"
+  exit 1
 fi
-last=$(tail -n 1 "$LOG" 2>/dev/null || echo '')
-log_mtime=$(stat -c %Y "$LOG" 2>/dev/null || echo 0)
-if [ "$log_mtime" -gt 0 ]; then
-  logage=$(( now - log_mtime ))
-else
-  logage=$MISSING_AGE
-fi
-state_mtime=$(stat -c %Y "$STATE" 2>/dev/null || echo 0)
-if [ "$state_valid" -eq 1 ] && [ "$state_mtime" -gt 0 ]; then
-  stateage=$(( now - state_mtime ))
+
+age_from_epoch() {
+  local epoch="$1"
+  if [ -z "$epoch" ] || [ "$epoch" -le 0 ] 2>/dev/null; then
+    printf '%s' "$MISSING_AGE"
+  elif [ "$epoch" -gt "$now" ]; then
+    printf '0'
+  else
+    printf '%s' "$(( now - epoch ))"
+  fi
+}
+
+logage=$(age_from_epoch "$(stat -c %Y "$LOG" 2>/dev/null || echo 0)")
+if [ "$state_valid" -eq 1 ]; then
+  stateage=$(age_from_epoch "$(stat -c %Y "$STATE" 2>/dev/null || echo 0)")
 else
   stateage=$MISSING_AGE
 fi
-output_mtime=$(stat -c %Y "$OUTPUT" 2>/dev/null || echo 0)
-if [ "$output_mtime" -gt 0 ]; then
-  outputage=$(( now - output_mtime ))
+index_epoch=$(date -u -d "$index_completed" +%s 2>/dev/null || stat -c %Y "$INDEX" 2>/dev/null || echo 0)
+indexage=$(age_from_epoch "$index_epoch")
+
+if [ -n "$OUTPUT" ]; then
+  if [ -s "$OUTPUT" ]; then output_epoch=$(stat -c %Y "$OUTPUT" 2>/dev/null || echo 0); else output_epoch=0; fi
 else
-  outputage=$MISSING_AGE
+  output_epoch=$(find "$SOURCE_ROOT" -mindepth 2 -maxdepth 2 -type f -name normalized.jsonl -size +0c \
+    -printf '%T@\n' 2>/dev/null | sort -nr | head -n1 | cut -d. -f1)
 fi
-if [ "$logage" -lt 0 ]; then logage=0; fi
-if [ "$stateage" -lt 0 ]; then stateage=0; fi
-if [ "$outputage" -lt 0 ]; then outputage=0; fi
+outputage=$(age_from_epoch "${output_epoch:-0}")
 
-# Read the newest relevant status event in file order. This lets a later HEALTHY
-# marker clear an earlier phase error or block without keeping local state.
-status_marker=$(grep -Ei "crawl-loop (ERROR|HEALTHY):|aborting after|consecutive (403|429)|refusing to crawl|blocked/robots refused" "$LOG" 2>/dev/null | tail -n1 || true)
-# A later successful discovery line proves a previous phase anomaly recovered in
-# the same service run. Do not keep alerting on a historical marker after that.
-if echo "$last" | grep -Eiq "^discover: label=.* links=[1-9][0-9]*|crawl-loop HEALTHY:"; then
-  status_marker=""
-fi
-if echo "$status_marker" | grep -Eiq "aborting after|consecutive (403|429)|refusing to crawl|blocked/robots refused"; then
-  echo "ALERT: aushadhi-crawl hit a 1mg BLOCK / robots failure (count=${count}/${CAP}, nrestarts=$restarts). marker='$status_marker' last='$last'"
+age_label() {
+  if [ "$1" -eq "$MISSING_AGE" ]; then printf 'missing'; else printf '%ss' "$1"; fi
+}
+logage_label=$(age_label "$logage")
+stateage_label=$(age_label "$stateage")
+outputage_label=$(age_label "$outputage")
+indexage_label=$(age_label "$indexage")
+
+status_marker=$(grep -Ei \
+  'crawl-loop (ERROR|HEALTHY|NO_WORK):|(^|[[:space:]])discover:.*links=[1-9][0-9]*|(^|[[:space:]])(apollo|pharmeasy|netmeds) (HOLD|ERROR):|STOPPED:|aborting after|refusing to crawl|robots\.txt (fetch failed|disallows)|blocked/robots|done:|crawl complete|scheduled idle|cap reached' \
+  "$LOG" 2>/dev/null | tail -n1 || true)
+
+zero_yield_runs=$(grep -Ei 'done:|NO_WORK:' "$LOG" 2>/dev/null | tail -n64 | awk '
+  /NO_WORK:/ || /done:.*added[=:][[:space:]]*0([^0-9]|$)/ || /done:[[:space:]]*0[[:space:]]+((products|drugs)[[:space:]]+this run|pages parsed)/ { streak += 1; next }
+  /done:/ { streak = 0 }
+  END { print streak + 0 }
+')
+
+if printf '%s\n' "$status_marker" | grep -Eiq 'HOLD:|aborting after|refusing to crawl|robots\.txt (fetch failed|disallows)|blocked/robots'; then
+  echo "ALERT: $SOURCE blocked/robots human-hold required count=${count}/${CAP} liveness=active/running outputage=$outputage_label indexage=$indexage_label zero_yield_runs=$zero_yield_runs nrestarts=$restarts marker='$status_marker'"
   exit 1
 fi
-if echo "$status_marker" | grep -Eq "crawl-loop ERROR:"; then
-  echo "ALERT: aushadhi-crawl phase failure (count=${count}/${CAP}, nrestarts=$restarts). marker='$status_marker' last='$last'"
+if printf '%s\n' "$status_marker" | grep -Eiq 'crawl-loop ERROR:| (apollo|pharmeasy|netmeds) ERROR:|discovery/parser anomaly'; then
+  echo "ALERT: $SOURCE phase anomaly count=${count}/${CAP} liveness=active/running outputage=$outputage_label indexage=$indexage_label zero_yield_runs=$zero_yield_runs nrestarts=$restarts marker='$status_marker'"
   exit 1
 fi
 
-# 3) Network fetches update state.json; cache-only gapfill pages append today's
-#    normalized JSONL. Treat any of those files as a valid activity witness.
 activityage=$logage
 activity=log
-if [ "$stateage" -lt "$activityage" ]; then
-  activityage=$stateage
-  activity=state
+if [ "$stateage" -lt "$activityage" ]; then activityage=$stateage; activity=state; fi
+if [ "$outputage" -lt "$activityage" ]; then activityage=$outputage; activity=output; fi
+if [ "$indexage" -lt "$activityage" ]; then activityage=$indexage; activity=index; fi
+
+if [ "$outputage" -eq "$MISSING_AGE" ]; then productive=missing
+elif [ "$outputage" -gt "$PRODUCTIVE_STALE_SECS" ]; then productive=stale
+else productive=fresh
 fi
-if [ "$outputage" -lt "$activityage" ]; then
-  activityage=$outputage
-  activity=output
+if [ -n "$index_started" ]; then index_state=refreshing
+elif [ "$indexage" -eq "$MISSING_AGE" ]; then index_state=missing
+elif [ "$indexage" -gt "$INDEX_STALE_SECS" ]; then index_state=stale
+else index_state=fresh
+fi
+if [ "$zero_yield_runs" -ge 2 ]; then terminal_state=repeated-zero-yield
+elif [ "$zero_yield_runs" -eq 1 ]; then terminal_state=zero-yield
+else terminal_state=productive
 fi
 
-# 4) Designed sleeps are healthy only for their bounded interval plus grace.
-#    A stale old sleep line must not hide a process wedged after logging it.
 sleep_grace=0
-if echo "$last" | grep -Eiq "idle 20m"; then
+if printf '%s\n' "$status_marker" | grep -Eiq 'reset wait [0-9]+s'; then
+  reset_wait=$(printf '%s\n' "$status_marker" | sed -n 's/.*reset wait \([0-9][0-9]*\)s.*/\1/p')
+  sleep_grace=$(( ${reset_wait:-86400} + 600 ))
+elif printf '%s\n' "$last" | grep -Eiq 'idle [0-9]+s'; then
+  idle_wait=$(printf '%s\n' "$last" | sed -n 's/.*idle \([0-9][0-9]*\)s.*/\1/p')
+  sleep_grace=$(( ${idle_wait:-3600} + 600 ))
+elif printf '%s\n' "$status_marker" | grep -Eiq 'scheduled idle 6h|NO_WORK:|crawl complete'; then
+  sleep_grace=23400
+elif printf '%s\n' "$status_marker" | grep -Eiq 'sleeping 20m'; then
   sleep_grace=1800
-elif echo "$last" | grep -Eiq "sleeping 1h|daily cap reached" || [ "${count:-0}" -ge "$CAP" ]; then
+elif printf '%s\n' "$status_marker" | grep -Eiq 'sleeping 1h'; then
   sleep_grace=4500
+elif printf '%s\n' "$status_marker" | grep -Eiq 'cap reached' || { [ "$count" -ge "$CAP" ] && [ "$state_date" = "$(date -u +%F)" ]; }; then
+  sleep_grace=90000
 fi
-if [ "$sleep_grace" -gt 0 ] && [ "$activityage" -le "$sleep_grace" ]; then
-  echo "OK: active, sleeping as designed (count=${count}/${CAP}, activity=${activity}:${activityage}s, grace=${sleep_grace}s, nrestarts=$restarts). last='$last'"
+
+facts="count=${count}/${CAP} liveness=active/running activity=${activity}:${activityage}s logage=$logage_label stateage=$stateage_label outputage=$outputage_label productive=$productive indexage=$indexage_label index=$index_state terminal=$terminal_state zero_yield_runs=$zero_yield_runs nrestarts=$restarts"
+if [ "$sleep_grace" -gt 0 ] && [ "$logage" -le "$sleep_grace" ]; then
+  echo "OK: $SOURCE scheduled-wait $facts grace=${sleep_grace}s last='$last'"
   exit 0
 fi
-
 if [ "$activityage" -gt "$STALE_SECS" ]; then
-  echo "ALERT: aushadhi-crawl activity silent ${activityage}s while below cap (count=${count}/${CAP}, logage=${logage}s, stateage=${stateage}s, outputage=${outputage}s, nrestarts=$restarts) — possibly wedged. last='$last'"
+  echo "ALERT: $SOURCE activity-silent $facts threshold=${STALE_SECS}s last='$last'"
   exit 1
 fi
 
-echo "OK: active and fetching (count=${count}/${CAP}, activity=${activity}:${activityage}s, logage=${logage}s, stateage=${stateage}s, outputage=${outputage}s, nrestarts=$restarts). last='$last'"
+echo "OK: $SOURCE active $facts last='$last'"
 exit 0

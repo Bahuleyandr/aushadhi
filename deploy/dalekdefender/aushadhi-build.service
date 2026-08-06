@@ -1,10 +1,54 @@
 [Unit]
-Description=aushadhi nightly rebuild + quality report
+Description=aushadhi nightly atomic rebuild + quality report
 After=network-online.target
+OnSuccess=aushadhi-export.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/root/aushadhi
-ExecStart=/usr/bin/bash /root/aushadhi/scripts/nightly-build.sh
-StandardOutput=append:/root/aushadhi/logs/build.log
-StandardError=append:/root/aushadhi/logs/build.log
+User=aushadhi
+Group=aushadhi
+WorkingDirectory=/opt/aushadhi
+Environment=HOME=/var/cache/aushadhi/build
+Environment=XDG_CACHE_HOME=/var/cache/aushadhi/build
+Environment=AUSHADHI_RAW_ROOT=/var/lib/aushadhi/data/raw
+Environment=AUSHADHI_DIST_ROOT=/var/lib/aushadhi/dist
+Environment=AUSHADHI_BUILD_RECEIPT_DIR=/var/lib/aushadhi/build-receipts
+Environment=AUSHADHI_DERIVED_ROOT=/var/cache/aushadhi/build/derived
+Environment=AUSHADHI_NIGHTLY_BUILD_MAX_AGE_SECONDS=604800
+Environment=NODE_OPTIONS=--max-old-space-size=6144
+ExecStart=/usr/bin/bash /opt/aushadhi/scripts/nightly-build.sh
+StandardOutput=append:/var/log/aushadhi/build/build.log
+StandardError=append:/var/log/aushadhi/build/build.log
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RemoveIPC=true
+KeyringMode=private
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+StateDirectory=aushadhi/dist aushadhi/build-receipts
+StateDirectoryMode=0750
+LogsDirectory=aushadhi/build
+LogsDirectoryMode=0750
+CacheDirectory=aushadhi/build
+CacheDirectoryMode=0750
+ReadOnlyPaths=/opt/aushadhi /var/lib/aushadhi/data/raw
+ReadWritePaths=/var/lib/aushadhi/dist /var/lib/aushadhi/build-receipts /var/log/aushadhi/build /var/cache/aushadhi/build
+InaccessiblePaths=/root
+MemoryHigh=7G
+MemoryMax=8G

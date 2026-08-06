@@ -1,0 +1,11 @@
+[Unit]
+Description=Review Aushadhi unindexed source generations weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 05:00:00
+RandomizedDelaySec=20m
+Persistent=true
+Unit=aushadhi-source-generation-retention.service
+
+[Install]
+WantedBy=timers.target

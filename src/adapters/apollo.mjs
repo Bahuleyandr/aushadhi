@@ -3,13 +3,34 @@ import path from 'node:path';
 import * as cheerio from 'cheerio';
 import { normMolecule } from '../lib/normalize.mjs';
 import { readJsonlSync } from '../lib/jsonl.mjs';
-import { identityKey } from '../lib/merge.mjs';
+
+function retainLatestSourceProduct(byProduct, row) {
+  const hasSourceId = row.source_id !== null && row.source_id !== undefined
+    && String(row.source_id) !== '';
+  const key = hasSourceId
+    ? `${row.source ?? ''}|${String(row.source_id)}`
+    : JSON.stringify([
+      row.source ?? '', row.brand_name ?? '', row.manufacturer ?? '', row.form_raw ?? '',
+      row.pack_label ?? '', row.ingredients ?? [], row.composition_raw ?? '',
+    ]);
+  const previous = byProduct.get(key);
+  if (!previous) {
+    byProduct.set(key, { ...row, first_seen: row.first_seen ?? row.seen_at ?? null });
+    return;
+  }
+  const firstSeen = [previous.first_seen, previous.seen_at, row.first_seen, row.seen_at]
+    .filter(Boolean).sort()[0] ?? null;
+  const latest = String(row.seen_at ?? '') >= String(previous.seen_at ?? '') ? row : previous;
+  byProduct.set(key, { ...latest, first_seen: firstSeen });
+}
 
 // Apollo product Drug ld+json states composition as
 //   "AMOXICILLIN-500MG+CLAVULANIC ACID-125MG"
 // i.e. molecules joined by '+', each "MOLECULE-STRENGTH" (strength is the
 // trailing -<num><unit>). Greedy molecule keeps hyphenated molecule names.
 const PART_RE = /^(.+)-([\d.]+)\s*([a-zµ%/]+)$/i;
+const APOLLO_PRODUCT_ORIGIN = 'https://www.apollopharmacy.in';
+const APOLLO_PRODUCT_PATH = /^\/medicine\/[a-z0-9-]+$/;
 
 export function parseApolloComposition(nonProprietaryName) {
   const parts = String(nonProprietaryName ?? '').split('+').map((s) => s.trim()).filter(Boolean);
@@ -47,11 +68,34 @@ function drugSchema($) {
   return drug;
 }
 
+export function apolloProductUrlMatches(value, expectedPath) {
+  if (typeof value !== 'string' || !APOLLO_PRODUCT_PATH.test(String(expectedPath))) return false;
+  try {
+    const url = new URL(value);
+    return url.origin === APOLLO_PRODUCT_ORIGIN
+      && !url.username && !url.password
+      && url.pathname === expectedPath;
+  } catch {
+    return false;
+  }
+}
+
+function drugIdentityMatches(drug, expectedPath) {
+  const mainEntity = typeof drug.mainEntityOfPage === 'string'
+    ? drug.mainEntityOfPage
+    : (drug.mainEntityOfPage?.['@id'] ?? drug.mainEntityOfPage?.url);
+  const identities = [drug.url, drug['@id'], mainEntity, drug.offers?.url]
+    .filter((value) => value !== null && value !== undefined && value !== '');
+  return typeof drug.url === 'string' && identities.length > 0
+    && identities.every((value) => apolloProductUrlMatches(value, expectedPath));
+}
+
 // Parse an Apollo /medicine/<slug> product page -> common row shape (source='apollo').
-export function parseApolloProduct(html) {
+export function parseApolloProduct(html, { expectedPath = null } = {}) {
   const $ = cheerio.load(html);
   const drug = drugSchema($);
   if (!drug) return null;
+  if (expectedPath !== null && !drugIdentityMatches(drug, expectedPath)) return null;
   const comp = typeof drug.nonProprietaryName === 'string' ? drug.nonProprietaryName : '';
   const ingredients = parseApolloComposition(comp);
   const manufacturer = drug.manufacturer?.legalName ?? drug.manufacturer?.name
@@ -93,14 +137,16 @@ export function parseApolloSaltDirectory(html) {
 }
 
 // Read all apollo crawl outputs (data/raw/apollo/<date>/normalized.jsonl) for
-// the build merge — last write per identity wins (mirrors readOnemgNormalized).
+// the build merge; latest observation per stable source product ID wins.
 export function readApolloNormalized(rawRoot) {
   const root = path.join(rawRoot, 'apollo');
   if (!fs.existsSync(root)) return [];
-  const byIdentity = new Map();
+  const byProduct = new Map();
   for (const d of fs.readdirSync(root).sort()) {
     const f = path.join(root, d, 'normalized.jsonl');
-    if (fs.existsSync(f)) for (const row of readJsonlSync(f)) byIdentity.set(identityKey(row), row);
+    if (fs.existsSync(f)) {
+      for (const row of readJsonlSync(f)) retainLatestSourceProduct(byProduct, row);
+    }
   }
-  return [...byIdentity.values()];
+  return [...byProduct.values()];
 }

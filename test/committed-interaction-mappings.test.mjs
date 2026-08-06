@@ -19,6 +19,10 @@ function readManifest(name) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, 'data-static', name), 'utf8'));
 }
 
+const committedTechnicalHoldPack = readManifest(
+  'interaction-promotion-holds.runtime.internal-evaluation.json',
+);
+
 test('committed ingredient mappings contain only the nine approved exact identities', () => {
   const manifest = readManifest('ingredient-mapping-overrides.json');
   assert.equal(validateIngredientMappingManifest(manifest), true);
@@ -685,7 +689,7 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
   assert.equal(validateRulePack(productionPack), true);
   assert.equal(internalPack.profile, 'internal-evaluation');
   assert.equal(internalPack.declared_coverage, 'partial');
-  assert.equal(internalPack.rules.length, 8);
+  assert.equal(internalPack.rules.length, 6);
   assert.deepEqual(productionPack.rules, []);
   assert.equal(productionPack.declared_coverage, 'unknown');
 
@@ -723,6 +727,7 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
       const result = checkResolvedProducts({
         resolvedInputs: [first, second],
         rulePack: internalPack,
+        technicalHoldPack: committedTechnicalHoldPack,
       });
       assert.equal(result.reviewed_findings.length, 1);
       assert.equal(result.reviewed_findings[0].rule_id, 'warfarin__amiodarone');
@@ -735,6 +740,7 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
       const reversed = checkResolvedProducts({
         resolvedInputs: [second, first],
         rulePack: internalPack,
+        technicalHoldPack: committedTechnicalHoldPack,
       });
       assert.deepEqual(reversed.checked_pairs, result.checked_pairs);
       assert.deepEqual(reversed.reviewed_findings, result.reviewed_findings);
@@ -747,6 +753,7 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
   const unapproved = checkResolvedProducts({
     resolvedInputs: [amiodarone[0], unapprovedProduct],
     rulePack: internalPack,
+    technicalHoldPack: committedTechnicalHoldPack,
   });
   assert.equal(unapproved.checked_pairs.length, 1);
   assert.deepEqual(unapproved.reviewed_findings, []);
@@ -757,6 +764,7 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
   const stale = checkResolvedProducts({
     resolvedInputs: [stalePresentation, warfarin[0]],
     rulePack: internalPack,
+    technicalHoldPack: committedTechnicalHoldPack,
   });
   assert.deepEqual(stale.checked_pairs, []);
   assert.deepEqual(stale.reviewed_findings, []);
@@ -771,6 +779,7 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
   const productionAttempt = checkResolvedProducts({
     resolvedInputs: [mappedProduction[0], mappedProduction[2]],
     rulePack: internalPack,
+    technicalHoldPack: committedTechnicalHoldPack,
   });
   assert.deepEqual(productionAttempt.checked_pairs, []);
   assert.deepEqual(productionAttempt.reviewed_findings, []);
@@ -822,6 +831,7 @@ test('the internal warfarin-fluconazole rule fires only for the 12 approved PMBJ
       const result = checkResolvedProducts({
         resolvedInputs: [first, second],
         rulePack: internalPack,
+        technicalHoldPack: committedTechnicalHoldPack,
       });
       assert.equal(result.reviewed_findings.length, 1);
       assert.equal(result.reviewed_findings[0].rule_id, 'warfarin__fluconazole');
@@ -834,6 +844,7 @@ test('the internal warfarin-fluconazole rule fires only for the 12 approved PMBJ
       const reversed = checkResolvedProducts({
         resolvedInputs: [second, first],
         rulePack: internalPack,
+        technicalHoldPack: committedTechnicalHoldPack,
       });
       assert.deepEqual(reversed.checked_pairs, result.checked_pairs);
       assert.deepEqual(reversed.reviewed_findings, result.reviewed_findings);
@@ -846,6 +857,7 @@ test('the internal warfarin-fluconazole rule fires only for the 12 approved PMBJ
   const unapproved = checkResolvedProducts({
     resolvedInputs: [unapprovedProduct, warfarin[0]],
     rulePack: internalPack,
+    technicalHoldPack: committedTechnicalHoldPack,
   });
   assert.equal(unapproved.checked_pairs.length, 1);
   assert.deepEqual(unapproved.reviewed_findings, []);
@@ -866,6 +878,7 @@ test('the internal warfarin-fluconazole rule fires only for the 12 approved PMBJ
   const productionAttempt = checkResolvedProducts({
     resolvedInputs: [mappedProduction[5], mappedProduction[2]],
     rulePack: internalPack,
+    technicalHoldPack: committedTechnicalHoldPack,
   });
   assert.deepEqual(productionAttempt.checked_pairs, []);
   assert.deepEqual(productionAttempt.reviewed_findings, []);

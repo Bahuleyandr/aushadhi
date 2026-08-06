@@ -105,6 +105,14 @@ export function parseDrugPage(html) {
   if (!compositionRaw && typeof drug?.activeIngredient === 'string') compositionRaw = drug.activeIngredient;
   const comp = compositionRaw ? parseComposition(compositionRaw) : { ingredients: [], status: 'missing', raw: '' };
 
+  let packLabel = null;
+  for (const priceData of jsonAtMarker(html, '"priceData"', '{')) {
+    if (priceData && typeof priceData.packSizes === 'string' && priceData.packSizes.trim()) {
+      packLabel = priceData.packSizes.trim();
+      break;
+    }
+  }
+
   // Substitutes: every "substitutes":[...] array; entries carry entity_name (formulary widget)
   const subs = [];
   for (const arr of jsonAtMarker(html, '"substitutes"', '[')) {
@@ -118,6 +126,7 @@ export function parseDrugPage(html) {
   return {
     brand_name: name,
     manufacturer,
+    pack_label: packLabel,
     form_raw: drug?.dosageForm ?? null,
     ingredients: comp.ingredients,
     composition_raw: comp.raw || compositionRaw || '',
@@ -154,4 +163,26 @@ export function parseBrowsePage(html) {
     out.push({ name: (li.name ?? p.split('/').pop()).toString().trim(), path: p });
   }
   return [...new Map(out.map((e) => [e.path, e])).values()];
+}
+
+export function parseBrowsePageInfo(html) {
+  const entries = parseBrowsePage(html);
+  const source = String(html ?? '');
+  const marker = 'window.__ROUTER_INITIAL_DATA__';
+  const markerIndex = source.indexOf(marker);
+  if (markerIndex < 0) return { entries, paginationKnown: false, next: null };
+  const start = source.indexOf('{', markerIndex + marker.length);
+  const raw = start >= 0 ? extractBalancedJson(source, start) : null;
+  if (!raw) return { entries, paginationKnown: false, next: null };
+  try {
+    const router = JSON.parse(raw);
+    const route = Object.values(router).find((candidate) => candidate?.data
+      && Object.hasOwn(candidate.data, 'next'));
+    if (!route || (route.data.next !== null && typeof route.data.next !== 'string')) {
+      return { entries, paginationKnown: false, next: null };
+    }
+    return { entries, paginationKnown: true, next: route.data.next };
+  } catch {
+    return { entries, paginationKnown: false, next: null };
+  }
 }

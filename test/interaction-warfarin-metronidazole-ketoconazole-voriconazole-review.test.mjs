@@ -39,6 +39,9 @@ const promotions = readJson(
 const internalPack = readJson(
   'data-static/interaction-rules.internal-evaluation.json',
 );
+const technicalHoldPack = readJson(
+  'data-static/interaction-promotion-holds.runtime.internal-evaluation.json',
+);
 const productionPack = readJson('data-static/interaction-rules.json');
 const sectionLines = fs.readFileSync(
   path.join(
@@ -427,6 +430,7 @@ test('all 12 approved combinations fire and unapproved product identities remain
         const result = checkResolvedProducts({
           resolvedInputs: [first, second],
           rulePack: internalPack,
+          technicalHoldPack,
         });
         assert.equal(result.reviewed_findings.length, 1, ruleId);
         assert.equal(result.reviewed_findings[0].rule_id, ruleId);
@@ -440,6 +444,7 @@ test('all 12 approved combinations fire and unapproved product identities remain
         const reversed = checkResolvedProducts({
           resolvedInputs: [second, first],
           rulePack: internalPack,
+          technicalHoldPack,
         });
         assert.deepEqual(reversed.checked_pairs, result.checked_pairs);
         assert.deepEqual(reversed.reviewed_findings, result.reviewed_findings);
@@ -458,6 +463,7 @@ test('all 12 approved combinations fire and unapproved product identities remain
     const result = checkResolvedProducts({
       resolvedInputs: [unapproved, warfarin[0]],
       rulePack: internalPack,
+      technicalHoldPack,
     });
     assert.deepEqual(result.reviewed_findings, [], drug);
   }
@@ -471,6 +477,7 @@ test('all 12 approved combinations fire and unapproved product identities remain
   const productionAttempt = checkResolvedProducts({
     resolvedInputs: [mappedProduction[0], mappedProduction[3]],
     rulePack: internalPack,
+    technicalHoldPack,
   });
   assert.deepEqual(productionAttempt.checked_pairs, []);
   assert.deepEqual(productionAttempt.reviewed_findings, []);

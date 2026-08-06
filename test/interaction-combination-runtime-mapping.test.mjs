@@ -382,6 +382,7 @@ test('an authentic mapped combination supplements its component subjects in the 
     surviving_reviewed_finding_count: 2,
     superseded_finding_count: 1,
     review_candidate_count: 0,
+    technical_hold_match_count: 0,
   });
 
   const reversedOrder = checkResolvedProducts({

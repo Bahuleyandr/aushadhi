@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "install_root": "/opt/aushadhi",
+  "state_root": "/var/lib/aushadhi",
+  "log_root": "/var/log/aushadhi",
+  "cache_root": "/var/cache/aushadhi",
+  "export_root": "/var/lib/aushadhi-export",
+  "runtime_user": "aushadhi",
+  "runtime_group": "aushadhi",
+  "release_receipt": {
+    "required": true,
+    "path": "/opt/aushadhi/DEPLOYED-RELEASE.json",
+    "required_fields": [
+      "repository_commit",
+      "repository_tree_sha256",
+      "installed_at_utc",
+      "installed_files_sha256",
+      "systemd_files_sha256",
+      "dependency_tree_sha256",
+      "privileged_files_sha256",
+      "installed_tree_metadata_sha256",
+      "inspection_profile",
+      "inspected_roots",
+      "filesystem_policy",
+      "runtime_manifest_sha256",
+      "artifact_policy"
+    ],
+    "dependency_tree": {
+      "path": "node_modules",
+      "required": true,
+      "lockfiles": [
+        "package.json",
+        "package-lock.json"
+      ],
+      "allow_internal_relative_symlinks": true
+    },
+    "systemd_files": {
+      "uid": 0,
+      "gid": 0,
+      "mode": "0644"
+    },
+    "installed_tree": {
+      "uid": 0,
+      "gid": 0,
+      "root_mode": "0755",
+      "directory_mode": "0755",
+      "receipt_mode": "0644",
+      "tracked_file_modes_from_git": true,
+      "disallow_group_or_other_write": true
+    },
+    "privileged_files": [
+      {
+        "source": "deploy/dalekdefender/aushadhi-network-hook.py",
+        "target": "usr/local/libexec/aushadhi-network-hook",
+        "mode": "0755",
+        "uid": 0,
+        "gid": 0
+      },
+      {
+        "source": "deploy/dalekdefender/aushadhi-observer.py",
+        "target": "usr/local/libexec/aushadhi-observer",
+        "mode": "0755",
+        "uid": 0,
+        "gid": 0
+      },
+      {
+        "source": "deploy/dalekdefender/aushadhi-source-healthcheck.sh",
+        "target": "usr/local/libexec/aushadhi-source-healthcheck",
+        "mode": "0755",
+        "uid": 0,
+        "gid": 0
+      },
+      {
+        "source": "deploy/aushadhi_nonroot_v2_export_snapshot.sh",
+        "target": "usr/local/libexec/aushadhi-export-snapshot",
+        "mode": "0755",
+        "uid": 0,
+        "gid": 0
+      },
+      {
+        "source": "deploy/aushadhi_nonroot_v2_export_retention.sh",
+        "target": "usr/local/libexec/aushadhi-export-retention",
+        "mode": "0755",
+        "uid": 0,
+        "gid": 0
+      },
+      {
+        "source": "deploy/aushadhi_nonroot_source_generation_retention.py",
+        "target": "usr/local/libexec/aushadhi-source-generation-retention",
+        "mode": "0755",
+        "uid": 0,
+        "gid": 0
+      },
+      {
+        "source": "deploy/dalekdefender/sudoers-aushadhi-observer",
+        "target": "etc/sudoers.d/aushadhi-observer",
+        "mode": "0440",
+        "uid": 0,
+        "gid": 0
+      },
+      {
+        "source": "deploy/dalekdefender/logrotate-aushadhi",
+        "target": "etc/logrotate.d/aushadhi",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
+      }
+    ]
+  },
+  "artifact_policy": {
+    "profile": "internal-evaluation",
+    "redistributable": false,
+    "production_authority": "none",
+    "deployment_authority": "separate-explicit-approval-required",
+    "restricted_sources": [
+      "janaushadhi",
+      "onemg-live"
+    ]
+  },
+  "restricted_cdci": {
+    "deployed": false,
+    "exported": false,
+    "storage_path": "data/restricted/cdci",
+    "profile": "internal-evaluation"
+  }
+}

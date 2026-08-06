@@ -6,6 +6,7 @@ import {
   strictPlainDataSnapshot,
   strictPlainDataSnapshotAllowShared,
 } from './strict-plain-data.mjs';
+import { createHash } from 'node:crypto';
 import { types as utilTypes } from 'node:util';
 
 export const DISCLAIMER = 'No listed interaction does not establish safety. Verify with a pharmacist or clinician and current approved labeling.';
@@ -42,6 +43,37 @@ const DISPENSE_ACTIONS = new Set([
   'confirm_and_monitor',
   'withhold_and_clarify',
 ]);
+const SHA256 = /^[0-9a-f]{64}$/u;
+const COMMITTED_INTERNAL_PACK_ID = 'aushadhi-internal-interactions';
+const INTERNAL_CLINICIAN_SOURCE_ID = 'aushadhi-open-clinician-rules';
+// Changing this opaque scope allowlist is part of the authenticated hold-clearance path.
+const REQUIRED_COMMITTED_HOLD_SCOPE_LEAF_HASHES = Object.freeze([
+  '3226817098a8fe14a6ee9db1160c17454a297629cfcea845f03795cb7a250b1b',
+  '3986a8b62eb3ae04753680133fb9326188435b986f144454ae361c2a41c9974c',
+  '3c01f53f52139f0a013f33c088187b68508e04e79d7906e9ffd91d86b2f477d6',
+  '4a165c47c38bce0b0818436d31efb273ff7ca4e00ee40b74017e42027ce8d25f',
+  '4f64e604aa238cdb860479f332d6115fac5637eb1bf8e88ff9ada5ad8a5b8b79',
+  '6325fd99ac2476c7dcf5c97c4e5724a71a75b2ae479a5eb48dd677a87d279b01',
+  '7320131abb96a1329914aef2d232e00946ffaa2e1cefc8fe32daccc01fd453c9',
+  'ad04962754e792fa608d66337bf69a1cae44d6285003f8e771c99a3976ebb49f',
+  'ad449bccad346b0066a49c001e449320184d993d507385a83a340cf4843f57dd',
+  'c304ee0b0085dc8d06f03eb213f988d2eff8a5c520f61cdbd6ba99256457c4ab',
+  'dd048ed185dff0fec675855149312949b3c6f26e46ff00f3eae5cf83f89785ab',
+  'fa9e12c44b95a9379685943b16c4b976d6a5531a9e3da7a2ba1bc5d432f16b64',
+]);
+const TECHNICAL_HOLD_KEYS = new Set([
+  'rule_id',
+  'pair',
+  'product_pairs',
+  'evidence_source_id',
+  'status',
+  'reason',
+  'detected_at',
+  'approved_source_version',
+  'observed_source_version',
+  'approved_payload_sha256',
+  'observed_payload_sha256',
+]);
 
 function compareStrings(a, b) {
   return a < b ? -1 : a > b ? 1 : 0;
@@ -49,6 +81,71 @@ function compareStrings(a, b) {
 
 function isObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function canonicalJsonValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalJsonValue);
+  if (isObject(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort(compareStrings).map((key) => [
+        key,
+        canonicalJsonValue(value[key]),
+      ]),
+    );
+  }
+  return value;
+}
+
+function sha256Canonical(value) {
+  return createHash('sha256')
+    .update(JSON.stringify(canonicalJsonValue(value)))
+    .digest('hex');
+}
+
+export function technicalHoldsSha256(holds) {
+  if (!Array.isArray(holds)) throw new TypeError('technical holds must be an array');
+  return sha256Canonical(holds);
+}
+
+function technicalHoldScopeLeafHash(pair, productPair) {
+  return sha256Canonical({ pair, product_pair: productPair });
+}
+
+function technicalHoldScopeLeaves(holds) {
+  return holds.flatMap((hold) => hold.product_pairs.map((productPair) => (
+    technicalHoldScopeLeafHash(hold.pair, productPair)
+  ))).sort(compareStrings);
+}
+
+function belongsToCommittedInternalFamily(rulePack) {
+  return rulePack.profile === 'internal-evaluation'
+    && (
+      rulePack.pack_id === COMMITTED_INTERNAL_PACK_ID
+      || rulePack.source_ids.includes(INTERNAL_CLINICIAN_SOURCE_ID)
+    );
+}
+
+function assertExactCommittedHoldScope(holds) {
+  const actual = technicalHoldScopeLeaves(holds);
+  if (JSON.stringify(actual) !== JSON.stringify(REQUIRED_COMMITTED_HOLD_SCOPE_LEAF_HASHES)) {
+    throw new TypeError(
+      'technical hold pack required held scope does not match the committed held scope',
+    );
+  }
+}
+
+function assertNoActiveHistoricallyHeldScope(rulePack) {
+  if (rulePack.profile !== 'internal-evaluation') return;
+  for (const rule of rulePack.rules) {
+    for (const productPair of rule.product_pairs ?? []) {
+      const leafHash = technicalHoldScopeLeafHash(rule.pair, productPair);
+      if (REQUIRED_COMMITTED_HOLD_SCOPE_LEAF_HASHES.includes(leafHash)) {
+        throw new TypeError(
+          `active rule overlaps a historically held scope: ${rule.rule_id}`,
+        );
+      }
+    }
+  }
 }
 
 function assertObject(value, label) {
@@ -515,6 +612,7 @@ export function validateRulePack(rulePack) {
     if (pairKeys.has(key)) throw new TypeError(`duplicate rule pair ${key}`);
     pairKeys.add(key);
   }
+  assertNoActiveHistoricallyHeldScope(rulePack);
 
   if (rulePack.schema_version === '1.1.0') {
     const suppressorsByTarget = new Map();
@@ -579,6 +677,155 @@ export function validateRulePack(rulePack) {
           );
         }
       }
+    }
+  }
+  return true;
+}
+
+function requireAllKeys(value, keys, label) {
+  assertExactKeys(value, keys, label);
+  for (const key of keys) {
+    if (!Object.hasOwn(value, key)) throw new TypeError(`${label} is missing property ${key}`);
+  }
+}
+
+function validateTechnicalHold(value, index) {
+  const label = `technical hold pack holds[${index}]`;
+  assertObject(value, label);
+  requireAllKeys(value, TECHNICAL_HOLD_KEYS, label);
+  requireString(value.rule_id, `${label}.rule_id`);
+  requireString(value.evidence_source_id, `${label}.evidence_source_id`);
+  if (!Array.isArray(value.pair) || value.pair.length !== 2) {
+    throw new TypeError(`${label}.pair must contain exactly two ingredient identifiers`);
+  }
+  const canonicalPair = normalizePairArguments(value.pair);
+  if (JSON.stringify(value.pair) !== JSON.stringify(canonicalPair)) {
+    throw new TypeError(`${label}.pair must use canonical order`);
+  }
+  validateProductPairs(value.product_pairs, `${label}.product_pairs`);
+  if (value.status !== 'held') throw new TypeError(`${label}.status must equal held`);
+  if (value.reason !== 'live_provenance_drift') {
+    throw new TypeError(`${label}.reason must equal live_provenance_drift`);
+  }
+  if (!isIsoDate(value.detected_at)) {
+    throw new TypeError(`${label}.detected_at must be an ISO date`);
+  }
+  requireString(value.approved_source_version, `${label}.approved_source_version`);
+  requireString(value.observed_source_version, `${label}.observed_source_version`);
+  for (const field of ['approved_payload_sha256', 'observed_payload_sha256']) {
+    if (!SHA256.test(value[field] ?? '')) {
+      throw new TypeError(`${label}.${field} must be a lowercase SHA-256`);
+    }
+  }
+  if (value.approved_source_version === value.observed_source_version
+      && value.approved_payload_sha256 === value.observed_payload_sha256) {
+    throw new TypeError(`${label} does not record provenance drift`);
+  }
+}
+
+export function validateTechnicalHoldPack(technicalHoldPack, {
+  rulePack,
+  promotionHoldManifestSha256,
+  runtimeHoldScopeSha256,
+} = {}) {
+  if (!isObject(technicalHoldPack)) throw new TypeError('technical hold pack must be an object');
+  technicalHoldPack = strictPlainDataSnapshot(technicalHoldPack, 'technical hold pack');
+  const keys = new Set([
+    'schema_version',
+    'profile',
+    'rule_pack_id',
+    'rule_pack_version',
+    'rule_pack_sha256',
+    'promotion_hold_manifest_sha256',
+    'holds_sha256',
+    'holds',
+  ]);
+  requireAllKeys(technicalHoldPack, keys, 'technical hold pack');
+  if (technicalHoldPack.schema_version !== 2) {
+    throw new TypeError('technical hold pack schema_version must equal 2');
+  }
+  if (technicalHoldPack.profile !== 'internal-evaluation') {
+    throw new TypeError('technical hold pack profile must be internal-evaluation');
+  }
+  requireString(technicalHoldPack.rule_pack_id, 'technical hold pack rule_pack_id');
+  requireString(technicalHoldPack.rule_pack_version, 'technical hold pack rule_pack_version');
+  for (const field of [
+    'rule_pack_sha256',
+    'promotion_hold_manifest_sha256',
+    'holds_sha256',
+  ]) {
+    if (!SHA256.test(technicalHoldPack[field] ?? '')) {
+      throw new TypeError(`technical hold pack ${field} must be a lowercase SHA-256`);
+    }
+  }
+  if (!Array.isArray(technicalHoldPack.holds)) {
+    throw new TypeError('technical hold pack holds must be an array');
+  }
+  const seenRuleIds = new Set();
+  const seenScopeLeaves = new Set();
+  let previousRuleId = null;
+  for (let index = 0; index < technicalHoldPack.holds.length; index += 1) {
+    const hold = technicalHoldPack.holds[index];
+    validateTechnicalHold(hold, index);
+    if (seenRuleIds.has(hold.rule_id)) {
+      throw new TypeError(`technical hold pack contains duplicate rule_id ${hold.rule_id}`);
+    }
+    if (previousRuleId !== null && compareStrings(previousRuleId, hold.rule_id) >= 0) {
+      throw new TypeError('technical hold pack holds must use deterministic rule_id order');
+    }
+    seenRuleIds.add(hold.rule_id);
+    previousRuleId = hold.rule_id;
+    for (const productPair of hold.product_pairs) {
+      const leafHash = technicalHoldScopeLeafHash(hold.pair, productPair);
+      if (seenScopeLeaves.has(leafHash)) {
+        throw new TypeError('technical hold pack contains duplicate exact held scope');
+      }
+      seenScopeLeaves.add(leafHash);
+    }
+  }
+  const computedHoldsSha256 = technicalHoldsSha256(technicalHoldPack.holds);
+  if (technicalHoldPack.holds_sha256 !== computedHoldsSha256) {
+    throw new TypeError('technical hold pack holds SHA-256 does not match');
+  }
+  let committedInternalFamily = technicalHoldPack.rule_pack_id === COMMITTED_INTERNAL_PACK_ID;
+  if (rulePack !== undefined) {
+    rulePack = strictPlainDataSnapshot(rulePack, 'rule pack');
+    validateRulePack(rulePack);
+    if (technicalHoldPack.profile !== rulePack.profile
+        || technicalHoldPack.rule_pack_id !== rulePack.pack_id
+        || technicalHoldPack.rule_pack_version !== rulePack.pack_version) {
+      throw new TypeError('technical hold pack identity does not match the rule pack');
+    }
+    const expectedHash = createHash('sha256')
+      .update(`${JSON.stringify(rulePack, null, 2)}\n`)
+      .digest('hex');
+    if (technicalHoldPack.rule_pack_sha256 !== expectedHash) {
+      throw new TypeError('technical hold pack rule pack SHA-256 does not match');
+    }
+    committedInternalFamily = belongsToCommittedInternalFamily(rulePack);
+    const activeRuleIds = new Set(rulePack.rules.map((rule) => rule.rule_id));
+    for (const hold of technicalHoldPack.holds) {
+      if (activeRuleIds.has(hold.rule_id)) {
+        throw new TypeError(`technical hold ${hold.rule_id} must not also be an active rule`);
+      }
+    }
+  }
+  if (committedInternalFamily) assertExactCommittedHoldScope(technicalHoldPack.holds);
+  if (promotionHoldManifestSha256 !== undefined) {
+    if (!SHA256.test(promotionHoldManifestSha256)) {
+      throw new TypeError('promotion hold manifest SHA-256 must be a lowercase SHA-256');
+    }
+    if (technicalHoldPack.promotion_hold_manifest_sha256
+        !== promotionHoldManifestSha256) {
+      throw new TypeError('technical hold pack promotion manifest SHA-256 does not match');
+    }
+  }
+  if (runtimeHoldScopeSha256 !== undefined) {
+    if (!SHA256.test(runtimeHoldScopeSha256)) {
+      throw new TypeError('runtime hold scope SHA-256 must be a lowercase SHA-256');
+    }
+    if (technicalHoldPack.holds_sha256 !== runtimeHoldScopeSha256) {
+      throw new TypeError('technical hold pack runtime hold scope SHA-256 does not match');
     }
   }
   return true;
@@ -850,11 +1097,16 @@ function projectReviewCandidate(value) {
 function outcomeFor({
   reviewedFindings,
   reviewCandidates,
+  technicalHoldMatches,
   unresolvedInputs,
   duplicateIngredients: duplicates,
   checkedPairs,
 }) {
+  if (technicalHoldMatches.length > 0 && reviewedFindings.length > 0) {
+    return 'reviewed_action_and_manual_review_required';
+  }
   if (reviewedFindings.length > 0) return 'reviewed_action_required';
+  if (technicalHoldMatches.length > 0) return 'manual_review_required';
   if (reviewCandidates.length > 0) return 'manual_review_required';
   if (unresolvedInputs.length > 0) return 'input_gaps';
   if (duplicates.length > 0 && checkedPairs.length === 0) {
@@ -867,9 +1119,17 @@ function outcomeFor({
 function clinicalStatusFor({
   reviewedFindings,
   reviewCandidates,
+  technicalHoldMatches,
   checkedPairs,
 }) {
+  if (technicalHoldMatches.length > 0 && reviewedFindings.length > 0) {
+    return 'reviewed_interaction_found_with_unevaluated_scope';
+  }
+  if (technicalHoldMatches.length > 0 && reviewCandidates.length > 0) {
+    return 'review_candidate_found_with_unevaluated_scope';
+  }
   if (reviewedFindings.length > 0) return 'reviewed_interaction_found';
+  if (technicalHoldMatches.length > 0) return 'not_evaluated';
   if (reviewCandidates.length > 0) return 'review_candidate_found';
   if (checkedPairs.length === 0) return 'not_evaluated';
   return 'no_reviewed_interaction_found';
@@ -879,6 +1139,7 @@ function buildNotEvaluated({
   unresolvedInputs,
   checkedPairs,
   rulePack,
+  technicalHoldMatches,
 }) {
   const entries = unresolvedInputs.map((input, index) => ({
     code: 'INPUT_GAP',
@@ -887,6 +1148,15 @@ function buildNotEvaluated({
     ...(input.input === undefined ? {} : { input: structuredClone(input.input) }),
     ...(input.product_id === undefined ? {} : { product_id: input.product_id }),
   }));
+  for (const match of technicalHoldMatches) {
+    entries.push({
+      code: 'PROMOTION_HELD_LIVE_PROVENANCE_DRIFT',
+      rule_id: match.hold.rule_id,
+      reason: match.hold.reason,
+      detected_at: match.hold.detected_at,
+      matched_product_pairs: structuredClone(match.matched_product_pairs),
+    });
+  }
   if (checkedPairs.length === 0) {
     entries.push({
       code: 'NO_CROSS_DRUG_PAIR_EVALUATED',
@@ -929,11 +1199,22 @@ export function checkResolvedProducts({
   resolvedInputs,
   rulePack,
   reviewCandidates = [],
+  technicalHoldPack,
 } = {}) {
   if (!Array.isArray(resolvedInputs)) throw new TypeError('resolvedInputs must be an array');
   if (!Array.isArray(reviewCandidates)) throw new TypeError('reviewCandidates must be an array');
   rulePack = strictPlainDataSnapshot(rulePack, 'rule pack');
   validateRulePack(rulePack);
+  if (belongsToCommittedInternalFamily(rulePack) && technicalHoldPack === undefined) {
+    throw new TypeError('technical hold pack is required for the committed internal rule pack');
+  }
+  if (technicalHoldPack !== undefined) {
+    technicalHoldPack = strictPlainDataSnapshot(
+      technicalHoldPack,
+      'technical hold pack',
+    );
+    validateTechnicalHoldPack(technicalHoldPack, { rulePack });
+  }
 
   const resolved = [];
   const unresolved = [];
@@ -1028,6 +1309,14 @@ export function checkResolvedProducts({
   const checked_pairs = generateCrossDrugPairs(mappedProducts);
   const checkedByKey = new Map(checked_pairs.map((entry) => [entry.pair_key, entry]));
   const checkedKeys = new Set(checkedByKey.keys());
+  const technicalHoldMatches = [];
+  for (const hold of technicalHoldPack?.holds ?? []) {
+    const checkedPair = checkedByKey.get(pairKey(hold.pair));
+    if (!checkedPair) continue;
+    const matched_product_pairs = matchedProductPairs(checkedPair, hold);
+    if (matched_product_pairs.length === 0) continue;
+    technicalHoldMatches.push({ hold, matched_product_pairs });
+  }
   const reviewedMatches = [];
   const packCandidates = [];
   for (const value of rulePack.rules) {
@@ -1127,6 +1416,7 @@ export function checkResolvedProducts({
       surviving_reviewed_finding_count: reviewed_findings.length,
       superseded_finding_count: superseded_findings.length,
       review_candidate_count: review_candidates.length,
+      technical_hold_match_count: technicalHoldMatches.length,
     },
     checked_pair_count: checked_pairs.length,
   };
@@ -1134,10 +1424,12 @@ export function checkResolvedProducts({
     unresolvedInputs: unresolved,
     checkedPairs: checked_pairs,
     rulePack,
+    technicalHoldMatches,
   });
   const outcome_code = outcomeFor({
     reviewedFindings: reviewed_findings,
     reviewCandidates: review_candidates,
+    technicalHoldMatches,
     unresolvedInputs: unresolved,
     duplicateIngredients: duplicate_ingredients,
     checkedPairs: checked_pairs,
@@ -1145,6 +1437,7 @@ export function checkResolvedProducts({
   const clinical_interaction_status = clinicalStatusFor({
     reviewedFindings: reviewed_findings,
     reviewCandidates: review_candidates,
+    technicalHoldMatches,
     checkedPairs: checked_pairs,
   });
 

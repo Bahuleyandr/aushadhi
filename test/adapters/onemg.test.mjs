@@ -1,7 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { parseDrugPage, parseBrowsePage, extractBalancedJson, readOnemgNormalized } from '../../src/adapters/onemg.mjs';
+import {
+  parseDrugPage,
+  parseBrowsePage,
+  parseBrowsePageInfo,
+  extractBalancedJson,
+  readOnemgNormalized,
+} from '../../src/adapters/onemg.mjs';
 
 const avastin = fs.readFileSync('test/fixtures/onemg/drug_page.html', 'utf8');
 const augmentin = fs.readFileSync('test/fixtures/onemg/drug_page_tablet.html', 'utf8');
@@ -69,4 +75,26 @@ test('parseBrowsePage: extracts from JSON-LD ItemList (paginated variant, no anc
   const alkasol = entries.find((e) => e.path === '/drugs/alkasol-oral-solution-4967');
   assert.ok(alkasol, 'Alkasol entry present');
   assert.equal(alkasol.name, 'Alkasol Oral Solution');
+});
+
+test('parseBrowsePageInfo: returns the source-owned structured next pointer', () => {
+  const page = parseBrowsePageInfo(browse);
+  assert.equal(page.paginationKnown, true);
+  assert.equal(page.next, '/drugs-all-medicines?page=2');
+  assert.ok(page.entries.length >= 20);
+});
+
+test('parseBrowsePageInfo: fails closed when pagination metadata is absent or malformed', () => {
+  const withoutRouter = browse.replace(/window\.__ROUTER_INITIAL_DATA__[\s\S]*?<\/script>/u, '</script>');
+  assert.deepEqual(parseBrowsePageInfo(withoutRouter), {
+    entries: parseBrowsePage(withoutRouter),
+    paginationKnown: false,
+    next: null,
+  });
+
+  const malformed = '<a href="/drugs/example-tablet-123">Example Tablet</a>'
+    + '<script>window.__ROUTER_INITIAL_DATA__ = {"route":{"data":{"next":{"page":2}}}};</script>';
+  const parsed = parseBrowsePageInfo(malformed);
+  assert.equal(parsed.paginationKnown, false);
+  assert.equal(parsed.next, null);
 });

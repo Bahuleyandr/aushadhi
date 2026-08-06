@@ -179,16 +179,35 @@ node src/cli/interactions.mjs `
 ```
 
 The committed production rule pack remains empty and declares unknown
-coverage. The internal-evaluation pack contains the clinician-approved
-warfarin-amiodarone rule for six exact PMBJP oral-tablet product pairs and the
-clinician-approved warfarin-fluconazole rule for 12 exact PMBJP oral-tablet
-product pairs. It also contains separately clinician-approved warfarin rules
-for metronidazole (six pairs), oral ketoconazole (three pairs), and
-voriconazole (three pairs), plus warfarin-azithromycin (six pairs) and
-warfarin-tramadol (six pairs). A reviewed ingredient identity without its
-exact reviewed presentation is excluded from clinical pair generation, and a
+coverage. Eight clinician-approved promotions remain recorded, but the
+internal-evaluation runtime pack currently compiles only six rules. The
+warfarin-azithromycin and warfarin-tramadol promotions are omitted under the
+mandatory provenance-drift holds recorded in
+`data-static/interaction-promotion-holds.internal-evaluation.json`; see
+`interaction-review/2026-08-06-promoted-evidence-drift-holds.md`. The six active
+rules cover warfarin with amiodarone, clarithromycin, fluconazole, oral
+ketoconazole, metronidazole, and voriconazole for their exact reviewed PMBJP
+oral-tablet assertions. A reviewed ingredient identity without its exact
+reviewed presentation is excluded from clinical pair generation, and a
 different product carrying the same ingredient does not inherit the approval.
 Reviewed mapping completeness does not otherwise promote a clinical rule.
+
+The compiler separately writes
+`data-static/interaction-promotion-holds.runtime.internal-evaluation.json`.
+The internal CLI validates that artifact against both the six-rule pack and the
+source hold manifest. A canonical SHA-256 binds its complete hold array to the
+source manifest, while opaque code-pinned exact-scope leaves prevent a rule-ID
+alias or product-pair mutation from reactivating a historical promotion. Its
+exact held product pairs resolve to `not_evaluated`
+with `manual_review_required`; the artifact deliberately carries no severity,
+mechanism, management, evidence excerpt, or other clinical text. The two live
+public payloads and their byte/canonical hashes are retained under
+`docs/interaction-review/evidence-drift/2026-08-06/` for offline reproduction
+only, with no promotion or deployment authority. A check containing both a
+reviewed active finding and a held pair reports
+`reviewed_interaction_found_with_unevaluated_scope` and
+`reviewed_action_and_manual_review_required`, so the hold cannot be hidden by
+the reviewed finding.
 
 The internal-evaluation runtime pack is deterministically compiled from
 `data-static/interaction-promotions.internal-evaluation.json`; it is not a
@@ -196,14 +215,19 @@ second clinical source of truth. Each promotion binds the exact SHA-256 of an
 attested v2 draft row, the clinician's verbatim approval and reviewer ID, the
 validated label versions, reviewed ingredient mapping IDs, reviewed
 presentation mapping IDs, and the expected product-pair count. The compiler
-fails closed if any bound input drifts:
+also requires the checked-in hold manifest to bind the exact draft-pack,
+evidence-digest, source-policy, approved-source-version, and approved-payload
+hashes. Every promotion is still compiled and validated, then a held rule is
+omitted from the runtime pack. The compiler fails closed if any bound input
+drifts:
 
 ```powershell
 npm run interactions:promote
 npm run interactions:promote:check
 ```
 
-The first command regenerates the pack. The second derives it in memory and
-requires exact byte equality with the committed artifact. This promotion path
-targets `internal-evaluation` only; the `production-open` pack remains empty
-and cannot inherit an internal approval.
+The first command regenerates both the active rule pack and the bound technical
+hold artifact. The second derives both in memory and requires exact byte
+equality with the committed artifacts. This promotion path targets
+`internal-evaluation` only; the `production-open` pack remains empty and cannot
+inherit an internal approval.

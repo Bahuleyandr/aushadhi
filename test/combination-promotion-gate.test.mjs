@@ -64,7 +64,7 @@ test('the committed manifest returns an authentic report bound to its frozen man
 
 test('the committed runtime build consumes the verified manifest handoff', () => {
   const pack = buildCommittedRuntimePack();
-  assert.equal(pack.rules.length, 8);
+  assert.equal(pack.rules.length, 6);
   assert.equal(pack.profile, 'internal-evaluation');
 });
 

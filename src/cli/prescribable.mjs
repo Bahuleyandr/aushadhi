@@ -16,10 +16,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import readline from 'node:readline';
 import { pathToFileURL } from 'node:url';
-import { ctx } from '../lib/context.mjs';
 import { buildStrengthModel } from '../lib/plausibility.mjs';
 import { releaseProfile, assignSubstituteGroups, formulationGroupRows } from '../lib/formulation.mjs';
+import { writeCsvStream, writeJsonlStream } from '../lib/build-cohort.mjs';
 
 const DROP = new Set(('tablet tablets tab tabs capsule capsules cap caps strip strips of in a an the '
   + 'bottle bottles syrup syrups injection injections inj vial vials ml mg mcg gm g kg iu '
@@ -307,40 +308,45 @@ export function buildPrescribable(rows, model) {
   return { records, reviewRows, conflictRows, groupRows, stats: Object.fromEntries(statusCounts) };
 }
 
-function toCsv(rows) {
-  if (!rows.length) return '';
-  const cols = Object.keys(rows[0]);
-  const esc = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  return `﻿${[cols.join(','), ...rows.map((r) => cols.map((c) => esc(r[c])).join(','))].join('\n')}\n`;
-}
-
-// Stream JSONL a chunk at a time. A full `rows.map(JSON.stringify).join('\n')` builds a
-// single string that overflows V8's max string length (~512MB) at this dataset size.
-function writeJsonl(file, rows) {
-  const fd = fs.openSync(file, 'w');
-  try {
-    let buf = '';
-    for (const r of rows) {
-      buf += JSON.stringify(r) + '\n';
-      if (buf.length >= (1 << 20)) { fs.writeSync(fd, buf); buf = ''; }
-    }
-    if (buf) fs.writeSync(fd, buf);
-  } finally {
-    fs.closeSync(fd);
+async function readJsonl(file) {
+  const rows = [];
+  const lines = readline.createInterface({
+    input: fs.createReadStream(file, { encoding: 'utf8' }),
+    crlfDelay: Infinity,
+  });
+  for await (const line of lines) {
+    if (line.trim()) rows.push(JSON.parse(line));
   }
+  return rows;
 }
 
-export async function main(log = console.log) {
-  const c = ctx();
-  const dir = path.join(c.distRoot, c.date);
+export async function main(log = console.log, options = {}) {
+  const selectedOutput = options.outputDir ?? process.env.AUSHADHI_COHORT_DIR;
+  if (typeof selectedOutput !== 'string' || selectedOutput.trim() === '') {
+    throw new Error('AUSHADHI_COHORT_DIR is required for a mutable cohort stage');
+  }
+  const dir = path.resolve(selectedOutput);
+  if (fs.existsSync(path.join(dir, 'cohort-manifest.json'))) {
+    throw new Error(`manifest-bound cohort is immutable: ${dir}`);
+  }
   const src = path.join(dir, 'drugs.jsonl');
-  const rows = fs.readFileSync(src, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const rows = await readJsonl(src);
   const model = buildStrengthModel(rows);
   const { records, reviewRows, conflictRows, groupRows, stats } = buildPrescribable(rows, model);
-  writeJsonl(path.join(dir, 'prescribable.jsonl'), records);
-  writeJsonl(path.join(dir, 'formulation_groups.jsonl'), groupRows);
-  if (reviewRows.length) fs.writeFileSync(path.join(dir, 'strength-review-shortlist.csv'), toCsv(reviewRows));
-  if (conflictRows.length) fs.writeFileSync(path.join(dir, 'strength-conflicts.csv'), toCsv(conflictRows));
+  await writeJsonlStream(path.join(dir, 'prescribable.jsonl'), records);
+  await writeJsonlStream(path.join(dir, 'formulation_groups.jsonl'), groupRows);
+  const reviewFile = path.join(dir, 'strength-review-shortlist.csv');
+  const conflictFile = path.join(dir, 'strength-conflicts.csv');
+  if (reviewRows.length) {
+    await writeCsvStream(reviewFile, reviewRows, { header: true, bom: true, columns: Object.keys(reviewRows[0]) });
+  } else {
+    fs.rmSync(reviewFile, { force: true });
+  }
+  if (conflictRows.length) {
+    await writeCsvStream(conflictFile, conflictRows, { header: true, bom: true, columns: Object.keys(conflictRows[0]) });
+  } else {
+    fs.rmSync(conflictFile, { force: true });
+  }
   const suppressed = stats.unverified ?? 0;
   const review = records.filter((r) => r.strength_conflict).length;
   const substitutable = records.filter((r) => r.substitute_count > 0).length;

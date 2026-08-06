@@ -19,11 +19,15 @@ test('parseNetmedsComposition: "MOL STRENGTH UNIT" single + combo', () => {
 });
 
 test('parseNetmedsProduct: brand + manufacturer + composition from __INITIAL_STATE__', () => {
-  const r = parseNetmedsProduct(productHtml);
+  const productPath = '/product/aciformin-500-tablet-10s-m9pl5y-10230093';
+  const r = parseNetmedsProduct(productHtml, '10230093', productPath);
   assert.match(r.brand_name, /ACIFORMIN 500/i);
   assert.match(r.manufacturer, /ACIDUS OJAS/i);
   assert.deepEqual(r.ingredients.map((i) => i.molecule), ['metformin']);
   assert.equal(r.source, 'netmeds');
+  assert.equal(r.source_id, '10230093');
+  assert.equal(parseNetmedsProduct(productHtml, '10230094', productPath), null);
+  assert.equal(parseNetmedsProduct(productHtml, '10230093', `${productPath}-wrong`), null);
 });
 
 test('parseNetmedsProduct: non-drug SKU -> null (device filter, no dosage digit)', () => {
@@ -78,7 +82,7 @@ test('isLikelyDrugSlug: no false-negatives on drug-overlapping words', () => {
   assert.equal(isLikelyDrugSlug('/product/permethrin-medicated-soap-75gm'), true);
 });
 
-test('readNetmedsNormalized: last write per identity wins', () => {
+test('readNetmedsNormalized: refreshes by source product ID without collapsing distinct products', () => {
   const root = 'test/.tmp-nm';
   fs.rmSync(root, { recursive: true, force: true });
   const mk = (date, molecule) => {
@@ -91,8 +95,16 @@ test('readNetmedsNormalized: last write per identity wins', () => {
   };
   mk('2026-07-01', 'old');
   mk('2026-07-17', 'new');
+  fs.appendFileSync(`${root}/netmeds/2026-07-17/normalized.jsonl`, JSON.stringify({
+    source: 'netmeds', source_id: '2', seen_at: '2026-07-17', brand_name: 'Aciformin', manufacturer: 'Acidus',
+    pack_label: '', ingredients: [{ molecule: 'other', strength_value: 1, strength_unit: 'mg', strength_raw: '1mg' }],
+    composition_status: 'complete', substitutes_raw: [],
+  }) + '\n');
   const rows = readNetmedsNormalized(root);
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].ingredients[0].molecule, 'new');
+  assert.equal(rows.length, 2);
+  const refreshed = rows.find((row) => row.source_id === '1');
+  assert.equal(refreshed.ingredients[0].molecule, 'new');
+  assert.equal(refreshed.first_seen, '2026-07-01');
+  assert.equal(rows.find((row) => row.source_id === '2').ingredients[0].molecule, 'other');
   fs.rmSync(root, { recursive: true, force: true });
 });

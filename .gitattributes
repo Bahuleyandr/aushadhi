@@ -4,3 +4,4 @@
 /data-static/ingredient-mapping-overrides.json text eol=lf
 /data-static/product-presentation-overrides.json text eol=lf
 /docs/interaction-review/** text eol=lf
+/docs/interaction-review/evidence-drift/2026-08-06/govuk-warfarin-tramadol-page.html -whitespace

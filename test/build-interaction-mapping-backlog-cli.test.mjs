@@ -57,4 +57,11 @@ test('mapping backlog CLI accepts explicit review inputs and rejects unknown fla
     () => parseArgs(['--profile', 'internal-evaluation', '--accept']),
     /unknown argument --accept/i,
   );
+  assert.throws(
+    () => parseArgs([
+      '--profile', 'internal-evaluation',
+      '--artifact-summary', 'dist/open/summary.json',
+    ]),
+    /--artifact-summary requires --artifact/i,
+  );
 });

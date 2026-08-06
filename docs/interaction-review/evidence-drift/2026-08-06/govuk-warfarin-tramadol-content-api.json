@@ -1,0 +1,450 @@
+{
+  "analytics_identifier": null,
+  "base_path": "/drug-safety-update/warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol",
+  "content_id": "2c293e14-eb15-43e8-8246-f83bd47fd651",
+  "description": "Taking warfarin and tramadol together can cause harmful drug interactions, which can raise the International Normalised Ratio (INR), and result in severe bruising and bleeding, which in some patients could be fatal.",
+  "details": {
+    "body": "<div class=\"call-to-action\">\n  <h2 id=\"advice-for-healthcare-professionals\">Advice for healthcare professionals:</h2>\n\n  <ul>\n    <li>warfarin is a coumarin-derived vitamin K antagonist which has a low therapeutic index, so continue to exercise caution when co-prescribing warfarin with other drugs, to minimise the risk of drug interactions</li>\n    <li>ask patients about all the medicines that they are currently taking</li>\n    <li>be aware of the risk of increased INR when warfarin and tramadol are used together, with a risk of major bruising and bleeding which could be life-threatening</li>\n    <li>consult the product information of any new concomitant therapy for specific guidance on use with warfarin and consider whether warfarin dose adjustment is required</li>\n    <li>consider whether additional monitoring of INR is required when starting tramadol or another concomitant medicine</li>\n    <li>ensure patients are aware of the need to seek medical treatment should they notice the signs of a major bleeding event</li>\n    <li>caution should also be taken if tramadol is co-prescribed with other coumarin-derived anticoagulants such as acenocoumarol</li>\n    <li>report suspected adverse drug reactions to the <a rel=\"external\" href=\"http://www.mhra.gov.uk/yellowcard\">Yellow Card scheme</a>\n</li>\n  </ul>\n\n  <h2 id=\"advice-for-healthcare-professionals-to-provide-to-patients\">Advice for healthcare professionals to provide to patients:</h2>\n  <ul>\n    <li>warfarin can interact with some medicines, such as tramadol, leading to an increased risk of bleeding</li>\n    <li>you should seek medical treatment and have an urgent International Normalised Ratio test should you experience any of the following symptoms:\n      <ul>\n        <li>prolonged nose bleeds (more than 10 minutes)</li>\n        <li>blood in vomit, sputum (phlegm), stool (poo) or urine (pee)</li>\n        <li>severe or unexplained bruising</li>\n        <li>severe bleeding gums</li>\n        <li>unusual headaches (headaches with blurred vision, slurred speech, loss of movement, feeling or being sick, fits, loss of consciousness, dizziness)</li>\n        <li>women who experience heavy or increased bleeding during their menstrual period or any other heavy vaginal bleeding</li>\n      </ul>\n    </li>\n    <li>inform your healthcare professional that you are taking warfarin and carry your anticoagulant alert card with you at all times</li>\n    <li>inform your healthcare professional of all the medicines you are currently taking</li>\n    <li>do not take any new medicines without first discussing this with your healthcare professional</li>\n    <li>do not stop taking warfarin without first discussing this with your healthcare professional</li>\n    <li>report suspected adverse drug reactions to the <a rel=\"external\" href=\"http://www.mhra.gov.uk/yellowcard\">Yellow Card scheme</a>\n</li>\n  </ul>\n</div>\n\n<h2 id=\"risk-of-adverse-drug-interaction-with-tramadol\">Risk of adverse drug interaction with tramadol</h2>\n\n<p>The MHRA has received a Coroner’s report following the death of a patient who died from a bleed on the brain, following concurrent treatment with warfarin and tramadol. Taking warfarin and tramadol together may increase a patient’s INR and increase the risk of bleeding. The Coroner raised concerns that the interaction between warfarin and tramadol was not well known and emphasised the need to highlight this interaction to healthcare professionals.</p>\n\n<p>Warfarin is a coumarin-derived vitamin K antagonist used for prevention and treatment of blood clots. It is used to prevent embolisation in rheumatic heart disease and, atrial fibrillation and after insertion of prosthetic heart valves. Warfarin is also used in the prevention and treatment of venous thrombosis and pulmonary embolism and treatment of transient ischaemic attacks.</p>\n\n<p>Warfarin has a low therapeutic index, which means care is required when taking co-prescribed medicines due to the possibility of interactions that could lead to an increased risk of bleeding.</p>\n\n<p>The product information for warfarin advises that healthcare professionals should refer to the product information of any new concomitant medicines for specific guidance on use with warfarin and whether a dose adjustment or therapeutic monitoring is required. The product information will be updated to include the interaction in due course.</p>\n\n<p>Tramadol is a non-selective opioid analgesic, which acts as an agonist at the mu, delta and kappa opioid receptors. Section 4.5 of the tramadol Summary of Product Characteristics (SmPC) states that caution should be exercised during concomitant treatment with coumarin derivatives such as warfarin due to reports of increased INR with major bleeding and bruising in some patients. While the risk of major bleeding with warfarin treatment is rare, the risk may be increased with concurrent use of tramadol.</p>\n\n<h2 id=\"report-any-suspected-adverse-drug-reactions\">Report any suspected adverse drug reactions</h2>\n\n<p>Please continue to report suspected adverse drug reactions (ADRs) to the Yellow Card scheme. Reporting suspected ADRs, even those known to occur, adds to knowledge about the frequency and severity of these reactions and can be used to identify patients who are most at risk. Your report helps the safer use of medicines.</p>\n\n<p>Healthcare professionals, patients, and caregivers are asked to submit reports using the Yellow Card scheme electronically using:</p>\n\n<ul>\n  <li>the <a rel=\"external\" href=\"https://yellowcard.mhra.gov.uk/\">Yellow Card scheme website</a>\n</li>\n  <li>the Yellow Card app; download from the <a rel=\"external\" href=\"https://itunes.apple.com/us/app/apple-store/id990237487?pt=117756671&amp;ct=EYC&amp;mt=8\">Apple App Store</a> or <a rel=\"external\" href=\"https://play.google.com/store/apps/details?id=uk.org.mhra.yellowcard&amp;referrer=utm_source%3DEYC%26utm_medium%3Dcpc%26anid%3Dadmob\">Google Play Store</a>\n</li>\n  <li>some clinical IT systems for healthcare professionals (EMIS, SystmOne, Vision, MiDatabank, and Ulysses)</li>\n</ul>\n\n<p>When reporting please provide as much information as possible, including information about medical history, any concomitant medication, onset, treatment dates, and product brand name.</p>\n\n<p>Article citation: Drug Safety Update volume 17, issue 11: June 2024: 2</p>\n\n",
+    "change_history": [
+      {
+        "note": "First published.",
+        "public_timestamp": "2024-06-20T10:11:09Z"
+      }
+    ],
+    "headers": [
+      {
+        "id": "advice-for-healthcare-professionals",
+        "level": 2,
+        "text": "Advice for healthcare professionals:"
+      },
+      {
+        "id": "advice-for-healthcare-professionals-to-provide-to-patients",
+        "level": 2,
+        "text": "Advice for healthcare professionals to provide to patients:"
+      },
+      {
+        "id": "risk-of-adverse-drug-interaction-with-tramadol",
+        "level": 2,
+        "text": "Risk of adverse drug interaction with tramadol"
+      },
+      {
+        "id": "report-any-suspected-adverse-drug-reactions",
+        "level": 2,
+        "text": "Report any suspected adverse drug reactions"
+      }
+    ],
+    "max_cache_time": 10,
+    "metadata": {
+      "therapeutic_area": [
+        "dispensing-gp-practices",
+        "haematology",
+        "pain-management-palliation"
+      ]
+    },
+    "temporary_update_type": false
+  },
+  "document_type": "drug_safety_update",
+  "first_published_at": "2024-06-20T11:11:09+01:00",
+  "links": {
+    "available_translations": [
+      {
+        "api_path": "/api/content/drug-safety-update/warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol",
+        "api_url": "https://www.gov.uk/api/content/drug-safety-update/warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol",
+        "base_path": "/drug-safety-update/warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol",
+        "content_id": "2c293e14-eb15-43e8-8246-f83bd47fd651",
+        "document_type": "drug_safety_update",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2024-06-20T10:11:09Z",
+        "schema_name": "specialist_document",
+        "title": "Warfarin: be alert to the risk of drug interactions with tramadol",
+        "web_url": "https://www.gov.uk/drug-safety-update/warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol",
+        "withdrawn": false
+      }
+    ],
+    "finder": [
+      {
+        "api_path": "/api/content/drug-safety-update",
+        "api_url": "https://www.gov.uk/api/content/drug-safety-update",
+        "base_path": "/drug-safety-update",
+        "content_id": "602be505-4cf4-4f8c-8bfc-7bc4b63a7f47",
+        "details": {
+          "facets": [
+            {
+              "allowed_values": [
+                {
+                  "label": "Anaesthesia and intensive care",
+                  "value": "anaesthesia-intensive-care"
+                },
+                {
+                  "label": "Breastfeeding",
+                  "value": "breastfeeding"
+                },
+                {
+                  "label": "Cancer",
+                  "value": "cancer"
+                },
+                {
+                  "label": "Cardiovascular disease and lipidology",
+                  "value": "cardiovascular-disease-lipidology"
+                },
+                {
+                  "label": "Care home staff",
+                  "value": "care-home-staff"
+                },
+                {
+                  "label": "Cosmetic surgery",
+                  "value": "cosmetic-surgery"
+                },
+                {
+                  "label": "Critical care",
+                  "value": "critical-care"
+                },
+                {
+                  "label": "Dentistry",
+                  "value": "dentistry"
+                },
+                {
+                  "label": "Dermatology",
+                  "value": "dermatology"
+                },
+                {
+                  "label": "Dispensing GP practices",
+                  "value": "dispensing-gp-practices"
+                },
+                {
+                  "label": "Ear, nose and throat",
+                  "value": "ear-nose-throat"
+                },
+                {
+                  "label": "Emergency medicine",
+                  "value": "emergency-medicine"
+                },
+                {
+                  "label": "Endocrinology, diabetology and metabolism",
+                  "value": "endocrinology-diabetology-metabolism"
+                },
+                {
+                  "label": "General practice",
+                  "value": "general-practice"
+                },
+                {
+                  "label": "General surgery",
+                  "value": "general-surgery"
+                },
+                {
+                  "label": "GI, hepatology and pancreatic disorders",
+                  "value": "gi-hepatology-pancreatic-disorders"
+                },
+                {
+                  "label": "Haematology and oncology",
+                  "value": "haematology"
+                },
+                {
+                  "label": "Immunology and vaccination",
+                  "value": "immunology-vaccination"
+                },
+                {
+                  "label": "Immunosuppression and transplantation",
+                  "value": "immunosuppression-transplantation"
+                },
+                {
+                  "label": "Infection prevention",
+                  "value": "infection-prevention"
+                },
+                {
+                  "label": "Infectious disease",
+                  "value": "infectious-disease"
+                },
+                {
+                  "label": "Neurology",
+                  "value": "neurology"
+                },
+                {
+                  "label": "Nutrition and dietetics",
+                  "value": "nutrition-dietetics"
+                },
+                {
+                  "label": "Obstetrics, gynaecology and fertility",
+                  "value": "obstetrics-gynaecology-fertility"
+                },
+                {
+                  "label": "Ophthalmology",
+                  "value": "ophthalmology"
+                },
+                {
+                  "label": "Orthopaedics",
+                  "value": "orthopaedics"
+                },
+                {
+                  "label": "Paediatrics and neonatology",
+                  "value": "paediatrics-neonatology"
+                },
+                {
+                  "label": "Pain management and palliation",
+                  "value": "pain-management-palliation"
+                },
+                {
+                  "label": "Pathology",
+                  "value": "pathology"
+                },
+                {
+                  "label": "Pharmacy",
+                  "value": "pharmacy"
+                },
+                {
+                  "label": "Physiotherapy and occupational therapy",
+                  "value": "physiotherapy-occupational-therapy"
+                },
+                {
+                  "label": "Pregnancy",
+                  "value": "pregnancy"
+                },
+                {
+                  "label": "Psychiatry",
+                  "value": "psychiatry"
+                },
+                {
+                  "label": "Radiology and imaging",
+                  "value": "radiology-imaging"
+                },
+                {
+                  "label": "Renal medicine",
+                  "value": "renal-medicine"
+                },
+                {
+                  "label": "Respiratory disease and allergy",
+                  "value": "respiratory-disease-allergy"
+                },
+                {
+                  "label": "Rheumatology",
+                  "value": "rheumatology"
+                },
+                {
+                  "label": "Theatre practitioners",
+                  "value": "theatre-practitioners"
+                },
+                {
+                  "label": "Urology and nephrology",
+                  "value": "urology-nephrology"
+                },
+                {
+                  "label": "Vascular and cardiac surgery",
+                  "value": "vascular-cardiac-surgery"
+                }
+              ],
+              "display_as_result_metadata": true,
+              "filterable": true,
+              "key": "therapeutic_area",
+              "name": "Therapeutic area",
+              "preposition": "about",
+              "type": "text"
+            },
+            {
+              "display_as_result_metadata": true,
+              "filterable": true,
+              "key": "first_published_at",
+              "name": "Published",
+              "preposition": "published",
+              "short_name": "Published",
+              "type": "date"
+            }
+          ],
+          "index_documents_in_search_engines": true,
+          "show_metadata_block": true,
+          "show_table_of_contents": true
+        },
+        "document_type": "finder",
+        "links": {},
+        "locale": "en",
+        "public_updated_at": "2026-04-09T09:03:44Z",
+        "schema_name": "finder",
+        "title": "Drug Safety Update",
+        "web_url": "https://www.gov.uk/drug-safety-update",
+        "withdrawn": false
+      }
+    ],
+    "organisations": [
+      {
+        "analytics_identifier": "EA63",
+        "api_path": "/api/content/government/organisations/medicines-and-healthcare-products-regulatory-agency",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/medicines-and-healthcare-products-regulatory-agency",
+        "base_path": "/government/organisations/medicines-and-healthcare-products-regulatory-agency",
+        "content_id": "240f72bd-9a4d-4f39-94d9-77235cadde8e",
+        "details": {
+          "acronym": "MHRA",
+          "brand": "department-of-health-social-care",
+          "default_news_image": null,
+          "logo": {
+            "crest": "single-identity",
+            "formatted_title": "Medicines &amp; Healthcare products<br/>Regulatory Agency"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "Medicines and Healthcare products Regulatory Agency",
+        "web_url": "https://www.gov.uk/government/organisations/medicines-and-healthcare-products-regulatory-agency",
+        "withdrawn": false
+      }
+    ],
+    "primary_publishing_organisation": [
+      {
+        "analytics_identifier": "EA63",
+        "api_path": "/api/content/government/organisations/medicines-and-healthcare-products-regulatory-agency",
+        "api_url": "https://www.gov.uk/api/content/government/organisations/medicines-and-healthcare-products-regulatory-agency",
+        "base_path": "/government/organisations/medicines-and-healthcare-products-regulatory-agency",
+        "content_id": "240f72bd-9a4d-4f39-94d9-77235cadde8e",
+        "details": {
+          "acronym": "MHRA",
+          "brand": "department-of-health-social-care",
+          "default_news_image": null,
+          "logo": {
+            "crest": "single-identity",
+            "formatted_title": "Medicines &amp; Healthcare products<br/>Regulatory Agency"
+          },
+          "organisation_govuk_status": {
+            "status": "live",
+            "updated_at": null,
+            "url": null
+          }
+        },
+        "document_type": "organisation",
+        "links": {},
+        "locale": "en",
+        "schema_name": "organisation",
+        "title": "Medicines and Healthcare products Regulatory Agency",
+        "web_url": "https://www.gov.uk/government/organisations/medicines-and-healthcare-products-regulatory-agency",
+        "withdrawn": false
+      }
+    ],
+    "taxons": [
+      {
+        "api_path": "/api/content/health-and-social-care/medicines-medical-devices-blood-vigilance-safety-alerts-alerts-and-recalls",
+        "api_url": "https://www.gov.uk/api/content/health-and-social-care/medicines-medical-devices-blood-vigilance-safety-alerts-alerts-and-recalls",
+        "base_path": "/health-and-social-care/medicines-medical-devices-blood-vigilance-safety-alerts-alerts-and-recalls",
+        "content_id": "51bbdf23-292a-4b74-8a66-f7db6b93b163",
+        "details": {
+          "internal_name": "Alerts and recalls [T]",
+          "notes_for_editors": "",
+          "visible_to_departmental_editors": false
+        },
+        "document_type": "taxon",
+        "links": {
+          "parent_taxons": [
+            {
+              "api_path": "/api/content/health-and-social-care/medicines-medical-devices-blood-vigilance-safety-alerts",
+              "api_url": "https://www.gov.uk/api/content/health-and-social-care/medicines-medical-devices-blood-vigilance-safety-alerts",
+              "base_path": "/health-and-social-care/medicines-medical-devices-blood-vigilance-safety-alerts",
+              "content_id": "49f5ab15-d6fe-4a8e-8e56-44878798e7d6",
+              "details": {
+                "internal_name": "Vigilance, safety alerts and guidance [T]",
+                "notes_for_editors": "",
+                "visible_to_departmental_editors": false
+              },
+              "document_type": "taxon",
+              "links": {
+                "parent_taxons": [
+                  {
+                    "api_path": "/api/content/health-and-social-care/medicines-medical-devices-blood",
+                    "api_url": "https://www.gov.uk/api/content/health-and-social-care/medicines-medical-devices-blood",
+                    "base_path": "/health-and-social-care/medicines-medical-devices-blood",
+                    "content_id": "cebc01ee-f70a-4397-a552-622e10b62508",
+                    "description": "",
+                    "details": {
+                      "internal_name": "Medicines and medical devices [T] (level 2, health theme)",
+                      "notes_for_editors": "",
+                      "visible_to_departmental_editors": false
+                    },
+                    "document_type": "taxon",
+                    "links": {
+                      "parent_taxons": [
+                        {
+                          "api_path": "/api/content/health-and-social-care",
+                          "api_url": "https://www.gov.uk/api/content/health-and-social-care",
+                          "base_path": "/health-and-social-care",
+                          "content_id": "8124ead8-8ebc-4faf-88ad-dd5cbcc92ba8",
+                          "description": "",
+                          "details": {
+                            "internal_name": "Health and social care",
+                            "notes_for_editors": "",
+                            "visible_to_departmental_editors": true
+                          },
+                          "document_type": "taxon",
+                          "links": {
+                            "root_taxon": [
+                              {
+                                "api_path": "/api/content/",
+                                "api_url": "https://www.gov.uk/api/content/",
+                                "base_path": "/",
+                                "content_id": "f3bbdec2-0e62-4520-a7fd-6ffd5d36e03a",
+                                "document_type": "homepage",
+                                "links": {},
+                                "locale": "en",
+                                "public_updated_at": "2026-02-18T13:00:23Z",
+                                "schema_name": "homepage",
+                                "title": "GOV.UK homepage",
+                                "web_url": "https://www.gov.uk/",
+                                "withdrawn": false
+                              }
+                            ]
+                          },
+                          "locale": "en",
+                          "phase": "live",
+                          "public_updated_at": "2018-09-16T20:30:51Z",
+                          "schema_name": "taxon",
+                          "title": "Health and social care",
+                          "web_url": "https://www.gov.uk/health-and-social-care",
+                          "withdrawn": false
+                        }
+                      ]
+                    },
+                    "locale": "en",
+                    "phase": "live",
+                    "public_updated_at": "2019-02-06T16:16:55Z",
+                    "schema_name": "taxon",
+                    "title": "Medicines, medical devices",
+                    "web_url": "https://www.gov.uk/health-and-social-care/medicines-medical-devices-blood",
+                    "withdrawn": false
+                  }
+                ]
+              },
+              "locale": "en",
+              "phase": "live",
+              "public_updated_at": "2018-08-22T12:56:18Z",
+              "schema_name": "taxon",
+              "title": "Vigilance, safety alerts and guidance",
+              "web_url": "https://www.gov.uk/health-and-social-care/medicines-medical-devices-blood-vigilance-safety-alerts",
+              "withdrawn": false
+            }
+          ]
+        },
+        "locale": "en",
+        "phase": "live",
+        "public_updated_at": "2018-08-22T12:56:19Z",
+        "schema_name": "taxon",
+        "title": "Alerts and recalls",
+        "web_url": "https://www.gov.uk/health-and-social-care/medicines-medical-devices-blood-vigilance-safety-alerts-alerts-and-recalls",
+        "withdrawn": false
+      }
+    ]
+  },
+  "locale": "en",
+  "phase": "live",
+  "public_updated_at": "2024-06-20T11:11:09+01:00",
+  "publishing_app": "specialist-publisher",
+  "publishing_request_id": "21-1744133331.828-10.13.30.69-702",
+  "publishing_scheduled_at": null,
+  "rendering_app": "frontend",
+  "scheduled_publishing_delay_seconds": null,
+  "schema_name": "specialist_document",
+  "title": "Warfarin: be alert to the risk of drug interactions with tramadol",
+  "updated_at": "2026-07-31T11:12:56+01:00",
+  "withdrawn_notice": {}
+}

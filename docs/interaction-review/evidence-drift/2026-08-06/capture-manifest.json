@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-08-06T00:38:37.348Z",
+  "purpose": "offline reproduction of live provenance-drift promotion holds",
+  "promotion_authority": "none",
+  "deployment_authority": "none",
+  "captures": {
+    "warfarin__azithromycin_oral": {
+      "source_policy_id": "openfda-labels",
+      "source_url": "https://api.fda.gov/drug/label.json?search=set_id%3A%22db52b91e-79f7-4cc1-9564-f2eee8e31c45%22&limit=100",
+      "record": {
+        "filename": "openfda-azithromycin-v49.json",
+        "file_sha256": "de5d9ec227eecca4f770ed3889095e802579aa98b9ed06f92f59530700ecce93",
+        "size_bytes": 234719,
+        "canonical_payload_sha256": "4cdab603d1ce790a38fee1969df01bca4338b283109b4d742a131d532d34204c",
+        "set_id": "db52b91e-79f7-4cc1-9564-f2eee8e31c45",
+        "version": "49",
+        "effective_time": "20260724"
+      },
+      "independent_reference": {
+        "source_url": "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls/db52b91e-79f7-4cc1-9564-f2eee8e31c45.xml",
+        "response_sha256": "29cbeff145cf9791b6a6b2b96e1f99a146f8279477df06bce17f641326058214",
+        "response_size_bytes": 465255,
+        "retained_payload": false,
+        "set_id": "db52b91e-79f7-4cc1-9564-f2eee8e31c45",
+        "version": "49",
+        "effective_time": "20260724"
+      }
+    },
+    "warfarin__tramadol": {
+      "source_policy_id": "mhra-govuk-drug-safety-updates",
+      "source_url": "https://www.gov.uk/drug-safety-update/warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol",
+      "content_api_url": "https://www.gov.uk/api/content/drug-safety-update/warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol",
+      "content_api": {
+        "filename": "govuk-warfarin-tramadol-content-api.json",
+        "file_sha256": "67569de6c5362eec9602a4030299ee5fc4c84473b6cc3960d00efb47f77637f1",
+        "size_bytes": 24618,
+        "canonical_payload_sha256": "b9d638afd2b21893f9222da1767b87e509e88de414aa6fac27e01b1ea5ec2f9f",
+        "public_updated_at": "2024-06-20T11:11:09+01:00"
+      },
+      "page_html": {
+        "filename": "govuk-warfarin-tramadol-page.html",
+        "file_sha256": "d97a9347be76a3d5857936141b54bd0b8c4a28926bfc4cbb9d7fe644e21dd955",
+        "size_bytes": 79376
+      }
+    }
+  }
+}

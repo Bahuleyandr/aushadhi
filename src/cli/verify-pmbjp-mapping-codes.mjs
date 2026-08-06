@@ -24,10 +24,10 @@ import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { assertJanAushadhiParseComplete, parseJanAushadhiText } from '../adapters/janaushadhi.mjs';
+import { resolvePublishedCohort } from '../lib/build-cohort.mjs';
 import { pdfToText } from '../lib/pdftotext.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const DEFAULT_CATALOGUE = path.join(ROOT, 'dist', 'latest', 'drugs.jsonl');
 const MAPPING_PATH = path.join(ROOT, 'data-static', 'product-presentation-overrides.json');
 
 const MAPPING_ID_RE = /^presentation:pmbjp:(\d+):/u;
@@ -204,10 +204,18 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     process.exitCode = 1;
   } else {
     try {
+      let cataloguePath = argValue(argv, 'catalogue');
+      if (cataloguePath === null) {
+        const published = await resolvePublishedCohort({
+          distRoot: path.resolve(process.env.AUSHADHI_DIST_ROOT ?? path.join(ROOT, 'dist')),
+          verifyFiles: ['drugs.jsonl'],
+        });
+        cataloguePath = path.join(published.dir, 'drugs.jsonl');
+      }
       const summary = await verifyPmbjpMappingCodes({
         listPath: path.resolve(listPath),
         expectedSha256: argValue(argv, 'sha256'),
-        cataloguePath: path.resolve(argValue(argv, 'catalogue') ?? DEFAULT_CATALOGUE),
+        cataloguePath: path.resolve(cataloguePath),
       });
       if (argv.includes('--json')) {
         process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);

@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { brandCore, normForm, sigOf, packNum, buildPrescribable } from '../src/cli/prescribable.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { brandCore, normForm, sigOf, packNum, buildPrescribable, main } from '../src/cli/prescribable.mjs';
 import { buildStrengthModel } from '../src/lib/plausibility.mjs';
 
 test('brandCore strips pack/unit/form tokens so cross-source variants collapse', () => {
@@ -126,4 +129,36 @@ test('buildPrescribable: same-formulation brands become mutual substitutes; SR/u
   const g = groupRows.find((x) => x.formulation_key === ir1.formulation_key);
   assert.equal(g.member_count, 2);
   assert.deepEqual(g.member_med_ids, [ir1.med_id, ir2.med_id].sort());
+});
+
+test('prescribable CLI writes into the selected cohort and removes absent optional outputs', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aushadhi-prescribable-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const input = drug({ brand_name: 'Deviceish Kit', ingredients: [] });
+  fs.writeFileSync(path.join(dir, 'drugs.jsonl'), `${JSON.stringify(input)}\n`);
+  fs.writeFileSync(path.join(dir, 'strength-review-shortlist.csv'), 'stale\n');
+  fs.writeFileSync(path.join(dir, 'strength-conflicts.csv'), 'stale\n');
+
+  await main(() => {}, { outputDir: dir });
+
+  const records = fs.readFileSync(path.join(dir, 'prescribable.jsonl'), 'utf8').trim().split('\n').map(JSON.parse);
+  assert.equal(records.length, 1);
+  assert.equal(records[0].strength_status, 'no_strength');
+  assert.ok(fs.existsSync(path.join(dir, 'formulation_groups.jsonl')));
+  assert.equal(fs.existsSync(path.join(dir, 'strength-review-shortlist.csv')), false);
+  assert.equal(fs.existsSync(path.join(dir, 'strength-conflicts.csv')), false);
+});
+
+test('prescribable CLI refuses to mutate a manifest-bound cohort', async (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aushadhi-prescribable-published-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(dir, 'cohort-manifest.json'), '{"schema_version":1}\n');
+  await assert.rejects(main(() => {}, { outputDir: dir }), /manifest-bound cohort.*immutable/i);
+});
+
+test('prescribable CLI refuses an implicit dist/date mutable destination', async () => {
+  await assert.rejects(
+    main(() => {}),
+    /AUSHADHI_COHORT_DIR.*required/i,
+  );
 });

@@ -1,0 +1,4 @@
+bahuleyan ALL=(root) NOPASSWD: /usr/local/libexec/aushadhi-observer healthcheck-crawl
+bahuleyan ALL=(root) NOPASSWD: /usr/local/libexec/aushadhi-observer healthcheck-apollo
+bahuleyan ALL=(root) NOPASSWD: /usr/local/libexec/aushadhi-observer healthcheck-netmeds
+bahuleyan ALL=(root) NOPASSWD: /usr/local/libexec/aushadhi-observer healthcheck-pharmeasy

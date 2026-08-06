@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseComposition } from '../lib/composition.mjs';
-import { pdfToText } from '../lib/pdftotext.mjs';
+import { resolvePdfText } from '../lib/derived-pdf-text.mjs';
 
 // NPPA (National Pharmaceutical Pricing Authority) NLEM ceiling-price list —
 // official formulation→composition→strength→PRICE. The direct PDF is WAF-gated
@@ -110,7 +110,7 @@ export async function parseNppaText(text, date) {
 export async function loadNppaRows(
   rawRoot,
   date = new Date().toISOString().slice(0, 10),
-  { onIntegrity } = {},
+  { onIntegrity, derivedRoot, pdfToTextImpl } = {},
 ) {
   const root = path.join(rawRoot, 'nppa');
   if (!fs.existsSync(root)) return [];
@@ -120,11 +120,21 @@ export async function loadNppaRows(
     let text = null;
     if (/\.txt$/i.test(f)) text = fs.readFileSync(f, 'utf8');
     else if (/\.pdf$/i.test(f)) {
-      const txt = f.replace(/\.pdf$/i, '.txt');
       // mode is explicit: NPPA is a ruled table, so if this document ever shows the
       // orphaned-cell signature the integrity report below is what reveals it, and
       // 'table' is the mode to switch to.
-      try { if (!fs.existsSync(txt)) { const r = await pdfToText(f, txt, { mode: 'layout' }); if (r.skipped) continue; } text = fs.readFileSync(txt, 'utf8'); } catch { continue; }
+      try {
+        const resolved = await resolvePdfText({
+          pdf: f,
+          rawRoot,
+          source: 'nppa',
+          mode: 'layout',
+          derivedRoot,
+          convert: pdfToTextImpl,
+        });
+        if (resolved.skipped) continue;
+        text = fs.readFileSync(resolved.file, 'utf8');
+      } catch { continue; }
     }
     if (!text) continue;
     const rows = await parseNppaText(text, date);

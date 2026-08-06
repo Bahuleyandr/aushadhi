@@ -1,37 +1,74 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
-import { stringify } from 'csv-stringify/sync';
 import { moleculeSetKey, moleculeNameKey } from './merge.mjs';
+import {
+  COHORT_MANIFEST,
+  OPTIONAL_COHORT_FILES,
+  writeCsvStream,
+  writeJsonlStream,
+} from './build-cohort.mjs';
 
 const ingredientsToString = (ings) =>
   ings.map((i) => (i.strength_raw ? `${i.molecule} (${i.strength_raw})` : i.molecule)).join(' + ');
 
-export async function emitArtifact({ distRoot, date, rows, conflicts, errors, meta, fdcKeys = new Set() }) {
-  const dir = path.join(distRoot, date);
-  await fsp.mkdir(dir, { recursive: true });
+const DRUG_COLUMNS = [
+  'brand_name', 'manufacturer', 'pack_label', 'form_raw', 'type', 'price_inr',
+  'is_discontinued', 'composition', 'composition_status', 'composition_raw',
+  'ingredients_json', 'n_substitutes', 'sources', 'source_count', 'confidence',
+  'atc_codes', 'first_seen', 'last_seen',
+];
 
-  const flat = rows.map((r) => ({
-    brand_name: r.brand_name,
-    manufacturer: r.manufacturer,
-    pack_label: r.pack_label,
-    form_raw: r.form_raw ?? '',
-    type: r.type ?? '',
-    price_inr: r.price_inr ?? '',
-    is_discontinued: r.is_discontinued ?? '',
-    composition: ingredientsToString(r.ingredients),
-    composition_status: r.composition_status,
-    composition_raw: r.composition_raw ?? '',
-    ingredients_json: JSON.stringify(r.ingredients),
-    n_substitutes: (r.substitutes_raw ?? []).length,
-    sources: r.sources.map((s) => s.source).join(';'),
-    source_count: r.source_count ?? 1,
-    confidence: r.confidence ?? 'single_source',
-    atc_codes: (r.atc_codes ?? []).join(';'),
-    first_seen: r.first_seen,
-    last_seen: r.last_seen,
-  }));
-  await fsp.writeFile(path.join(dir, 'drugs.csv'), stringify(flat, { header: true, bom: true }));
-  await fsp.writeFile(path.join(dir, 'drugs.jsonl'), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+export async function emitArtifact({
+  distRoot, date, rows, conflicts, errors, meta, fdcKeys = new Set(), outputDir,
+}) {
+  const stagedDir = outputDir ?? process.env.AUSHADHI_COHORT_DIR;
+  if (typeof stagedDir !== 'string' || stagedDir.trim() === '') {
+    throw new Error('AUSHADHI_COHORT_DIR is required for a mutable cohort stage');
+  }
+  const dir = path.resolve(stagedDir);
+  try {
+    await fsp.lstat(path.join(dir, COHORT_MANIFEST));
+    throw new Error(`manifest-bound cohort is immutable: ${dir}`);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+  await fsp.mkdir(dir, { recursive: true });
+  for (const name of [
+    'prescribable.jsonl',
+    'formulation_groups.jsonl',
+    'REPORT.md',
+    COHORT_MANIFEST,
+    ...OPTIONAL_COHORT_FILES,
+  ]) {
+    await fsp.rm(path.join(dir, name), { force: true });
+  }
+
+  function* flatRows() {
+    for (const r of rows) {
+      yield {
+        brand_name: r.brand_name,
+        manufacturer: r.manufacturer,
+        pack_label: r.pack_label,
+        form_raw: r.form_raw ?? '',
+        type: r.type ?? '',
+        price_inr: r.price_inr ?? '',
+        is_discontinued: r.is_discontinued ?? '',
+        composition: ingredientsToString(r.ingredients),
+        composition_status: r.composition_status,
+        composition_raw: r.composition_raw ?? '',
+        ingredients_json: JSON.stringify(r.ingredients),
+        n_substitutes: (r.substitutes_raw ?? []).length,
+        sources: r.sources.map((s) => s.source).join(';'),
+        source_count: r.source_count ?? 1,
+        confidence: r.confidence ?? 'single_source',
+        atc_codes: (r.atc_codes ?? []).join(';'),
+        first_seen: r.first_seen,
+        last_seen: r.last_seen,
+      };
+    }
+  }
+  await writeCsvStream(path.join(dir, 'drugs.csv'), flatRows(), { header: true, bom: true, columns: DRUG_COLUMNS });
+  await writeJsonlStream(path.join(dir, 'drugs.jsonl'), rows);
 
   const comps = new Map();
   let cdscoValidated = 0;
@@ -46,30 +83,46 @@ export async function emitArtifact({ distRoot, date, rows, conflicts, errors, me
     }
     comps.get(k).brand_count++;
   }
-  await fsp.writeFile(
+  await writeCsvStream(
     path.join(dir, 'compositions.csv'),
-    stringify([...comps.values()].sort((a, b) => b.brand_count - a.brand_count), { header: true, bom: true }),
+    [...comps.values()].sort((a, b) => b.brand_count - a.brand_count),
+    { header: true, bom: true, columns: ['composition', 'molecule_set_key', 'brand_count', 'cdsco_fdc_validated'] },
   );
 
-  const edges = rows.flatMap((r) => {
-    const onemg = (r.sources ?? []).find((s) => s.source === 'onemg-live');
-    return (r.substitutes_raw ?? []).map((s) => ({
-      brand_name: r.brand_name,
-      manufacturer: r.manufacturer,
-      substitute_name: s.name,
-      substitute_manufacturer: s.manufacturer ?? '',
-      source_id: onemg?.source_id ?? '',
-      seen_at: onemg?.seen_at ?? r.last_seen,
-    }));
+  function* substituteEdges() {
+    for (const r of rows) {
+      const onemg = (r.sources ?? []).find((s) => s.source === 'onemg-live');
+      for (const s of r.substitutes_raw ?? []) {
+        yield {
+          brand_name: r.brand_name,
+          manufacturer: r.manufacturer,
+          substitute_name: s.name,
+          substitute_manufacturer: s.manufacturer ?? '',
+          source_id: onemg?.source_id ?? '',
+          seen_at: onemg?.seen_at ?? r.last_seen,
+        };
+      }
+    }
+  }
+  await writeCsvStream(path.join(dir, 'substitute_edges.csv'), substituteEdges(), {
+    header: true,
+    columns: ['brand_name', 'manufacturer', 'substitute_name', 'substitute_manufacturer', 'source_id', 'seen_at'],
   });
-  await fsp.writeFile(path.join(dir, 'substitute_edges.csv'), stringify(edges, { header: true, columns: ['brand_name', 'manufacturer', 'substitute_name', 'substitute_manufacturer', 'source_id', 'seen_at'] }));
-  await fsp.writeFile(
-    path.join(dir, 'conflicts.csv'),
-    stringify(conflicts.map((c) => ({ ...c, a: JSON.stringify(c.a), b: JSON.stringify(c.b) })), { header: true, columns: ['kind', 'identity_key', 'a', 'b'] }),
-  );
+  function* csvConflicts() {
+    for (const conflict of conflicts) {
+      yield { ...conflict, a: JSON.stringify(conflict.a), b: JSON.stringify(conflict.b) };
+    }
+  }
+  await writeCsvStream(path.join(dir, 'conflicts.csv'), csvConflicts(), {
+    header: true,
+    columns: ['kind', 'identity_key', 'a', 'b'],
+  });
   // machine-readable twin — gapfill consumes this, never the CSV
-  await fsp.writeFile(path.join(dir, 'conflicts.jsonl'), conflicts.map((c) => JSON.stringify(c)).join('\n') + (conflicts.length ? '\n' : ''));
-  await fsp.writeFile(path.join(dir, 'errors.csv'), stringify(errors, { header: true, columns: ['source', 'reason', 'detail'] }));
+  await writeJsonlStream(path.join(dir, 'conflicts.jsonl'), conflicts);
+  await writeCsvStream(path.join(dir, 'errors.csv'), errors, {
+    header: true,
+    columns: ['source', 'reason', 'detail'],
+  });
 
   const statusCounts = {};
   const confidenceCounts = {};
@@ -103,8 +156,5 @@ export async function emitArtifact({ distRoot, date, rows, conflicts, errors, me
     '',
   ].join('\n'));
 
-  const latest = path.join(distRoot, 'latest');
-  await fsp.rm(latest, { recursive: true, force: true });
-  await fsp.cp(dir, latest, { recursive: true });
   return { dir };
 }

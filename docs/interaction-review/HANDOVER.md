@@ -4,6 +4,18 @@
 **Read this before touching anything in `data-static/`,**
 **`data/interaction/internal-evaluation/`, or `src/lib/interaction-*`.**
 
+> **Current-state update (2026-08-06):** this handover records the reviewed
+> 2026-07-28 state. A later live provenance check found source-payload drift for
+> `warfarin__azithromycin_oral` and `warfarin__tramadol`. Their clinician
+> approvals remain historical records, but mandatory technical holds now omit
+> both from the internal-evaluation runtime pack. The current pack has six active
+> rules. Exact held product pairs return `not_evaluated` and
+> `manual_review_required` through a separately bound nonclinical runtime hold
+> artifact. Mixed checks keep both the reviewed finding and the held scope
+> visible through `reviewed_interaction_found_with_unevaluated_scope` and
+> `reviewed_action_and_manual_review_required`; production-open remains empty. See
+> [`2026-08-06-promoted-evidence-drift-holds.md`](./2026-08-06-promoted-evidence-drift-holds.md).
+
 ## 0 · Exact reviewed state
 
 ```text

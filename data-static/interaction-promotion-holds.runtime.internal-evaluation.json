@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "profile": "internal-evaluation",
+  "rule_pack_id": "aushadhi-internal-interactions",
+  "rule_pack_version": "0.5.0",
+  "rule_pack_sha256": "0acf96d74b884e1c87b40c95952ef3178020e018801527420ca9926f458f0239",
+  "promotion_hold_manifest_sha256": "0dfc07ec5becf324b22cd649962251d3b3131af47195c2920419c6d289abdf9e",
+  "holds_sha256": "256faf2ae557d528b5c94765e4fe8e5f1af731e430b1120a610701f6488b52db",
+  "holds": [
+    {
+      "rule_id": "warfarin__azithromycin_oral",
+      "pair": [
+        "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06",
+        "sha256:a11cef0dcf59d647cc50aa3f94174e67599b079a0abc989a22ae61649ca2b783"
+      ],
+      "product_pairs": [
+        [
+          "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:5968b93a6bd3e19bbefacbaffed16ef902dc74d50f9f0ac4fd4b636f417b44c6",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+          "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25"
+        ],
+        [
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+          "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25"
+        ],
+        [
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca",
+          "sha256:e935455d6e58eef7d1cb40cf68e4e4ab02cbe768405adf38278f37d4c3664d25"
+        ]
+      ],
+      "evidence_source_id": "fda-label-azithromycin",
+      "status": "held",
+      "reason": "live_provenance_drift",
+      "detected_at": "2026-08-06",
+      "approved_source_version": "openfda-labels:db52b91e-79f7-4cc1-9564-f2eee8e31c45:48",
+      "observed_source_version": "openfda-labels:db52b91e-79f7-4cc1-9564-f2eee8e31c45:49",
+      "approved_payload_sha256": "c2685e743c2b1fca5c3862fb87a4a452c366876d280ef0f18e31eae9a4e109f1",
+      "observed_payload_sha256": "4cdab603d1ce790a38fee1969df01bca4338b283109b4d742a131d532d34204c"
+    },
+    {
+      "rule_id": "warfarin__tramadol",
+      "pair": [
+        "sha256:2ec225c652eabf57f4297ab503a1aee5d450c03f721033270bd09c1290a0cd06",
+        "sha256:7d4536b14c06903f91096e57cf43df6161f83c9bd2ac24738ca1da7d2d4dafc7"
+      ],
+      "product_pairs": [
+        [
+          "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548"
+        ],
+        [
+          "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141"
+        ],
+        [
+          "sha256:40082328dece8bd9ede7401e76d42cd84d76c63823ebc505783ce7d0d55d44ab",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ],
+        [
+          "sha256:9570b79daed31dd5271ec2021558be191fddfe4e3d1002e66a3383dc1a309548",
+          "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4"
+        ],
+        [
+          "sha256:a543d303907ce3804debf1784653e97b30ef00f4eebb040d8e89fbfbbfbf4141",
+          "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4"
+        ],
+        [
+          "sha256:d1e2560cc1b427cfc8b6f8edcc41d3861ac6235aaefd313ea9f0df3dff5635f4",
+          "sha256:d5c2e164ff5144544a122908b964b144e2132b9ff216a66bb3a57b80b944ffca"
+        ]
+      ],
+      "evidence_source_id": "mhra-dsu-tramadol-warfarin",
+      "status": "held",
+      "reason": "live_provenance_drift",
+      "detected_at": "2026-08-06",
+      "approved_source_version": "mhra-govuk-drug-safety-updates:warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol:2024-06-20T11:11:09+01:00",
+      "observed_source_version": "mhra-govuk-drug-safety-updates:warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol:2024-06-20T11:11:09+01:00",
+      "approved_payload_sha256": "2f7e923cbd5447e3df760ac9f5c7b55d064f3adb5bf681fe3d1fd24643331f22",
+      "observed_payload_sha256": "b9d638afd2b21893f9222da1767b87e509e88de414aa6fac27e01b1ea5ec2f9f"
+    }
+  ]
+}

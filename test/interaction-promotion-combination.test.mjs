@@ -14,6 +14,9 @@ import {
   createDraftPackAttestation,
 } from '../src/lib/interaction-draft-attestation.mjs';
 import {
+  technicalHoldsSha256,
+} from '../src/lib/interaction-checker.mjs';
+import {
   verifyCombinationManifestEvidence,
 } from '../src/lib/combination-rxnorm-evidence.mjs';
 import {
@@ -47,6 +50,12 @@ function baseInputs() {
   return {
     promotionManifest: readJson(
       'data-static/interaction-promotions.internal-evaluation.json',
+    ),
+    promotionHoldManifest: readJson(
+      'data-static/interaction-promotion-holds.internal-evaluation.json',
+    ),
+    sourcePolicyBytes: fs.readFileSync(
+      path.join(ROOT, 'data-static/interaction-sources.json'),
     ),
     draftPackBytes: fs.readFileSync(
       path.join(ROOT, 'docs/interaction-review/batch-01-v2/batch-01-v2.jsonl'),
@@ -116,6 +125,9 @@ function combinationInputs() {
     rules,
     verifiedAt: source.attestation.verified_at,
   });
+  source.promotionHoldManifest.draft_pack_sha256 = source.attestation.pack_sha256;
+  source.promotionHoldManifest.evidence_digest_sha256 =
+    source.attestation.evidence_digest_sha256;
 
   source.combinationManifest = readJson(
     'data-static/combination-identity-overrides.json',
@@ -139,6 +151,18 @@ function combinationInputs() {
     output_pack: {
       ...structuredClone(source.promotionManifest.output_pack),
       schema_version: '1.1.0',
+      pack_id: 'aushadhi-test-combination-interactions',
+      source_ids: ['synthetic-combination-test'],
+      licence_notices: {
+        'synthetic-combination-test': {
+          attribution: 'Aushadhi test contributors',
+          licence_notice: 'Creative Commons Attribution 4.0 International',
+          licence_id: 'CC-BY-4.0',
+          licence_url: 'https://creativecommons.org/licenses/by/4.0/legalcode',
+          source_url: 'https://example.test/aushadhi',
+          changes: 'Synthetic combination compiler fixture.',
+        },
+      },
     },
     promotions: [{
       rule_id: draft.rule_id,
@@ -176,6 +200,10 @@ function combinationInputs() {
       },
     }],
   };
+  source.promotionHoldManifest.pack_id =
+    source.promotionManifest.output_pack.pack_id;
+  source.promotionHoldManifest.holds = [];
+  source.promotionHoldManifest.runtime_hold_scope_sha256 = technicalHoldsSha256([]);
   return attachAuthenticReport(source);
 }
 
@@ -240,7 +268,7 @@ test('schema v2 compiles clinician-approved D1 metadata with derived subject rol
   assert.deepEqual(rule.supersedes_rule_ids, []);
 });
 
-test('schema v2 retains the exact legacy side shape and byte-identical eight-rule output', () => {
+test('schema v2 retains the exact legacy side shape and byte-identical held output', () => {
   const source = baseInputs();
   source.promotionManifest.schema_version = 2;
   assert.equal(validatePromotionManifest(source.promotionManifest), true);
@@ -249,7 +277,7 @@ test('schema v2 retains the exact legacy side shape and byte-identical eight-rul
     path.join(ROOT, 'data-static/interaction-rules.internal-evaluation.json'),
     'utf8',
   );
-  assert.equal(compiled.rules.length, 8);
+  assert.equal(compiled.rules.length, 6);
   assert.equal(serializeInteractionRuntimePack(compiled), checkedIn);
 });
 
