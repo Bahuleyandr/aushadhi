@@ -263,6 +263,26 @@ test('check mode fails on violating artifacts naming the sources and passes on c
   assert.match(passed.stdout, /public release check passed: 2 rows/u);
 });
 
+test('check mode rejects a zero-row artifact instead of passing vacuously', (t) => {
+  const scratch = scratchDir(t, 'aushadhi-public-check-empty-');
+  const manifestPath = path.join(scratch, 'sources.json');
+  fs.writeFileSync(manifestPath, `${JSON.stringify(fixtureManifest({
+    'fixture-open': fixtureSource(),
+  }), null, 2)}\n`);
+
+  const empty = path.join(scratch, 'empty.jsonl');
+  fs.writeFileSync(empty, '');
+  const failed = run(['--check', empty, '--manifest', manifestPath]);
+  assert.notEqual(failed.status, 0);
+  assert.match(failed.stderr, /contains no rows; an empty public release is never valid/u);
+
+  const blankLines = path.join(scratch, 'blank.jsonl');
+  fs.writeFileSync(blankLines, '\n\n\n');
+  const alsoFailed = run(['--check', blankLines, '--manifest', manifestPath]);
+  assert.notEqual(alsoFailed.status, 0);
+  assert.match(alsoFailed.stderr, /contains no rows; an empty public release is never valid/u);
+});
+
 test('staging hard-fails on a corrupt row and leaves the output absent', (t) => {
   const scratch = scratchDir(t, 'aushadhi-public-corrupt-');
   const manifestPath = path.join(scratch, 'sources.json');

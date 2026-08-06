@@ -309,6 +309,9 @@ async function checkRelease(gate, inputPath) {
   const resolvedInput = path.resolve(inputPath);
   requireReadableFile(resolvedInput, 'input');
   const stats = await scanInput(resolvedInput, gate.cleared);
+  if (stats.rowsRead === 0) {
+    fail('candidate artifact contains no rows; an empty public release is never valid');
+  }
   if (stats.rowsExcluded > 0) {
     for (const [sourceId, rows] of [...stats.excludedSourceRows.entries()].sort()) {
       const reason = gate.excluded.get(sourceId)?.reason ?? UNLISTED_SOURCE_REASON;
