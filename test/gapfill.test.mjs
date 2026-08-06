@@ -1,9 +1,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { buildQueue } from '../src/lib/gapfill-queue.mjs';
 import { buildKnownCombos } from '../src/lib/known-combos.mjs';
-import { crawlerExitCode, DiscoveryAnomalyError } from '../src/cli/gapfill.mjs';
+import {
+  canonicalBrowseNext,
+  crawlerExitCode,
+  DiscoveryAnomalyError,
+  NoWorkError,
+} from '../src/cli/gapfill.mjs';
 import { BlockedError, CapReachedError } from '../src/lib/politeness.mjs';
+import { ParserAnomalyError } from '../src/lib/variant-priority.mjs';
+
+test('gapfill integrity-checks both indexed cohort artifacts before reading them', () => {
+  const cli = fs.readFileSync('src/cli/gapfill.mjs', 'utf8');
+  assert.match(
+    cli,
+    /verifyFiles:\s*\['drugs\.jsonl',\s*'conflicts\.jsonl'\]/u,
+  );
+});
 
 const row = (brand, status, over = {}) => ({
   brand_name: brand, manufacturer: 'M Pharma Ltd', pack_label: 'strip of 10',
@@ -17,6 +32,25 @@ const slugIndex = new Map([
   ['gamma 20 tablet', '/drugs/gamma-20-tablet-103'],
   ['delta cream', '/drugs/delta-cream-104'],
 ]);
+
+test('structured 1mg pagination accepts only the exact next page for the same label', () => {
+  assert.equal(
+    canonicalBrowseNext('/drugs-all-medicines?page=2', 'a', 2),
+    '/drugs-all-medicines?page=2&label=a',
+  );
+  assert.throws(
+    () => canonicalBrowseNext('/drugs-all-medicines?page=1', 'a', 2),
+    /expected page 2/i,
+  );
+  assert.throws(
+    () => canonicalBrowseNext('/drugs-all-medicines?page=2&sort=popular', 'a', 2),
+    /unexpected query parameter/i,
+  );
+  assert.throws(
+    () => canonicalBrowseNext('/drugs-all-medicines?page=2&page=3', 'a', 2),
+    /exactly one page/i,
+  );
+});
 
 test('priority: catalog-matched > conflicted > missing; slugless skipped', () => {
   const rows = [
@@ -114,6 +148,8 @@ test('crawler exit contract distinguishes cap, block/robots, and ordinary errors
   assert.equal(crawlerExitCode(new BlockedError('aborting after 3 consecutive 429 responses'), true), 3);
   assert.equal(crawlerExitCode(new Error('robots.txt fetch failed (403) — refusing to crawl'), true), 3);
   assert.equal(crawlerExitCode(new DiscoveryAnomalyError('w', 1), true), 4);
+  assert.equal(crawlerExitCode(new ParserAnomalyError('/drugs/parser-drift-1'), true), 4);
+  assert.equal(crawlerExitCode(new NoWorkError('no retryable 1mg product paths'), true), 5);
   assert.equal(crawlerExitCode(new BlockedError('legacy wrapper compatibility'), false), 2);
   assert.equal(crawlerExitCode(new Error('parser drift')), 1);
 });

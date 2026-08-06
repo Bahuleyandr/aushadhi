@@ -1,5 +1,12 @@
 # Plan: plausibility strength resolution in the DD reconcile pipeline
 
+> **Historical plan, superseded for operation.** The original split
+> `build -> prescribable -> report` publication and its Phase 4 copy/deploy step
+> must not be executed. Current publication is one immutable, manifest-bound
+> cohort through `npm run build`; `npm run prescribable` also invokes that full
+> atomic coordinator. The reviewed runtime and separate deployment-approval
+> boundary are documented in `deploy/dalekdefender/README.md`.
+
 **Goal.** Replace the source-trust strength selection in the nightly merge with
 **molecule-plausibility resolution**, so every consumer of `drugs.jsonl` gets
 corrected strengths; add per-record strength verification; and emit a doctor-facing

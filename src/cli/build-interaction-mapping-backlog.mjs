@@ -2,9 +2,9 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildInteractionMappingBacklogFromFiles } from '../lib/interaction-mapping-backlog.mjs';
+import { resolvePublishedCohort } from '../lib/build-cohort.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const DEFAULT_ARTIFACT = path.join(ROOT, 'dist', 'latest', 'drugs.jsonl');
 const DEFAULT_RULES = path.join(
   ROOT,
   'docs',
@@ -26,10 +26,18 @@ function storagePath(file) {
   return path.relative(ROOT, file).replaceAll(path.sep, '/');
 }
 
+function publishedStoragePath(distRoot, file) {
+  const relative = path.relative(distRoot, file);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`published cohort artifact is outside its dist root: ${file}`);
+  }
+  return path.posix.join('dist', relative.replaceAll(path.sep, '/'));
+}
+
 export function parseArgs(args) {
   const options = {
     profile: null,
-    artifactPath: DEFAULT_ARTIFACT,
+    artifactPath: null,
     artifactSummaryPath: null,
     rulesPath: DEFAULT_RULES,
     memberSetsPath: DEFAULT_MEMBER_SETS,
@@ -67,7 +75,10 @@ export function parseArgs(args) {
   if (!['production-open', 'internal-evaluation'].includes(options.profile)) {
     throw new Error(`unsupported --profile ${options.profile}`);
   }
-  if (!artifactSummaryExplicit) {
+  if (artifactSummaryExplicit && options.artifactPath === null) {
+    throw new Error('--artifact-summary requires --artifact');
+  }
+  if (!artifactSummaryExplicit && options.artifactPath !== null) {
     options.artifactSummaryPath = path.join(path.dirname(options.artifactPath), 'summary.json');
   }
   options.outputDir ??= path.join(
@@ -92,8 +103,9 @@ export async function buildMappingBacklog(options) {
     memberSetsStoragePath: storagePath(options.memberSetsPath),
     artifactPath: options.artifactPath,
     artifactSummaryPath: options.artifactSummaryPath,
-    artifactSummaryStoragePath: storagePath(options.artifactSummaryPath),
-    artifactStoragePath: storagePath(options.artifactPath),
+    artifactSummaryStoragePath: options.artifactSummaryStoragePath
+      ?? storagePath(options.artifactSummaryPath),
+    artifactStoragePath: options.artifactStoragePath ?? storagePath(options.artifactPath),
     ingredientOutputPath,
     productOutputPath,
     summaryOutputPath,
@@ -102,7 +114,22 @@ export async function buildMappingBacklog(options) {
 }
 
 export async function main(args = process.argv.slice(2)) {
-  const result = await buildMappingBacklog(parseArgs(args));
+  const options = parseArgs(args);
+  if (options.artifactPath === null) {
+    const distRoot = path.resolve(process.env.AUSHADHI_DIST_ROOT ?? path.join(ROOT, 'dist'));
+    const published = await resolvePublishedCohort({
+      distRoot,
+      verifyFiles: ['drugs.jsonl', 'summary.json'],
+    });
+    options.artifactPath = path.join(published.dir, 'drugs.jsonl');
+    options.artifactSummaryPath ??= path.join(published.dir, 'summary.json');
+    options.artifactStoragePath = publishedStoragePath(distRoot, options.artifactPath);
+    options.artifactSummaryStoragePath = publishedStoragePath(
+      distRoot,
+      options.artifactSummaryPath,
+    );
+  }
+  const result = await buildMappingBacklog(options);
   const counts = result.summary.counts;
   process.stderr.write(
     [

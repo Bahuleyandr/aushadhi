@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { normMolecule } from '../lib/normalize.mjs';
-import { pdfToText } from '../lib/pdftotext.mjs';
+import { resolvePdfText } from '../lib/derived-pdf-text.mjs';
 
 export function comboNameKey(molecules) {
   return [...molecules].map((m) => m.toLowerCase().trim()).sort().join('|');
@@ -31,7 +31,10 @@ export function extractFdcCombos(text) {
 }
 
 // Scans operator-dropped PDFs under data/raw/cdsco-fdc/**; returns Set of comboNameKeys.
-export async function loadCdscoFdcCombos(rawRoot) {
+export async function loadCdscoFdcCombos(rawRoot, {
+  derivedRoot,
+  pdfToTextImpl,
+} = {}) {
   const root = path.join(rawRoot, 'cdsco-fdc');
   if (!fs.existsSync(root)) return { keys: new Set(), files: 0 };
   const pdfs = [];
@@ -51,12 +54,19 @@ export async function loadCdscoFdcCombos(rawRoot) {
   // are now reported so a broken extraction is visible instead of merely quiet.
   const perFile = [];
   for (const pdf of pdfs) {
-    const txt = pdf.replace(/\.pdf$/i, '.txt');
     try {
-      if (!fs.existsSync(txt)) {
-        const r = await pdfToText(pdf, txt, { mode: 'layout' });
-        if (r.skipped) return { keys, files: pdfs.length, perFile, skipped: r.skipped };
+      const resolved = await resolvePdfText({
+        pdf,
+        rawRoot,
+        source: 'cdsco-fdc',
+        mode: 'layout',
+        derivedRoot,
+        convert: pdfToTextImpl,
+      });
+      if (resolved.skipped) {
+        return { keys, files: pdfs.length, perFile, skipped: resolved.skipped };
       }
+      const txt = resolved.file;
       const combos = extractFdcCombos(fs.readFileSync(txt, 'utf8'));
       for (const combo of combos) keys.add(comboNameKey(combo));
       perFile.push({ file: pdf, combos: combos.length, error: null });

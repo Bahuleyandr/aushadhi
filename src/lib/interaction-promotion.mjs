@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto';
 
 import {
   pairKey,
+  technicalHoldsSha256,
   validateRulePack,
+  validateTechnicalHoldPack,
 } from './interaction-checker.mjs';
 import {
   mappingAllowedForProfile,
@@ -38,6 +40,40 @@ const PROMOTABLE_EVIDENCE = new Map([
   ['mhra-govuk-drug-safety-updates', new Set([
     'machine_confirmed_govuk_ogl_bound_pending_clinician',
   ])],
+]);
+const PROMOTION_HOLD_STATUS = 'held';
+const PROMOTION_HOLD_REASON = 'live_provenance_drift';
+const REQUIRED_PROMOTION_HOLDS = Object.freeze([
+  Object.freeze({
+    rule_id: 'warfarin__azithromycin_oral',
+    evidence_source_id: 'fda-label-azithromycin',
+    status: PROMOTION_HOLD_STATUS,
+    reason: PROMOTION_HOLD_REASON,
+    detected_at: '2026-08-06',
+    approved_source_version:
+      'openfda-labels:db52b91e-79f7-4cc1-9564-f2eee8e31c45:48',
+    observed_source_version:
+      'openfda-labels:db52b91e-79f7-4cc1-9564-f2eee8e31c45:49',
+    approved_payload_sha256:
+      'c2685e743c2b1fca5c3862fb87a4a452c366876d280ef0f18e31eae9a4e109f1',
+    observed_payload_sha256:
+      '4cdab603d1ce790a38fee1969df01bca4338b283109b4d742a131d532d34204c',
+  }),
+  Object.freeze({
+    rule_id: 'warfarin__tramadol',
+    evidence_source_id: 'mhra-dsu-tramadol-warfarin',
+    status: PROMOTION_HOLD_STATUS,
+    reason: PROMOTION_HOLD_REASON,
+    detected_at: '2026-08-06',
+    approved_source_version:
+      'mhra-govuk-drug-safety-updates:warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol:2024-06-20T11:11:09+01:00',
+    observed_source_version:
+      'mhra-govuk-drug-safety-updates:warfarin-be-alert-to-the-risk-of-drug-interactions-with-tramadol:2024-06-20T11:11:09+01:00',
+    approved_payload_sha256:
+      '2f7e923cbd5447e3df760ac9f5c7b55d064f3adb5bf681fe3d1fd24643331f22',
+    observed_payload_sha256:
+      'b9d638afd2b21893f9222da1767b87e509e88de414aa6fac27e01b1ea5ec2f9f',
+  }),
 ]);
 
 function isObject(value) {
@@ -99,6 +135,24 @@ function requireSortedStringArray(value, label) {
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function canonicalJsonValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalJsonValue);
+  if (isObject(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort(compareStrings).map((key) => [
+        key,
+        canonicalJsonValue(value[key]),
+      ]),
+    );
+  }
+  return value;
+}
+
+export function promotionHoldManifestSha256(manifest) {
+  validatePromotionHoldManifest(manifest);
+  return sha256(JSON.stringify(canonicalJsonValue(manifest)));
 }
 
 function compareStrings(left, right) {
@@ -361,6 +415,93 @@ export function validatePromotionManifest(manifest) {
   return true;
 }
 
+function validatePromotionHold(value, index) {
+  const label = `promotion hold manifest holds[${index}]`;
+  requireObject(value, label);
+  requireExactKeys(value, [
+    'rule_id',
+    'evidence_source_id',
+    'status',
+    'reason',
+    'detected_at',
+    'approved_source_version',
+    'observed_source_version',
+    'approved_payload_sha256',
+    'observed_payload_sha256',
+  ], label);
+  requireString(value.rule_id, `${label}.rule_id`);
+  requireString(value.evidence_source_id, `${label}.evidence_source_id`);
+  if (value.status !== PROMOTION_HOLD_STATUS) {
+    throw new TypeError(`${label}.status must equal ${PROMOTION_HOLD_STATUS}`);
+  }
+  if (value.reason !== PROMOTION_HOLD_REASON) {
+    throw new TypeError(`${label}.reason must equal ${PROMOTION_HOLD_REASON}`);
+  }
+  requireIsoDate(value.detected_at, `${label}.detected_at`);
+  requireString(value.approved_source_version, `${label}.approved_source_version`);
+  requireString(value.observed_source_version, `${label}.observed_source_version`);
+  for (const field of ['approved_payload_sha256', 'observed_payload_sha256']) {
+    if (!SHA256.test(value[field] ?? '')) {
+      throw new TypeError(`${label}.${field} must be a lowercase SHA-256`);
+    }
+  }
+  if (value.approved_source_version === value.observed_source_version
+      && value.approved_payload_sha256 === value.observed_payload_sha256) {
+    throw new TypeError(`${label} does not record source-version or payload drift`);
+  }
+}
+
+export function validatePromotionHoldManifest(manifest) {
+  requireObject(manifest, 'promotion hold manifest');
+  manifest = strictPlainDataSnapshot(manifest, 'promotion hold manifest');
+  requireExactKeys(manifest, [
+    'schema_version',
+    'pack_id',
+    'profile',
+    'draft_pack_sha256',
+    'evidence_digest_sha256',
+    'source_policy_sha256',
+    'runtime_hold_scope_sha256',
+    'holds',
+  ], 'promotion hold manifest');
+  if (manifest.schema_version !== 3) {
+    throw new TypeError('promotion hold manifest schema_version must equal 3');
+  }
+  requireString(manifest.pack_id, 'promotion hold manifest pack_id');
+  if (manifest.profile !== 'internal-evaluation') {
+    throw new TypeError('promotion hold manifest profile must be internal-evaluation');
+  }
+  for (const field of [
+    'draft_pack_sha256',
+    'evidence_digest_sha256',
+    'source_policy_sha256',
+    'runtime_hold_scope_sha256',
+  ]) {
+    if (!SHA256.test(manifest[field] ?? '')) {
+      throw new TypeError(`promotion hold manifest ${field} must be a lowercase SHA-256`);
+    }
+  }
+  if (!Array.isArray(manifest.holds)) {
+    throw new TypeError('promotion hold manifest holds must be an array');
+  }
+  const ruleIds = [];
+  for (let index = 0; index < manifest.holds.length; index += 1) {
+    const hold = manifest.holds[index];
+    validatePromotionHold(hold, index);
+    if (ruleIds.includes(hold.rule_id)) {
+      throw new TypeError(
+        `promotion hold manifest contains duplicate rule_id ${hold.rule_id}`,
+      );
+    }
+    ruleIds.push(hold.rule_id);
+  }
+  const sortedRuleIds = [...ruleIds].sort(compareStrings);
+  if (JSON.stringify(ruleIds) !== JSON.stringify(sortedRuleIds)) {
+    throw new TypeError('promotion hold manifest holds must be sorted by rule_id');
+  }
+  return true;
+}
+
 function requireDraftBoundary(rule) {
   if (rule.runtime_enabled !== false
       || rule.runtime_status?.runtime_enabled !== false
@@ -372,8 +513,7 @@ function requireDraftBoundary(rule) {
   }
 }
 
-function expectedSourceVersions(rule) {
-  return rule.evidence.map((evidence) => {
+function sourceVersionForEvidence(evidence, ruleId) {
     const setId = evidence.provenance?.set_id;
     const version = evidence.provenance?.version;
     if (typeof setId === 'string' && typeof version === 'string') {
@@ -386,9 +526,23 @@ function expectedSourceVersions(rule) {
       );
     }
     throw new TypeError(
-      `${rule.rule_id} evidence ${evidence.source_id} lacks a promotable source version`,
+      `${ruleId} evidence ${evidence.source_id} lacks a promotable source version`,
     );
-  });
+}
+
+function expectedSourceVersions(rule) {
+  return rule.evidence.map((evidence) => sourceVersionForEvidence(evidence, rule.rule_id));
+}
+
+function evidencePayloadSha256(evidence, ruleId) {
+  const hash = evidence.provenance?.payload_sha256
+    ?? evidence.provenance?.document_sha256;
+  if (!SHA256.test(hash ?? '')) {
+    throw new TypeError(
+      `${ruleId} evidence ${evidence.source_id} lacks a bound payload SHA-256`,
+    );
+  }
+  return hash;
 }
 
 function assertExactArray(actual, expected, label) {
@@ -586,8 +740,10 @@ function runtimeEvidence(evidence) {
   };
 }
 
-export function compileInteractionRuntimePack({
+export function compileInteractionRuntimeArtifacts({
   promotionManifest,
+  promotionHoldManifest,
+  sourcePolicyBytes,
   draftPackBytes,
   attestation,
   memberSetsBytes,
@@ -600,6 +756,11 @@ export function compileInteractionRuntimePack({
     promotionManifest,
     'promotion manifest',
   );
+  requireObject(promotionHoldManifest, 'promotion hold manifest');
+  promotionHoldManifest = strictPlainDataSnapshot(
+    promotionHoldManifest,
+    'promotion hold manifest',
+  );
   ingredientManifest = strictPlainDataSnapshot(
     ingredientManifest,
     'ingredient mapping manifest',
@@ -609,6 +770,24 @@ export function compileInteractionRuntimePack({
     'product presentation manifest',
   );
   validatePromotionManifest(promotionManifest);
+  validatePromotionHoldManifest(promotionHoldManifest);
+  if (promotionHoldManifest.pack_id !== promotionManifest.output_pack.pack_id) {
+    throw new TypeError('promotion hold manifest pack_id must match the output pack');
+  }
+  if (promotionHoldManifest.profile !== promotionManifest.profile) {
+    throw new TypeError('promotion hold manifest profile must match the promotion manifest');
+  }
+  if (!ArrayBuffer.isView(sourcePolicyBytes) || sourcePolicyBytes.byteLength === 0) {
+    throw new TypeError('source policy bytes must be a non-empty Uint8Array');
+  }
+  const policyBytes = Buffer.from(
+    sourcePolicyBytes.buffer,
+    sourcePolicyBytes.byteOffset,
+    sourcePolicyBytes.byteLength,
+  );
+  if (sha256(policyBytes) !== promotionHoldManifest.source_policy_sha256) {
+    throw new TypeError('promotion hold manifest source policy SHA-256 does not match');
+  }
   validateIngredientMappingManifest(ingredientManifest);
   validateProductPresentationManifest(presentationManifest);
   const hasCombinationSide = promotionManifest.promotions.some((promotion) => (
@@ -631,8 +810,9 @@ export function compileInteractionRuntimePack({
     );
   }
   const parsed = parseDraftPack(draftPackBytes);
+  const parsedAttestation = parseAttestation(attestation);
   assertDraftPackAttestation(
-    parseAttestation(attestation),
+    parsedAttestation,
     {
       packBytes: draftPackBytes,
       memberSetsBytes,
@@ -644,6 +824,62 @@ export function compileInteractionRuntimePack({
     rule.rule_id,
     { rule, line: parsed.lines[index] },
   ]));
+  const promotionsById = new Map(
+    promotionManifest.promotions.map((promotion) => [promotion.rule_id, promotion]),
+  );
+  if (promotionHoldManifest.draft_pack_sha256 !== parsedAttestation.pack_sha256) {
+    throw new TypeError('promotion hold manifest draft pack SHA-256 does not match');
+  }
+  if (promotionHoldManifest.evidence_digest_sha256
+      !== parsedAttestation.evidence_digest_sha256) {
+    throw new TypeError('promotion hold manifest evidence digest SHA-256 does not match');
+  }
+  const heldRuleIds = new Set();
+  for (const hold of promotionHoldManifest.holds) {
+    const promotion = promotionsById.get(hold.rule_id);
+    if (!promotion) {
+      throw new TypeError(`promotion hold ${hold.rule_id} does not identify a promotion`);
+    }
+    const draft = rulesById.get(hold.rule_id);
+    const matchingEvidence = draft?.rule.evidence.filter(
+      (evidence) => evidence.source_id === hold.evidence_source_id,
+    ) ?? [];
+    if (matchingEvidence.length !== 1) {
+      throw new TypeError(
+        `promotion hold ${hold.rule_id}/${hold.evidence_source_id} `
+          + 'does not identify exact draft evidence',
+      );
+    }
+    const [evidence] = matchingEvidence;
+    const approvedSourceVersion = sourceVersionForEvidence(evidence, hold.rule_id);
+    if (hold.approved_source_version !== approvedSourceVersion
+        || !promotion.approval.source_versions.includes(approvedSourceVersion)) {
+      throw new TypeError(
+        `promotion hold ${hold.rule_id} approved source version does not match`,
+      );
+    }
+    if (hold.approved_payload_sha256 !== evidencePayloadSha256(evidence, hold.rule_id)) {
+      throw new TypeError(
+        `promotion hold ${hold.rule_id} approved payload SHA-256 does not match`,
+      );
+    }
+    heldRuleIds.add(hold.rule_id);
+  }
+  const promotedRuleIds = new Set(
+    promotionManifest.promotions.map((promotion) => promotion.rule_id),
+  );
+  const holdsByRule = new Map(
+    promotionHoldManifest.holds.map((hold) => [hold.rule_id, hold]),
+  );
+  for (const required of REQUIRED_PROMOTION_HOLDS) {
+    if (!promotedRuleIds.has(required.rule_id)) continue;
+    const actual = holdsByRule.get(required.rule_id);
+    if (!actual || Object.keys(required).some((key) => actual[key] !== required[key])) {
+      throw new TypeError(
+        `required promotion hold is missing or changed: ${required.rule_id}`,
+      );
+    }
+  }
   const ingredientById = new Map(
     ingredientManifest.mappings.map((mapping) => [mapping.mapping_id, mapping]),
   );
@@ -651,7 +887,7 @@ export function compileInteractionRuntimePack({
     presentationManifest.mappings.map((mapping) => [mapping.mapping_id, mapping]),
   );
 
-  const rules = promotionManifest.promotions.map((promotion) => {
+  const compiledRules = promotionManifest.promotions.map((promotion) => {
     const draft = rulesById.get(promotion.rule_id);
     if (!draft) throw new TypeError(`draft rule ${promotion.rule_id} does not exist`);
     if (sha256(draft.line) !== promotion.draft_rule_sha256) {
@@ -716,7 +952,10 @@ export function compileInteractionRuntimePack({
         source_versions: promotion.approval.source_versions,
       },
     };
-  }).sort((left, right) => compareStrings(left.rule_id, right.rule_id));
+  });
+  const rules = compiledRules
+    .filter((rule) => !heldRuleIds.has(rule.rule_id))
+    .sort((left, right) => compareStrings(left.rule_id, right.rule_id));
 
   const rulePack = {
     ...structuredClone(promotionManifest.output_pack),
@@ -724,11 +963,64 @@ export function compileInteractionRuntimePack({
     rules,
   };
   validateRulePack(rulePack);
-  return rulePack;
+  const compiledById = new Map(compiledRules.map((rule) => [rule.rule_id, rule]));
+  const technicalHolds = promotionHoldManifest.holds.map((hold) => {
+    const rule = compiledById.get(hold.rule_id);
+    return {
+      rule_id: hold.rule_id,
+      pair: structuredClone(rule.pair),
+      product_pairs: structuredClone(rule.product_pairs),
+      evidence_source_id: hold.evidence_source_id,
+      status: hold.status,
+      reason: hold.reason,
+      detected_at: hold.detected_at,
+      approved_source_version: hold.approved_source_version,
+      observed_source_version: hold.observed_source_version,
+      approved_payload_sha256: hold.approved_payload_sha256,
+      observed_payload_sha256: hold.observed_payload_sha256,
+    };
+  });
+  const runtimeHoldScopeSha256 = technicalHoldsSha256(technicalHolds);
+  if (promotionHoldManifest.runtime_hold_scope_sha256 !== runtimeHoldScopeSha256) {
+    throw new TypeError('promotion hold manifest runtime hold scope SHA-256 does not match');
+  }
+  const technicalHoldPack = {
+    schema_version: 2,
+    profile: promotionManifest.profile,
+    rule_pack_id: rulePack.pack_id,
+    rule_pack_version: rulePack.pack_version,
+    rule_pack_sha256: sha256(`${JSON.stringify(rulePack, null, 2)}\n`),
+    promotion_hold_manifest_sha256: promotionHoldManifestSha256(
+      promotionHoldManifest,
+    ),
+    holds_sha256: runtimeHoldScopeSha256,
+    holds: technicalHolds,
+  };
+  validateTechnicalHoldPack(technicalHoldPack, {
+    rulePack,
+    promotionHoldManifestSha256: promotionHoldManifestSha256(
+      promotionHoldManifest,
+    ),
+    runtimeHoldScopeSha256: promotionHoldManifest.runtime_hold_scope_sha256,
+  });
+  return { rulePack, technicalHoldPack };
+}
+
+export function compileInteractionRuntimePack(inputs) {
+  return compileInteractionRuntimeArtifacts(inputs).rulePack;
 }
 
 export function serializeInteractionRuntimePack(rulePack) {
   rulePack = strictPlainDataSnapshot(rulePack, 'rule pack');
   validateRulePack(rulePack);
   return `${JSON.stringify(rulePack, null, 2)}\n`;
+}
+
+export function serializeInteractionTechnicalHoldPack(technicalHoldPack) {
+  technicalHoldPack = strictPlainDataSnapshot(
+    technicalHoldPack,
+    'technical hold pack',
+  );
+  validateTechnicalHoldPack(technicalHoldPack);
+  return `${JSON.stringify(technicalHoldPack, null, 2)}\n`;
 }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -211,7 +212,7 @@ function makeCombinationFixture() {
   return dir;
 }
 
-function runCli(args, { attachMappings = true } = {}) {
+function runCli(args, { attachMappings = true, env = {} } = {}) {
   const invocation = [...args];
   const artifactIndex = invocation.indexOf('--artifact');
   if (attachMappings && artifactIndex >= 0) {
@@ -228,7 +229,7 @@ function runCli(args, { attachMappings = true } = {}) {
   return spawnSync(process.execPath, [CLI, ...invocation], {
     cwd: ROOT,
     encoding: 'utf8',
-    env: { ...process.env, NO_COLOR: '1' },
+    env: { ...process.env, NO_COLOR: '1', ...env },
   });
 }
 
@@ -264,6 +265,100 @@ test('CLI selects the rule pack for the explicit release profile by default', ()
     path.basename(internal.combinationEvidenceDir),
     'combination-rxnorm-evidence',
   );
+  assert.equal(production.artifactPath, null);
+  assert.equal(internal.artifactPath, null);
+});
+
+test('CLI resolves its default artifact through an external immutable cohort index', () => {
+  const distRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'aushadhi-interactions-dist-'));
+  try {
+    const generationId = 'generation-1';
+    const date = '2026-08-06';
+    const generationDir = path.join(distRoot, '.generations', generationId);
+    fs.mkdirSync(generationDir, { recursive: true });
+    const rows = ['First Medicine', 'Second Medicine'].map((brandName, index) => ({
+      brand_name: brandName,
+      manufacturer: 'Fixture Manufacturer',
+      pack_label: 'strip of 10 tablets',
+      form_raw: 'tablet',
+      ingredients: [{
+        molecule: `fixture ingredient ${index + 1}`,
+        molecule_raw: `Fixture Ingredient ${index + 1}`,
+        strength_raw: '1 mg',
+      }],
+      sources: [{ source: 'github-jr', source_id: String(index + 1), seen_at: date }],
+    }));
+    const drugsContents = `${rows.map(JSON.stringify).join('\n')}\n`;
+    const summaryContents = JSON.stringify({
+      date,
+      total_rows: rows.length,
+      sources: { 'github-jr': rows.length },
+    });
+    const drugsPath = path.join(generationDir, 'drugs.jsonl');
+    const summaryPath = path.join(generationDir, 'summary.json');
+    const preservedTime = new Date('2026-08-06T00:00:00.000Z');
+    fs.writeFileSync(drugsPath, drugsContents);
+    fs.utimesSync(drugsPath, preservedTime, preservedTime);
+    fs.writeFileSync(summaryPath, summaryContents);
+    const cohortManifest = `${JSON.stringify({
+      schema_version: 1,
+      generation_id: generationId,
+      date,
+      counts: { drugs: rows.length },
+      files: {
+        'drugs.jsonl': {
+          sha256: digest(drugsContents),
+          size_bytes: Buffer.byteLength(drugsContents),
+          record_count: rows.length,
+        },
+        'summary.json': {
+          sha256: digest(summaryContents),
+          size_bytes: Buffer.byteLength(summaryContents),
+        },
+      },
+    })}\n`;
+    fs.writeFileSync(path.join(generationDir, 'cohort-manifest.json'), cohortManifest);
+    fs.writeFileSync(path.join(distRoot, 'cohort-index.json'), JSON.stringify({
+      schema_version: 1,
+      updated_at: '2026-08-06T00:00:00.000Z',
+      latest: { date, generation_id: generationId },
+      dates: { [date]: generationId },
+      generations: {
+        [generationId]: {
+          date,
+          manifest_sha256: digest(cohortManifest),
+          published_at: '2026-08-06T00:00:00.000Z',
+        },
+      },
+    }));
+
+    const result = runCli([
+      '--profile', 'production-open',
+      '--drug', 'First Medicine',
+      '--drug', 'Second Medicine',
+    ], {
+      attachMappings: false,
+      env: { AUSHADHI_DIST_ROOT: distRoot },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout).coverage.interaction_knowledge, 'unknown');
+
+    fs.writeFileSync(drugsPath, drugsContents.replace('First Medicine', 'Third Medicine'));
+    fs.utimesSync(drugsPath, preservedTime, preservedTime);
+    assert.equal(fs.statSync(drugsPath).size, Buffer.byteLength(drugsContents));
+    const tampered = runCli([
+      '--profile', 'production-open',
+      '--drug', 'First Medicine',
+      '--drug', 'Second Medicine',
+    ], {
+      attachMappings: false,
+      env: { AUSHADHI_DIST_ROOT: distRoot },
+    });
+    assert.equal(tampered.status, 1);
+    assert.match(tampered.stderr, /drugs\.jsonl hash mismatch/i);
+  } finally {
+    fs.rmSync(distRoot, { recursive: true, force: true });
+  }
 });
 
 test('CLI accepts explicit combination manifest and evidence directory paths', () => {

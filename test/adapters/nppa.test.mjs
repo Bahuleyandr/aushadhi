@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { parseNppaLine, parseNppaText } from '../../src/adapters/nppa.mjs';
+import { loadNppaRows, parseNppaLine, parseNppaText } from '../../src/adapters/nppa.mjs';
 
 const sample = fs.readFileSync('test/fixtures/nppa/sample.txt', 'utf8');
 
@@ -87,4 +87,36 @@ test('nppaExtractionIntegrity: deliberately dropped device rows do not count as 
 test('nppaExtractionIntegrity: empty input is not reported as complete', () => {
   assert.equal(nppaExtractionIntegrity('').complete, false);
   assert.equal(nppaExtractionIntegrity('').max_sl_number, 0);
+});
+
+test('NPPA PDF conversion writes only to the derived cache', async () => {
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'nppa-derived-'));
+  const dir = path.join(root, 'nppa');
+  const derivedRoot = path.join(root, '..', `${path.basename(root)}-derived`);
+  fs.mkdirSync(dir, { recursive: true });
+  const pdf = path.join(dir, 'ceiling-prices.pdf');
+  fs.writeFileSync(pdf, 'stable fake PDF bytes');
+
+  const rows = await loadNppaRows(root, '2026-08-06', {
+    derivedRoot,
+    pdfToTextImpl: async (_source, target, options) => {
+      assert.equal(options.mode, 'layout');
+      fs.writeFileSync(
+        target,
+        '1  2011  Acetylsalicylic acid  Tablet 300 mg  1582(E)  25-Mar-2026  0.28(1 Tablet)\n',
+      );
+      return { file: target, mode: options.mode };
+    },
+  });
+
+  assert.equal(rows.length, 1);
+  assert.equal(fs.existsSync(path.join(dir, 'ceiling-prices.txt')), false);
+  assert.equal(
+    fs.readdirSync(path.join(derivedRoot, 'nppa')).filter((name) => name.endsWith('.txt')).length,
+    1,
+  );
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.rmSync(derivedRoot, { recursive: true, force: true });
 });

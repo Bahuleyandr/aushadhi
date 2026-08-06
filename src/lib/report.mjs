@@ -1,6 +1,6 @@
 // Human-readable dataset quality report from a build summary.json (+ optional
 // conflict-by-kind tally). Pure + deterministic so it is unit-testable; the CLI
-// wrapper (src/cli/report.mjs) reads the files and writes dist/latest/REPORT.md.
+// wrapper (src/cli/report.mjs) reads the selected cohort and writes REPORT.md.
 const fmt = (n) => (n === null || n === undefined ? '—' : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','));
 const pct = (n, d) => `${d ? ((100 * n) / d).toFixed(1) : '0.0'}%`;
 
@@ -34,7 +34,7 @@ export function renderReport(summary = {}, conflictsByKind = {}) {
     for (const tier of ['multi_source', 'single_source', 'conflict']) {
       if (s.confidence[tier] != null) L.push(`| ${tier} | ${fmt(s.confidence[tier])} | ${pct(s.confidence[tier], total)} |`);
     }
-    L.push('', '> `conflict` and `single_source` rows are the review-worthy ones for clinical use.', '');
+    L.push('', '> Internal-evaluation limitations: `single_source` means no cross-source corroboration; `conflict` means sources disagree. Neither tier establishes a clinically verified composition or authorizes automatic use.', '');
   }
 
   if (s.strength_verified_rows != null) {
@@ -47,7 +47,7 @@ export function renderReport(summary = {}, conflictsByKind = {}) {
     L.push(`| no_strength | ${fmt(sn)} | ${pct(sn, total)} |`);
     L.push('');
     if (s.strength_conflict_rows != null) L.push(`- \`strength_conflict\` (sources disagree on strength — review): ${fmt(s.strength_conflict_rows)}`);
-    L.push('> `strength_verified` rows are safe to auto-fill; `unverified` / `strength_conflict` need pharmacist or authoritative-reference confirmation.', '');
+    L.push('> Internal-evaluation quality signals only: `strength_verified` rows passed the build\'s configured plausibility checks; they do not constitute clinical verification and do not authorize auto-fill or other runtime action. `unverified`, `no_strength`, and `strength_conflict` remain unresolved limitations requiring authoritative-reference or qualified human review.', '');
   }
 
   if (s.atc_coverage_rows != null) {
@@ -57,11 +57,11 @@ export function renderReport(summary = {}, conflictsByKind = {}) {
   if (s.conflicts != null) {
     L.push('## Conflicts — never silently resolved', '', `- Total: ${fmt(s.conflicts)}`);
     for (const [kind, n] of Object.entries(conflictsByKind).sort((a, b) => b[1] - a[1])) L.push(`  - ${kind}: ${fmt(n)}`);
-    L.push('');
+    L.push('', '> Conflicts remain unresolved internal-evaluation limitations; this report does not select a source or authorize runtime use.', '');
   }
 
   if (s.likely_truncated != null) {
-    L.push('## Truncation watch', '', `- Rows possibly truncated (2-slot source inside a known 3+ combo): ${fmt(s.likely_truncated)}`, '');
+    L.push('## Truncation watch', '', `- Rows possibly truncated (2-slot source inside a known 3+ combo): ${fmt(s.likely_truncated)}`, '', '> `likely_truncated` rows may omit ingredients; do not treat their recorded composition as complete without authoritative verification.', '');
   }
 
   return L.join('\n');

@@ -2,9 +2,9 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildInteractionCatalogueFromFiles } from '../lib/interaction-catalogue-filter.mjs';
+import { resolvePublishedCohort } from '../lib/build-cohort.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const DEFAULT_ARTIFACT = path.join(ROOT, 'dist', 'latest', 'drugs.jsonl');
 
 function requireValue(args, index, flag) {
   const value = args[index + 1];
@@ -18,10 +18,18 @@ function storagePath(file) {
   return path.relative(ROOT, file).replaceAll(path.sep, '/');
 }
 
+function publishedStoragePath(distRoot, file) {
+  const relative = path.relative(distRoot, file);
+  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`published cohort artifact is outside its dist root: ${file}`);
+  }
+  return path.posix.join('dist', relative.replaceAll(path.sep, '/'));
+}
+
 export function parseArgs(args) {
   const options = {
     profile: null,
-    artifactPath: DEFAULT_ARTIFACT,
+    artifactPath: null,
     artifactSummaryPath: null,
     outputDir: null,
   };
@@ -50,7 +58,10 @@ export function parseArgs(args) {
   if (!['production-open', 'internal-evaluation'].includes(options.profile)) {
     throw new Error(`unsupported --profile ${options.profile}`);
   }
-  if (!artifactSummaryExplicit) {
+  if (artifactSummaryExplicit && options.artifactPath === null) {
+    throw new Error('--artifact-summary requires --artifact');
+  }
+  if (!artifactSummaryExplicit && options.artifactPath !== null) {
     options.artifactSummaryPath = path.join(path.dirname(options.artifactPath), 'summary.json');
   }
   options.outputDir ??= path.join(
@@ -65,14 +76,30 @@ export function parseArgs(args) {
 
 export async function main(args = process.argv.slice(2)) {
   const options = parseArgs(args);
+  let artifactStoragePath;
+  let artifactSummaryStoragePath;
+  if (options.artifactPath === null) {
+    const distRoot = path.resolve(process.env.AUSHADHI_DIST_ROOT ?? path.join(ROOT, 'dist'));
+    const published = await resolvePublishedCohort({
+      distRoot,
+      verifyFiles: ['drugs.jsonl', 'summary.json'],
+    });
+    options.artifactPath = path.join(published.dir, 'drugs.jsonl');
+    options.artifactSummaryPath ??= path.join(published.dir, 'summary.json');
+    artifactStoragePath = publishedStoragePath(distRoot, options.artifactPath);
+    artifactSummaryStoragePath = publishedStoragePath(distRoot, options.artifactSummaryPath);
+  } else {
+    artifactStoragePath = storagePath(options.artifactPath);
+    artifactSummaryStoragePath = storagePath(options.artifactSummaryPath);
+  }
   const outputPath = path.join(options.outputDir, 'drugs.jsonl');
   const outputSummaryPath = path.join(options.outputDir, 'summary.json');
   const result = await buildInteractionCatalogueFromFiles({
     profile: options.profile,
     artifactPath: options.artifactPath,
-    artifactStoragePath: storagePath(options.artifactPath),
+    artifactStoragePath,
     artifactSummaryPath: options.artifactSummaryPath,
-    artifactSummaryStoragePath: storagePath(options.artifactSummaryPath),
+    artifactSummaryStoragePath,
     outputPath,
     outputStoragePath: storagePath(outputPath),
     outputSummaryPath,

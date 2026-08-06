@@ -11,7 +11,15 @@ test('fixture mini-pipeline: normalize -> merge -> emit', async () => {
   const all = [];
   for await (const r of normalizeGithubJr('test/fixtures/github-jr/sample.csv', '2026-07-07')) all.push(r);
   const { rows, conflicts } = mergeRows(all);
-  await emitArtifact({ distRoot: dir, date: '2026-07-07', rows, conflicts, errors: [], meta: { sources: { 'github-jr': all.length } } });
+  await emitArtifact({
+    distRoot: dir,
+    date: '2026-07-07',
+    outputDir: `${dir}/2026-07-07`,
+    rows,
+    conflicts,
+    errors: [],
+    meta: { sources: { 'github-jr': all.length } },
+  });
   const summary = JSON.parse(fs.readFileSync(`${dir}/2026-07-07/summary.json`, 'utf8'));
   assert.equal(summary.total_rows, 3);
   assert.equal(summary.unique_compositions, 2);

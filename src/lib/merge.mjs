@@ -393,10 +393,11 @@ const isFiniteNum = (value) => typeof value === 'number' && Number.isFinite(valu
 
 // Annotate each merged row with a plausibility-based strength verification status.
 // This is resolution-free: strengths are NOT altered or suppressed here (that is the
-// prescribable/clinical layer's job) — every consumer just gets a trust signal:
-//   strength_verified: safe to auto-fill? (>=2 sources agree | single-molecule &
-//     plausible | single-source combo whose molecule->strength assignment is
-//     plausibility-unambiguous).
+// downstream layer's job) — every consumer gets an internal-evaluation quality
+// signal, never clinical verification or authority to auto-fill:
+//   strength_verified: the configured corroboration/plausibility checks passed
+//     (>=2 sources agree | single-molecule & plausible | single-source combo whose
+//     molecule->strength assignment is plausibility-unambiguous).
 //   strength_status:   verified | unverified | no_strength.
 //   strength_conflict: sources give the SAME product two different strengths
 //     (a strength_disagreement conflict) — flag for review.

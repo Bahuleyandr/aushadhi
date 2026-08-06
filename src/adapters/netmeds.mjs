@@ -3,7 +3,26 @@ import path from 'node:path';
 import { normMolecule } from '../lib/normalize.mjs';
 import { extractBalancedJson } from './onemg.mjs';
 import { readJsonlSync } from '../lib/jsonl.mjs';
-import { identityKey } from '../lib/merge.mjs';
+
+function retainLatestSourceProduct(byProduct, row) {
+  const hasSourceId = row.source_id !== null && row.source_id !== undefined
+    && String(row.source_id) !== '';
+  const key = hasSourceId
+    ? `${row.source ?? ''}|${String(row.source_id)}`
+    : JSON.stringify([
+      row.source ?? '', row.brand_name ?? '', row.manufacturer ?? '', row.form_raw ?? '',
+      row.pack_label ?? '', row.ingredients ?? [], row.composition_raw ?? '',
+    ]);
+  const previous = byProduct.get(key);
+  if (!previous) {
+    byProduct.set(key, { ...row, first_seen: row.first_seen ?? row.seen_at ?? null });
+    return;
+  }
+  const firstSeen = [previous.first_seen, previous.seen_at, row.first_seen, row.seen_at]
+    .filter(Boolean).sort()[0] ?? null;
+  const latest = String(row.seen_at ?? '') >= String(previous.seen_at ?? '') ? row : previous;
+  byProduct.set(key, { ...latest, first_seen: firstSeen });
+}
 
 // Netmeds composition is "Metformin 500 mg" (space-separated MOL STRENGTH UNIT),
 // "+"-joined for combos ("Amoxicillin 500 mg+Clavulanic Acid 125 mg").
@@ -38,10 +57,19 @@ function extractInitialState(html) {
 
 // Parse a Netmeds /product/<slug> page. Returns null for non-drug SKUs (devices,
 // herbal, anything with no generic composition) — the automatic device filter.
-export function parseNetmedsProduct(html) {
+export function parseNetmedsProduct(html, expectedProductId = null, expectedProductPath = null) {
   const st = extractInitialState(html);
-  const a = st?.productDetailsPage?.product?.attributes;
+  const product = st?.productDetailsPage?.product;
+  const a = product?.attributes;
   if (!a) return null;
+  const embeddedProductId = product.uid === null || product.uid === undefined
+    ? null : String(product.uid);
+  if (expectedProductId !== null && expectedProductId !== undefined
+    && embeddedProductId !== String(expectedProductId)) return null;
+  if (expectedProductPath !== null && expectedProductPath !== undefined) {
+    const canonicalPath = typeof product.slug === 'string' ? `/product/${product.slug}` : null;
+    if (canonicalPath !== String(expectedProductPath)) return null;
+  }
   const generic = (a.genericnamewithdosage ?? a.genericname ?? '').toString();
   // device/herbal filter: a real allopathic composition carries a dosage number
   // ("Metformin 500 mg"); category text ("Ayurvedic Medicine") has no digit.
@@ -50,6 +78,7 @@ export function parseNetmedsProduct(html) {
   if (!ingredients.length) return null; // device / herbal / no composition -> skip
   return {
     source: 'netmeds',
+    ...(embeddedProductId === null ? {} : { source_id: embeddedProductId }),
     brand_name: (a['mstar-displaynamewops'] ?? a.brand_name ?? '').toString().trim() || null,
     manufacturer: (a.manufacturername ?? a.marketername ?? '').toString().trim() || null,
     form_raw: (a.releasetypename ?? '').toString().trim() || null,
@@ -88,10 +117,12 @@ export function isLikelyDrugSlug(pathOrSlug) {
 export function readNetmedsNormalized(rawRoot) {
   const root = path.join(rawRoot, 'netmeds');
   if (!fs.existsSync(root)) return [];
-  const byIdentity = new Map();
+  const byProduct = new Map();
   for (const d of fs.readdirSync(root).sort()) {
     const f = path.join(root, d, 'normalized.jsonl');
-    if (fs.existsSync(f)) for (const row of readJsonlSync(f)) byIdentity.set(identityKey(row), row);
+    if (fs.existsSync(f)) {
+      for (const row of readJsonlSync(f)) retainLatestSourceProduct(byProduct, row);
+    }
   }
-  return [...byIdentity.values()];
+  return [...byProduct.values()];
 }

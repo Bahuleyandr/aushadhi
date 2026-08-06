@@ -1,0 +1,11 @@
+# Aushadhi crawler/build/export logs. copytruncate is required because the
+# systemd services hold append-mode file descriptors open.
+/var/log/aushadhi/*/*.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

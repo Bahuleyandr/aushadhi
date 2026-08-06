@@ -2,7 +2,15 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { checkResolvedProducts, validateRulePack } from '../lib/interaction-checker.mjs';
+import {
+  checkResolvedProducts,
+  validateRulePack,
+  validateTechnicalHoldPack,
+} from '../lib/interaction-checker.mjs';
+import {
+  promotionHoldManifestSha256,
+  validatePromotionHoldManifest,
+} from '../lib/interaction-promotion.mjs';
 import {
   compileCombinationIdentityManifest,
   validateCombinationIdentityManifest,
@@ -26,9 +34,9 @@ import {
   loadSourceManifest,
 } from '../lib/interaction-source-policy.mjs';
 import { scanProductQueries } from '../lib/product-resolver.mjs';
+import { resolvePublishedCohort } from '../lib/build-cohort.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const DEFAULT_ARTIFACT = path.join(ROOT, 'dist', 'latest', 'drugs.jsonl');
 const DEFAULT_RULES_BY_PROFILE = {
   'production-open': path.join(ROOT, 'data-static', 'interaction-rules.json'),
   'internal-evaluation': path.join(
@@ -46,6 +54,16 @@ const DEFAULT_PRESENTATION_MAPPINGS = path.join(
   ROOT,
   'data-static',
   'product-presentation-overrides.json',
+);
+const DEFAULT_PROMOTION_HOLDS = path.join(
+  ROOT,
+  'data-static',
+  'interaction-promotion-holds.internal-evaluation.json',
+);
+const DEFAULT_RUNTIME_TECHNICAL_HOLDS = path.join(
+  ROOT,
+  'data-static',
+  'interaction-promotion-holds.runtime.internal-evaluation.json',
 );
 const DEFAULT_COMBINATION_MANIFEST = path.join(
   ROOT,
@@ -79,7 +97,7 @@ function requireValue(args, index, flag) {
 export function parseArgs(args) {
   const options = {
     profile: null,
-    artifactPath: DEFAULT_ARTIFACT,
+    artifactPath: null,
     rulesPath: null,
     ingredientMappingsPath: DEFAULT_INGREDIENT_MAPPINGS,
     presentationMappingsPath: DEFAULT_PRESENTATION_MAPPINGS,
@@ -309,20 +327,58 @@ function assertRulePackProfile(runtimeProfile, rulePack) {
 }
 
 export async function runInteractionCheck(options) {
+  let artifactPath = options.artifactPath;
+  let artifactStoragePath;
+  if (artifactPath === null || artifactPath === undefined) {
+    const distRoot = path.resolve(
+      ROOT,
+      process.env.AUSHADHI_DIST_ROOT ?? 'dist',
+    );
+    const published = await resolvePublishedCohort({
+      distRoot,
+      verifyFiles: ['drugs.jsonl', 'summary.json'],
+    });
+    artifactPath = path.join(published.dir, 'drugs.jsonl');
+    artifactStoragePath = path.posix.join(
+      'dist',
+      path.relative(distRoot, artifactPath).replaceAll(path.sep, '/'),
+    );
+  } else {
+    artifactStoragePath = storagePath(artifactPath);
+  }
   const manifest = loadSourceManifest();
-  const summaryPath = path.join(path.dirname(options.artifactPath), 'summary.json');
+  const summaryPath = path.join(path.dirname(artifactPath), 'summary.json');
   const summary = await readJson(summaryPath, 'artifact summary');
   const summaryProvenance = artifactSummaryProvenance(summary);
   assertArtifactProvenance(manifest, {
     sourceIds: summaryProvenance.sourceIds,
     profile: options.profile,
     use: 'product-resolution',
-    storagePath: storagePath(options.artifactPath),
+    storagePath: artifactStoragePath,
   });
 
   const rulePack = await readJson(options.rulesPath, 'interaction rule pack');
   validateRulePack(rulePack);
   assertRulePackProfile(options.profile, rulePack);
+  let technicalHoldPack;
+  if (options.profile === 'internal-evaluation') {
+    const promotionHoldManifest = await readJson(
+      DEFAULT_PROMOTION_HOLDS,
+      'promotion hold manifest',
+    );
+    validatePromotionHoldManifest(promotionHoldManifest);
+    technicalHoldPack = await readJson(
+      DEFAULT_RUNTIME_TECHNICAL_HOLDS,
+      'runtime technical hold pack',
+    );
+    validateTechnicalHoldPack(technicalHoldPack, {
+      rulePack,
+      promotionHoldManifestSha256: promotionHoldManifestSha256(
+        promotionHoldManifest,
+      ),
+      runtimeHoldScopeSha256: promotionHoldManifest.runtime_hold_scope_sha256,
+    });
+  }
   assertArtifactProvenance(manifest, {
     sourceIds: rulePack.source_ids,
     profile: rulePack.profile,
@@ -388,7 +444,7 @@ export async function runInteractionCheck(options) {
   );
 
   const scan = await scanProductQueries({
-    artifactPath: options.artifactPath,
+    artifactPath,
     queries: options.queries,
   });
   const observedSourceIds = assertSummaryMatchesRows(summaryProvenance, scan.provenance);
@@ -396,7 +452,7 @@ export async function runInteractionCheck(options) {
     sourceIds: observedSourceIds,
     profile: options.profile,
     use: 'product-resolution',
-    storagePath: storagePath(options.artifactPath),
+    storagePath: artifactStoragePath,
   });
   const mappedRecords = mapResolvedProducts({
     records: scan.results,
@@ -409,6 +465,7 @@ export async function runInteractionCheck(options) {
     ...checkResolvedProducts({
       resolvedInputs: mappedRecords,
       rulePack,
+      technicalHoldPack,
     }),
     mapping_summary: summarizeInteractionMappings(mappedRecords),
   };

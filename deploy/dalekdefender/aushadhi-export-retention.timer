@@ -1,0 +1,11 @@
+[Unit]
+Description=Review Aushadhi verified export snapshot retention weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 04:15:00
+RandomizedDelaySec=20m
+Persistent=true
+Unit=aushadhi-export-retention.service
+
+[Install]
+WantedBy=timers.target

@@ -5,11 +5,31 @@ import {
   parseApolloComposition, parseApolloProduct, parseApolloSaltPage,
   parseApolloSaltDirectory, readApolloNormalized,
 } from '../../src/adapters/apollo.mjs';
-import { refreshSaltIndex, runApolloIndex } from '../../src/cli/apollo.mjs';
+import {
+  ApolloParserAnomalyError,
+  refreshSaltIndex,
+  runApolloIndex,
+} from '../../src/cli/apollo.mjs';
 import { BlockedError, HttpStatusError } from '../../src/lib/politeness.mjs';
 
 const medHtml = fs.readFileSync('test/fixtures/apollo/medicine_elmox.html', 'utf8');
 const saltHtml = fs.readFileSync('test/fixtures/apollo/salt_amox_clav.html', 'utf8');
+const APOLLO_ORIGIN = 'https://www.apollopharmacy.in';
+const FIXTURE_PRODUCT_PATH = '/medicine/elmox-cv-625mg-tablet';
+
+function productHtmlFor(requestPath) {
+  return medHtml.replaceAll(FIXTURE_PRODUCT_PATH, requestPath);
+}
+
+function withProductResponseMetadata(fetcher) {
+  return {
+    ...fetcher,
+    getWithMetadata: async (requestPath, options) => ({
+      body: (await fetcher.get(requestPath, options)).replaceAll(FIXTURE_PRODUCT_PATH, requestPath),
+      responseUrl: `${APOLLO_ORIGIN}${requestPath}`,
+    }),
+  };
+}
 
 test('parseApolloComposition: MOLECULE-STRENGTH+MOLECULE-STRENGTH form', () => {
   const ings = parseApolloComposition('AMOXICILLIN-500MG+CLAVULANIC ACID-125MG');
@@ -35,6 +55,29 @@ test('parseApolloProduct: extracts brand, manufacturer, composition from the Dru
   assert.equal(r.source, 'apollo');
 });
 
+test('parseApolloProduct: binds the Drug JSON-LD identity to the requested product path', () => {
+  assert.ok(parseApolloProduct(medHtml, { expectedPath: FIXTURE_PRODUCT_PATH }));
+  assert.equal(
+    parseApolloProduct(medHtml, { expectedPath: '/medicine/a-different-product' }),
+    null,
+  );
+  const htmlForUrl = (url, { includeUrl = true } = {}) => `<script type="application/ld+json">${JSON.stringify({
+    '@type': 'Drug',
+    name: 'Bound product',
+    nonProprietaryName: 'PARACETAMOL-500MG',
+    ...(includeUrl ? { url } : {}),
+  })}</script>`;
+  for (const html of [
+    htmlForUrl(null, { includeUrl: false }),
+    htmlForUrl(FIXTURE_PRODUCT_PATH),
+    htmlForUrl(`https://example.invalid${FIXTURE_PRODUCT_PATH}`),
+    htmlForUrl(`${APOLLO_ORIGIN}${FIXTURE_PRODUCT_PATH}/`),
+    htmlForUrl(`${APOLLO_ORIGIN}/medicine/a-different-product`),
+  ]) {
+    assert.equal(parseApolloProduct(html, { expectedPath: FIXTURE_PRODUCT_PATH }), null);
+  }
+});
+
 test('parseApolloSaltPage: extracts the /medicine/ product paths listed', () => {
   const paths = parseApolloSaltPage(saltHtml);
   assert.ok(paths.length >= 3, `got ${paths.length}`);
@@ -49,7 +92,7 @@ test('parseApolloSaltDirectory: extracts unique /salt/ paths, ignores non-salt l
   assert.deepEqual(paths.sort(), ['/salt/amoxicillin', '/salt/amoxicillin-clavulanic-acid']);
 });
 
-test('readApolloNormalized: reads normalized rows, last write per identity wins', () => {
+test('readApolloNormalized: refreshes by source product ID without collapsing distinct products', () => {
   const root = 'test/.tmp-apollo';
   fs.rmSync(root, { recursive: true, force: true });
   const mk = (date, molecule) => {
@@ -62,9 +105,17 @@ test('readApolloNormalized: reads normalized rows, last write per identity wins'
   };
   mk('2026-07-01', 'old');
   mk('2026-07-17', 'new');
+  fs.appendFileSync(`${root}/apollo/2026-07-17/normalized.jsonl`, JSON.stringify({
+    source: 'apollo', source_id: 'y', seen_at: '2026-07-17', brand_name: 'Elmox CV', manufacturer: 'Elder',
+    pack_label: '', ingredients: [{ molecule: 'other', strength_value: 1, strength_unit: 'mg', strength_raw: '1mg' }],
+    composition_status: 'complete', substitutes_raw: [],
+  }) + '\n');
   const rows = readApolloNormalized(root);
-  assert.equal(rows.length, 1);
-  assert.equal(rows[0].ingredients[0].molecule, 'new'); // later date wins
+  assert.equal(rows.length, 2);
+  const refreshed = rows.find((row) => row.source_id === 'x');
+  assert.equal(refreshed.ingredients[0].molecule, 'new');
+  assert.equal(refreshed.first_seen, '2026-07-01');
+  assert.equal(rows.find((row) => row.source_id === 'y').ingredients[0].molecule, 'other');
   fs.rmSync(root, { recursive: true, force: true });
 });
 
@@ -73,8 +124,9 @@ test('runApolloIndex: parser anomaly is quarantined while later products and sal
   fs.rmSync(root, { recursive: true, force: true });
   fs.mkdirSync(root, { recursive: true });
   const outFile = `${root}/normalized.jsonl`;
-  const pf = {
-    state: { apollo: { saltCursor: 0 } },
+  const invalidated = [];
+  const pf = withProductResponseMetadata({
+    state: { apollo: {} },
     get: async (requestPath) => {
       if (requestPath === '/salt/first') {
         return '<a href="/medicine/bad-product">Bad</a><a href="/medicine/first-good">Good</a>';
@@ -85,9 +137,9 @@ test('runApolloIndex: parser anomaly is quarantined while later products and sal
       if (requestPath === '/medicine/bad-product') return '<html>parser drift</html>';
       return medHtml;
     },
-    cachePath: (requestPath) => `${root}/${requestPath.split('/').pop()}.html`,
+    invalidate: async (requestPath) => invalidated.push(requestPath),
     persist: async () => {},
-  };
+  });
 
   const result = await runApolloIndex({
     pf,
@@ -99,16 +151,22 @@ test('runApolloIndex: parser anomaly is quarantined while later products and sal
   });
 
   assert.equal(result.products, 2);
-  assert.equal(result.saltCursor, 2);
+  assert.equal(result.checkedSalts, 2);
   assert.equal(result.quarantined, 1);
-  assert.deepEqual(pf.state.apollo.quarantine, [{
+  assert.deepEqual(pf.state.apollo.quarantine.map((entry) => ({
+    kind: entry.kind,
+    path: entry.path,
+    productId: entry.productId,
+    reason: entry.reason,
+    parser: entry.parser,
+  })), [{
     kind: 'product',
     path: '/medicine/bad-product',
-    saltPath: '/salt/first',
-    saltIndex: 0,
+    productId: 'bad-product',
     reason: 'parser_anomaly',
     parser: 'parser-v1',
   }]);
+  assert.deepEqual(invalidated, ['/medicine/bad-product']);
   assert.deepEqual(
     fs.readFileSync(outFile, 'utf8').trim().split('\n').map((line) => JSON.parse(line).source_id),
     ['first-good', 'second-good'],
@@ -123,19 +181,17 @@ test('runApolloIndex: parser upgrade retries quarantined products without duplic
   const outFile = `${root}/normalized.jsonl`;
   const state = {
     apollo: {
-      saltCursor: 1,
       quarantine: [{
         kind: 'product',
         path: '/medicine/recovered-product',
         saltPath: '/salt/first',
-        saltIndex: 0,
         reason: 'parser_anomaly',
         parser: 'parser-v1',
       }],
     },
   };
   const calls = [];
-  const pf = {
+  const pf = withProductResponseMetadata({
     state,
     get: async (requestPath) => {
       calls.push(requestPath);
@@ -144,9 +200,9 @@ test('runApolloIndex: parser upgrade retries quarantined products without duplic
       }
       return medHtml;
     },
-    cachePath: (requestPath) => `${root}/${requestPath.split('/').pop()}.html`,
+    invalidate: async () => {},
     persist: async () => {},
-  };
+  });
 
   const result = await runApolloIndex({
     pf,
@@ -155,12 +211,13 @@ test('runApolloIndex: parser upgrade retries quarantined products without duplic
     date: '2026-08-01',
     seen: new Set(['already-seen']),
     parserFingerprint: 'parser-v2',
+    now: () => Date.parse('2026-08-01T00:00:00.000Z'),
     log: () => {},
   });
 
   assert.equal(result.products, 1);
   assert.equal(result.quarantined, 0);
-  assert.equal(state.apollo.saltCursor, 1);
+  assert.equal(state.apollo.saltChecks['/salt/first'], '2026-08-01T00:00:00.000Z');
   assert.deepEqual(calls, ['/salt/first', '/medicine/recovered-product']);
   assert.equal(JSON.parse(fs.readFileSync(outFile, 'utf8').trim()).source_id, 'recovered-product');
   fs.rmSync(root, { recursive: true, force: true });
@@ -171,8 +228,8 @@ test('runApolloIndex: isolated fetch failure is quarantined without blocking lat
   fs.rmSync(root, { recursive: true, force: true });
   fs.mkdirSync(root, { recursive: true });
   const outFile = `${root}/normalized.jsonl`;
-  const pf = {
-    state: { apollo: { saltCursor: 0 } },
+  const pf = withProductResponseMetadata({
+    state: { apollo: {} },
     get: async (requestPath) => {
       if (requestPath === '/salt/first') {
         return '<a href="/medicine/fetch-failure">Bad</a><a href="/medicine/good-product">Good</a>';
@@ -180,9 +237,9 @@ test('runApolloIndex: isolated fetch failure is quarantined without blocking lat
       if (requestPath === '/medicine/fetch-failure') throw new TypeError('fetch failed');
       return medHtml;
     },
-    cachePath: (requestPath) => `${root}/${requestPath.split('/').pop()}.html`,
+    invalidate: async () => {},
     persist: async () => {},
-  };
+  });
 
   const result = await runApolloIndex({
     pf,
@@ -205,16 +262,17 @@ test('runApolloIndex: empty salt page is quarantined while the next salt proceed
   fs.rmSync(root, { recursive: true, force: true });
   fs.mkdirSync(root, { recursive: true });
   const outFile = `${root}/normalized.jsonl`;
-  const pf = {
-    state: { apollo: { saltCursor: 0 } },
+  const invalidated = [];
+  const pf = withProductResponseMetadata({
+    state: { apollo: {} },
     get: async (requestPath) => requestPath === '/salt/empty'
       ? '<html>changed layout</html>'
       : requestPath === '/salt/good'
         ? '<a href="/medicine/good-product">Good</a>'
         : medHtml,
-    cachePath: (requestPath) => `${root}/${requestPath.split('/').pop()}.html`,
+    invalidate: async (requestPath) => invalidated.push(requestPath),
     persist: async () => {},
-  };
+  });
 
   const result = await runApolloIndex({
     pf,
@@ -226,20 +284,21 @@ test('runApolloIndex: empty salt page is quarantined while the next salt proceed
   });
 
   assert.equal(result.products, 1);
-  assert.equal(result.saltCursor, 2);
+  assert.equal(result.checkedSalts, 1);
   assert.deepEqual(pf.state.apollo.quarantine.map(({ kind, path, reason }) => ({ kind, path, reason })), [{
     kind: 'salt',
     path: '/salt/empty',
     reason: 'parser_anomaly',
   }]);
+  assert.deepEqual(invalidated, ['/salt/empty']);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
 test('runApolloIndex: block signal aborts immediately and is never quarantined', async () => {
   const pf = {
-    state: { apollo: { saltCursor: 0 } },
+    state: { apollo: {} },
     get: async () => { throw new BlockedError('aborting after 3 consecutive 429 responses'); },
-    cachePath: () => 'unused',
+    invalidate: async () => {},
     persist: async () => {},
   };
 
@@ -252,22 +311,25 @@ test('runApolloIndex: block signal aborts immediately and is never quarantined',
     log: () => {},
   }), BlockedError);
   assert.deepEqual(pf.state.apollo.quarantine, []);
-  assert.equal(pf.state.apollo.saltCursor, 0);
+  assert.deepEqual(pf.state.apollo.saltChecks, {});
 });
 
-test('runApolloIndex: typed permanent product absence is tombstoned rather than quarantined', async () => {
-  const root = 'test/.tmp-apollo-tombstone';
+test('runApolloIndex: typed 404 is timestamped and withheld until revalidation is due', async () => {
+  const root = 'test/.tmp-apollo-not-found';
   fs.rmSync(root, { recursive: true, force: true });
   fs.mkdirSync(root, { recursive: true });
-  const pf = {
-    state: { apollo: { saltCursor: 0 } },
+  const calls = [];
+  const pf = withProductResponseMetadata({
+    state: { apollo: {} },
     get: async (requestPath) => {
+      calls.push(requestPath);
       if (requestPath === '/salt/example') return '<a href="/medicine/gone">Gone</a>';
       throw new HttpStatusError(404, requestPath);
     },
-    cachePath: () => 'unused',
+    invalidate: async () => {},
     persist: async () => {},
-  };
+  });
+  const checkedAt = Date.parse('2026-07-31T00:00:00.000Z');
 
   const result = await runApolloIndex({
     pf,
@@ -275,18 +337,78 @@ test('runApolloIndex: typed permanent product absence is tombstoned rather than 
     outFile: `${root}/normalized.jsonl`,
     date: '2026-07-31',
     parserFingerprint: 'parser-v1',
+    now: () => checkedAt,
     log: () => {},
   });
 
   assert.equal(result.products, 0);
   assert.equal(result.quarantined, 0);
+  assert.equal(result.notFound, 1);
+  assert.deepEqual(pf.state.apollo.tombstones, []);
+  assert.deepEqual(pf.state.apollo.products.pathOutcomes, [{
+    productId: 'gone',
+    path: '/medicine/gone',
+    status: 'not_found',
+    checkedAt: '2026-07-31T00:00:00.000Z',
+    retryAt: '2026-08-30T00:00:00.000Z',
+  }]);
+
+  await runApolloIndex({
+    pf,
+    salts: ['/salt/example'],
+    outFile: `${root}/normalized.jsonl`,
+    date: '2026-08-01',
+    parserFingerprint: 'parser-v1',
+    now: () => Date.parse('2026-08-01T00:00:00.000Z'),
+    log: () => {},
+  });
+  assert.equal(calls.filter((requestPath) => requestPath === '/medicine/gone').length, 1);
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('runApolloIndex: typed 410 is permanently gone and never fetched again', async () => {
+  const root = 'test/.tmp-apollo-gone';
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.mkdirSync(root, { recursive: true });
+  const calls = [];
+  const pf = withProductResponseMetadata({
+    state: { apollo: {} },
+    get: async (requestPath) => {
+      calls.push(requestPath);
+      if (requestPath === '/salt/example') return '<a href="/medicine/gone">Gone</a>';
+      throw new HttpStatusError(410, requestPath);
+    },
+    invalidate: async () => {},
+    persist: async () => {},
+  });
+  await runApolloIndex({
+    pf,
+    salts: ['/salt/example'],
+    outFile: `${root}/normalized.jsonl`,
+    date: '2026-07-31',
+    parserFingerprint: 'parser-v1',
+    now: () => Date.parse('2026-07-31T00:00:00.000Z'),
+    log: () => {},
+  });
   assert.deepEqual(pf.state.apollo.tombstones, ['product:/medicine/gone']);
+  assert.equal(pf.state.apollo.products.pathOutcomes[0].status, 'gone');
+
+  await runApolloIndex({
+    pf,
+    salts: ['/salt/example'],
+    outFile: `${root}/normalized.jsonl`,
+    date: '2026-09-01',
+    parserFingerprint: 'parser-v1',
+    now: () => Date.parse('2026-09-01T00:00:00.000Z'),
+    log: () => {},
+  });
+  assert.equal(calls.filter((requestPath) => requestPath === '/medicine/gone').length, 1);
   fs.rmSync(root, { recursive: true, force: true });
 });
 
 test('runApolloIndex: repeated fetch failures stop after a bounded source probe', async () => {
-  const pf = {
-    state: { apollo: { saltCursor: 0 } },
+  const pf = withProductResponseMetadata({
+    state: { apollo: {} },
     get: async (requestPath) => requestPath === '/salt/example'
       ? [
         '<a href="/medicine/failure-1">1</a>',
@@ -295,9 +417,9 @@ test('runApolloIndex: repeated fetch failures stop after a bounded source probe'
         '<a href="/medicine/failure-4">4</a>',
       ].join('')
       : Promise.reject(new TypeError('fetch failed')),
-    cachePath: () => 'unused',
+    invalidate: async () => {},
     persist: async () => {},
-  };
+  });
 
   await assert.rejects(runApolloIndex({
     pf,
@@ -309,7 +431,122 @@ test('runApolloIndex: repeated fetch failures stop after a bounded source probe'
     log: () => {},
   }), /fetch failed/);
   assert.equal(pf.state.apollo.quarantine.length, 3);
-  assert.equal(pf.state.apollo.saltCursor, 0);
+  assert.equal(pf.state.apollo.saltChecks['/salt/example'] !== undefined, true);
+});
+
+test('runApolloIndex: three consecutive product parser anomalies exit 4 and remain retryable', async () => {
+  const root = 'test/.tmp-apollo-systemic-parser';
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.mkdirSync(root, { recursive: true });
+  const productPaths = [
+    '/medicine/invalid-product-one',
+    '/medicine/invalid-product-two',
+    FIXTURE_PRODUCT_PATH,
+  ];
+  const calls = [];
+  let recovered = false;
+  const pf = {
+    state: { apollo: { productPaths } },
+    get: async () => assert.fail('product identity fetches must request response metadata'),
+    getWithMetadata: async (requestPath, options) => {
+      calls.push([requestPath, options]);
+      return {
+        body: recovered ? productHtmlFor(requestPath) : '<html>systemic parser drift</html>',
+        responseUrl: `${APOLLO_ORIGIN}${requestPath}`,
+      };
+    },
+    invalidate: async () => {},
+    persist: async () => {},
+  };
+  const run = () => runApolloIndex({
+    pf,
+    salts: [],
+    allSalts: [],
+    outFile: `${root}/normalized.jsonl`,
+    date: '2026-08-06',
+    parserFingerprint: 'parser-v1',
+    maxConsecutiveParserAnomalies: 3,
+    log: () => {},
+  });
+
+  await assert.rejects(
+    run(),
+    (error) => error instanceof ApolloParserAnomalyError
+      && error.code === 'DISCOVERY_ANOMALY'
+      && error.requestPath === FIXTURE_PRODUCT_PATH,
+  );
+  assert.deepEqual(calls.map(([requestPath]) => requestPath), productPaths);
+  assert.ok(calls.every(([, options]) => options?.fresh === true));
+  assert.deepEqual(pf.state.apollo.quarantine.map((entry) => entry.path), productPaths.slice(0, 2));
+
+  calls.length = 0;
+  await assert.rejects(run(), ApolloParserAnomalyError);
+  assert.deepEqual(
+    calls.map(([requestPath]) => requestPath),
+    [FIXTURE_PRODUCT_PATH],
+    'the threshold product must remain fetchable on the next run',
+  );
+
+  calls.length = 0;
+  recovered = true;
+  const result = await run();
+  assert.equal(result.status, 'completed');
+  assert.equal(result.products, 1);
+  assert.deepEqual(calls.map(([requestPath]) => requestPath), [FIXTURE_PRODUCT_PATH]);
+  assert.equal(JSON.parse(fs.readFileSync(`${root}/normalized.jsonl`, 'utf8')).source_id, 'elmox-cv-625mg-tablet');
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('runApolloIndex: redirected and wrong JSON-LD products are quarantined without binding source_id', async () => {
+  const cases = [
+    {
+      label: 'redirected response',
+      responseUrl: `${APOLLO_ORIGIN}/medicine/a-different-product`,
+      html: medHtml,
+    },
+    {
+      label: 'wrong JSON-LD identity',
+      responseUrl: `${APOLLO_ORIGIN}${FIXTURE_PRODUCT_PATH}`,
+      html: productHtmlFor('/medicine/a-different-product'),
+    },
+    {
+      label: 'foreign response host',
+      responseUrl: `https://example.invalid${FIXTURE_PRODUCT_PATH}`,
+      html: medHtml,
+    },
+  ];
+  for (const scenario of cases) {
+    const root = `test/.tmp-apollo-identity-${scenario.label.replaceAll(' ', '-')}`;
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.mkdirSync(root, { recursive: true });
+    const invalidated = [];
+    const pf = {
+      state: { apollo: { productPaths: [FIXTURE_PRODUCT_PATH] } },
+      get: async () => assert.fail('product identity fetches must request response metadata'),
+      getWithMetadata: async (_requestPath, options) => {
+        assert.equal(options?.fresh, true);
+        return { body: scenario.html, responseUrl: scenario.responseUrl };
+      },
+      invalidate: async (requestPath) => invalidated.push(requestPath),
+      persist: async () => {},
+    };
+
+    const result = await runApolloIndex({
+      pf,
+      salts: [],
+      allSalts: [],
+      outFile: `${root}/normalized.jsonl`,
+      date: '2026-08-06',
+      parserFingerprint: 'parser-v1',
+      log: () => {},
+    });
+    assert.equal(result.status, 'no_work');
+    assert.equal(result.products, 0);
+    assert.deepEqual(pf.state.apollo.quarantine.map((entry) => entry.path), [FIXTURE_PRODUCT_PATH]);
+    assert.deepEqual(invalidated, [FIXTURE_PRODUCT_PATH]);
+    assert.equal(fs.existsSync(`${root}/normalized.jsonl`), false);
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('refreshSaltIndex: appends only newly discovered salts', async () => {

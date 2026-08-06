@@ -1,3 +1,7 @@
 export function ctx() {
-  return { rawRoot: 'data/raw', distRoot: 'dist', date: new Date().toISOString().slice(0, 10) };
+  return {
+    rawRoot: process.env.AUSHADHI_RAW_ROOT ?? 'data/raw',
+    distRoot: process.env.AUSHADHI_DIST_ROOT ?? 'dist',
+    date: new Date().toISOString().slice(0, 10),
+  };
 }

@@ -67,3 +67,30 @@ test('an absent cdsco-fdc directory stays a clean no-op', async () => {
   assert.equal(result.files, 0);
   fsp.rmSync(root, { recursive: true, force: true });
 });
+
+test('a missing sibling extraction is written only to the derived cache', async () => {
+  const root = fsp.mkdtempSync(nodePath.join(os.tmpdir(), 'cdsco-fdc-derived-'));
+  const dir = nodePath.join(root, 'cdsco-fdc');
+  const derivedRoot = nodePath.join(root, '..', `${nodePath.basename(root)}-derived`);
+  fsp.mkdirSync(dir, { recursive: true });
+  const pdf = nodePath.join(dir, 'official.pdf');
+  fsp.writeFileSync(pdf, 'stable fake PDF bytes');
+
+  const result = await loadCdscoFdcCombos(root, {
+    derivedRoot,
+    pdfToTextImpl: async (_source, target, options) => {
+      assert.equal(options.mode, 'layout');
+      fsp.writeFileSync(target, 'Amoxicillin + Clavulanic Acid\n');
+      return { file: target, mode: options.mode };
+    },
+  });
+
+  assert.equal(result.keys.size, 1);
+  assert.equal(fsp.existsSync(nodePath.join(dir, 'official.txt')), false);
+  assert.equal(
+    fsp.readdirSync(nodePath.join(derivedRoot, 'cdsco-fdc')).filter((name) => name.endsWith('.txt')).length,
+    1,
+  );
+  fsp.rmSync(root, { recursive: true, force: true });
+  fsp.rmSync(derivedRoot, { recursive: true, force: true });
+});

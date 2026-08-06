@@ -1,30 +1,31 @@
 # aushadhi
 
-India drug reference builder: produces a versioned **brand → composition** dataset of drugs in the Indian market (~254k+ SKUs) from openly licensed datasets, official government sources (Jan Aushadhi, CDSCO), and a polite, capped Tata 1mg gap-filler.
+India drug reference builder: produces a versioned **brand → composition** dataset of drugs in the Indian market from openly licensed datasets, official government sources (Jan Aushadhi, CDSCO), and a polite, capped Tata 1mg gap-filler.
 
 Primary consumer: VH Health composition drug search (`drug_compositions` import + hospital catalog brand-matching).
 
 - Design spec: [docs/superpowers/specs/2026-07-07-india-drug-reference-design.md](docs/superpowers/specs/2026-07-07-india-drug-reference-design.md)
-- Artifacts land in `dist/<date>/` (gitignored — this repo is code only)
+- Complete artifacts land in immutable `dist/.generations/<generation-id>/`
+  directories and are selected through the atomically replaced
+  `dist/cohort-index.json` (all gitignored — this repo is code only)
 - MIMS is deliberately excluded (paywalled, copyrighted editorial content)
 
 ## Commands
 
 ```
 npm run fetch     # download source snapshots (idempotent, cached)
-npm run build     # normalize -> merge -> emit dist/<date>/
+npm run build     # normalize -> merge -> atomically publish one immutable cohort
 npm run stats     # summary of latest dist
 npm test          # node:test suite
 
-# build the separately licensed CDCI identity index (never writes dist/)
-npm run cdci:index
+# validate the separately generated production-open data package
+npm run package:production-open:check
 
-# local, read-only interaction check (current dist is private/internal)
-# call Node directly on PowerShell because npm 11 consumes repeated --drug flags
-node src/cli/interactions.mjs --profile internal-evaluation --drug "Augmentin 625 Duo Tablet" --drug "Azithral 500 Tablet"
+# stage that data-only package under dist/ (never changes canonical sources)
+npm run package:production-open
 
-# generate RxNorm/UNII mapping proposals; output remains review_candidate
-node src/cli/propose-interaction-mappings.mjs --profile internal-evaluation --ingredient "warfarin"
+# local interaction check against the production-open rule pack
+node src/cli/interactions.mjs --profile production-open --drug "Example A" --drug "Example B"
 
 # gap-filler: call node directly (PowerShell eats `--` before npm flags)
 node src/cli/gapfill.mjs --discover 50            # build/extend the slug index (A-Z browse)
@@ -33,26 +34,20 @@ node src/cli/gapfill.mjs --limit 200 --catalog-export names.csv   # prioritize h
 node src/cli/gapfill.mjs --audit-sample 50        # measure the 2-slot truncation rate (and fix the sample)
 ```
 
-NEVER run two gapfill/discover processes at once — the politeness rate limiter
-and state file are per-process.
+Never run two gapfill/discover processes against the same source state. The
+persistent state lock, shared request-spacing record, and operator hold are
+deliberately fail-closed.
 
-## Restricted CDCI identity index
+## Distribution boundary
 
-`npm run cdci:index` builds a separate, identity-only index from the licensed
-Common Drug Codes for India SNOMED CT extension. The pinned archive paths and
-hashes live in `data-static/cdci-release.internal-evaluation.json`; the source
-archives and generated outputs remain below `data/restricted/cdci/`, which is
-gitignored. CDCI content is non-redistributable, internal-evaluation data and is
-never read by the ordinary catalogue build or written to `dist/`.
+The root project is a private development repository. Its npm package is
+deliberately metadata-only and is not a data or runtime distribution.
 
-The June 15, 2026 CDCI extension declares a dependency on the June 1, 2026
-International Edition. The pinned July International archive is used only as a
-Full-history source to reconstruct that exact June dependency view. Its July
-Snapshot is never substituted for the declared base. Missing, inactive, or
-ambiguous references are quarantined and cannot authorize runtime mappings.
-The release config also pins expected identity counts and a SHA-256 of the
-sorted quarantine concept IDs (LF-delimited with a trailing LF), so parser
-drift aborts before replacing a previously valid index.
+The separately generated `@aushadhi/production-open-interactions` package
+contains only the canonical production-open rules file and a schema projection
+whose profile is narrowed to `production-open`. The canonical rules are empty
+and declare coverage as `unknown`. A blank result does not mean safety and must
+never be presented as proof that no interaction exists.
 
 ## Interaction checker
 
@@ -60,18 +55,15 @@ The interaction checker resolves exact products, expands fixed-dose
 combinations, and checks every unique cross-product ingredient pair against a
 versioned clinician-reviewed rule pack. It never treats a missing rule as proof
 of safety: the committed open rule pack currently declares coverage as
-`unknown` and contains no invented clinical rules. The internal-evaluation pack
-contains two clinician-approved rules: warfarin-amiodarone is restricted to six
-combinations of five exact reviewed PMBJP oral-tablet assertions, and
-warfarin-fluconazole is restricted to 12 combinations of seven exact reviewed
-PMBJP oral-tablet assertions. Neither is loaded by `production-open`.
+`unknown` and contains no invented clinical rules. Private review packs,
+identity mappings, evidence captures, and operational controls are not loaded
+by `production-open` and are never included in the public data package.
 
 Every run requires an explicit release profile. `production-open` accepts only
 sources whose licences and storage zones are approved for redistribution.
-`internal-evaluation` may read the existing `dist/latest` artifact, which
-contains restricted Jan Aushadhi and Tata 1mg provenance and must not be
-redistributed. Ambiguous products and lossy legacy ingredient names are
-reported as unresolved instead of being auto-selected or silently mapped.
+Other profiles may read private data and must not be redistributed. Ambiguous
+products and lossy legacy ingredient names are reported as unresolved instead
+of being auto-selected or silently mapped.
 Observed ingredient strings require a human-reviewed typed RxNorm/UNII
 mapping, and a runtime subject requires a separately reviewed concrete product
 route and formulation. Brand and pack text never infer either.
@@ -93,6 +85,11 @@ were not performed. `clinical_interaction_status`, `outcome_code`,
 `checks_performed`, and `capability_limitations` make those states explicit.
 Review candidates always expose `severity: "unknown"` with null mechanism and
 management until a clinician-reviewed promotion authorizes them.
+
+The root package manifest uses an empty npm `files` allowlist. This excludes all
+source code, datasets, review material, runtime state, credentials, logs, and
+archives by construction. It does not make private runtime outputs
+redistributable.
 
 Structured disambiguation is accepted as JSON, for example:
 
@@ -125,7 +122,8 @@ isoniazid + pyrazinamide + ethambutol).
 | cdsco-fdc | validation | internal/restricted until reuse permission is cleared |
 | onemg-live | gap-fill | private/internal only; non-redistributable |
 
-Current artifact: **255,894 drugs, 12,148 unique compositions** (`dist/latest/`).
+Artifact counts are runtime state and are not hard-coded here. `npm run stats`
+reads the currently indexed immutable cohort and reports its bound totals.
 
 The gap-filler is two-stage: `--discover` builds a brand→URL slug index from the A–Z
 browse pages (both server-rendering variants handled: anchors + JSON-LD ItemList);

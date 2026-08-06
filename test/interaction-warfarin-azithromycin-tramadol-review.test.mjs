@@ -39,6 +39,9 @@ const promotions = readJson(
 const internalPack = readJson(
   'data-static/interaction-rules.internal-evaluation.json',
 );
+const technicalHoldPack = readJson(
+  'data-static/interaction-promotion-holds.runtime.internal-evaluation.json',
+);
 const productionPack = readJson('data-static/interaction-rules.json');
 const sectionLines = fs.readFileSync(
   path.join(
@@ -465,19 +468,10 @@ test('approved candidates map and promote only their exact internal-evaluation s
       ruleId,
     );
 
-    const runtimeRule = internalPack.rules.find((rule) => rule.rule_id === ruleId);
-    assert.ok(runtimeRule, ruleId);
-    assert.equal(runtimeRule.severity, expected.severity, ruleId);
-    assert.equal(runtimeRule.dispense_action, 'confirm_and_monitor', ruleId);
-    assert.equal(runtimeRule.product_pairs.length, expected.pairs, ruleId);
-    assert.deepEqual(runtimeRule.product_pairs, packetRule.scope.product_pairs, ruleId);
-    assert.equal(runtimeRule.review.reviewer_id, 'clinician:subas', ruleId);
-    assert.match(runtimeRule.management, /prescriber or anticoagulation service/iu);
-    assert.match(runtimeRule.management, /PT\/INR monitoring/iu);
-    assert.match(runtimeRule.management, /bleeding or bruising/iu);
-    assert.doesNotMatch(
-      JSON.stringify(runtimeRule),
-      /Child-Pugh|Indian regulatory-label claim/iu,
+    assert.equal(
+      internalPack.rules.some((rule) => rule.rule_id === ruleId),
+      false,
+      `${ruleId} must remain technically held after live provenance drift`,
     );
   }
   assert.equal(productionPack.rules.length, 0);
@@ -528,7 +522,7 @@ const runtimeProducts = [
   },
 }));
 
-test('all 12 approved combinations fire and excluded presentations stay outside scope', () => {
+test('all 12 exact held combinations require manual review without clinical details', () => {
   assert.equal(validateRulePack(internalPack), true);
   assert.equal(validateRulePack(productionPack), true);
   const mapped = mapResolvedProducts({
@@ -545,32 +539,41 @@ test('all 12 approved combinations fire and excluded presentations stay outside 
     const interacting = mapped.filter((record) => (
       record.product.ingredients[0].runtime_subject.drug === expected.drug
     ));
-    const observed = [];
+    let checked = 0;
     for (const first of interacting) {
       for (const second of warfarin) {
         const result = checkResolvedProducts({
           resolvedInputs: [first, second],
           rulePack: internalPack,
+          technicalHoldPack,
         });
-        assert.equal(result.reviewed_findings.length, 1, ruleId);
-        assert.equal(result.reviewed_findings[0].rule_id, ruleId);
-        assert.equal(
-          result.reviewed_findings[0].dispense_action,
-          'confirm_and_monitor',
+        assert.deepEqual(result.reviewed_findings, [], ruleId);
+        assert.deepEqual(result.review_candidates, [], ruleId);
+        assert.equal(result.clinical_interaction_status, 'not_evaluated', ruleId);
+        assert.equal(result.outcome_code, 'manual_review_required', ruleId);
+        const held = result.not_evaluated.filter(
+          (entry) => entry.code === 'PROMOTION_HELD_LIVE_PROVENANCE_DRIFT',
         );
+        assert.equal(held.length, 1, ruleId);
+        assert.equal(held[0].rule_id, ruleId);
+        for (const forbidden of ['severity', 'dispense_action', 'mechanism', 'management', 'evidence']) {
+          assert.equal(Object.hasOwn(held[0], forbidden), false, `${ruleId}.${forbidden}`);
+        }
         assert.equal(result.unresolved_inputs.length, 0);
-        observed.push(result.checked_pairs[0].product_pairs[0]);
+        assert.equal(result.checked_pairs.length, 1);
+        checked += 1;
 
         const reversed = checkResolvedProducts({
           resolvedInputs: [second, first],
           rulePack: internalPack,
+          technicalHoldPack,
         });
         assert.deepEqual(reversed.checked_pairs, result.checked_pairs);
         assert.deepEqual(reversed.reviewed_findings, result.reviewed_findings);
+        assert.deepEqual(reversed.not_evaluated, result.not_evaluated);
       }
     }
-    const runtimeRule = internalPack.rules.find((rule) => rule.rule_id === ruleId);
-    assert.deepEqual(observed.sort(), runtimeRule.product_pairs);
+    assert.equal(checked, expected.pairs, ruleId);
   }
 
   for (const drug of ['azithromycin', 'tramadol']) {
@@ -582,8 +585,13 @@ test('all 12 approved combinations fire and excluded presentations stay outside 
     const result = checkResolvedProducts({
       resolvedInputs: [unapproved, warfarin[0]],
       rulePack: internalPack,
+      technicalHoldPack,
     });
     assert.deepEqual(result.reviewed_findings, [], drug);
+    assert.equal(result.outcome_code, 'no_reviewed_finding', drug);
+    assert.ok(!result.not_evaluated.some(
+      (entry) => entry.code === 'PROMOTION_HELD_LIVE_PROVENANCE_DRIFT',
+    ), drug);
   }
 
   const forbiddenSourceIds = new Set(['26', '27', '47', '48', '510', '1521', '1747', '2649']);
@@ -601,6 +609,7 @@ test('all 12 approved combinations fire and excluded presentations stay outside 
   const productionAttempt = checkResolvedProducts({
     resolvedInputs: [mappedProduction[0], mappedProduction[3]],
     rulePack: internalPack,
+    technicalHoldPack,
   });
   assert.deepEqual(productionAttempt.checked_pairs, []);
   assert.deepEqual(productionAttempt.reviewed_findings, []);

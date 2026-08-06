@@ -13,8 +13,9 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 import {
-  compileInteractionRuntimePack,
+  compileInteractionRuntimeArtifacts,
   serializeInteractionRuntimePack,
+  serializeInteractionTechnicalHoldPack,
 } from '../lib/interaction-promotion.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -24,6 +25,12 @@ const PATHS = {
     'data-static',
     'interaction-promotions.internal-evaluation.json',
   ),
+  promotionHolds: path.join(
+    ROOT,
+    'data-static',
+    'interaction-promotion-holds.internal-evaluation.json',
+  ),
+  sourcePolicy: path.join(ROOT, 'data-static', 'interaction-sources.json'),
   draft: path.join(
     ROOT,
     'docs',
@@ -46,6 +53,11 @@ const PATHS = {
     'data-static',
     'interaction-rules.internal-evaluation.json',
   ),
+  technicalHoldsOutput: path.join(
+    ROOT,
+    'data-static',
+    'interaction-promotion-holds.runtime.internal-evaluation.json',
+  ),
 };
 
 function readJson(file) {
@@ -59,10 +71,12 @@ function deepFreeze(value, seen = new Set()) {
   return Object.freeze(value);
 }
 
-export function buildCommittedRuntimePack(pmbjpSource = defaultPmbjpSource(ROOT)) {
+export function buildCommittedRuntimeArtifacts(pmbjpSource = defaultPmbjpSource(ROOT)) {
   const { manifest, report } = assertCombinationEvidenceVerified(ROOT, pmbjpSource);
-  return compileInteractionRuntimePack({
+  return compileInteractionRuntimeArtifacts({
     promotionManifest: readJson(PATHS.promotion),
+    promotionHoldManifest: readJson(PATHS.promotionHolds),
+    sourcePolicyBytes: fs.readFileSync(PATHS.sourcePolicy),
     draftPackBytes: fs.readFileSync(PATHS.draft),
     attestation: fs.readFileSync(PATHS.attestation, 'utf8'),
     memberSetsBytes: fs.readFileSync(PATHS.memberSets),
@@ -71,6 +85,10 @@ export function buildCommittedRuntimePack(pmbjpSource = defaultPmbjpSource(ROOT)
     combinationManifest: manifest,
     combinationEvidenceReport: report,
   });
+}
+
+export function buildCommittedRuntimePack(pmbjpSource = defaultPmbjpSource(ROOT)) {
+  return buildCommittedRuntimeArtifacts(pmbjpSource).rulePack;
 }
 
 function replaceAtomically(targetPath, text) {
@@ -169,18 +187,33 @@ function main() {
   const tableArg = args.find((arg) => arg.startsWith('--pmbjp-table='));
   if (pdfArg) source.pdfPath = path.resolve(ROOT, pdfArg.slice('--pmbjp-list='.length));
   if (tableArg) source.tableTextPath = path.resolve(ROOT, tableArg.slice('--pmbjp-table='.length));
-  const serialized = serializeInteractionRuntimePack(buildCommittedRuntimePack(source));
+  const artifacts = buildCommittedRuntimeArtifacts(source);
+  const serialized = serializeInteractionRuntimePack(artifacts.rulePack);
+  const serializedTechnicalHolds = serializeInteractionTechnicalHoldPack(
+    artifacts.technicalHoldPack,
+  );
   if (args.includes('--check')) {
     if (!fs.existsSync(PATHS.output) || fs.readFileSync(PATHS.output, 'utf8') !== serialized) {
       throw new Error(
         'checked-in internal runtime pack is stale; run npm run interactions:promote',
       );
     }
+    if (!fs.existsSync(PATHS.technicalHoldsOutput)
+        || fs.readFileSync(PATHS.technicalHoldsOutput, 'utf8')
+          !== serializedTechnicalHolds) {
+      throw new Error(
+        'checked-in internal runtime technical holds are stale; '
+          + 'run npm run interactions:promote',
+      );
+    }
     process.stdout.write(`Verified ${PATHS.output}\n`);
+    process.stdout.write(`Verified ${PATHS.technicalHoldsOutput}\n`);
     return;
   }
+  replaceAtomically(PATHS.technicalHoldsOutput, serializedTechnicalHolds);
   replaceAtomically(PATHS.output, serialized);
   process.stdout.write(`Wrote ${PATHS.output}\n`);
+  process.stdout.write(`Wrote ${PATHS.technicalHoldsOutput}\n`);
 }
 
 if (process.argv[1]
