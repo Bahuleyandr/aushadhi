@@ -116,11 +116,20 @@ isoniazid + pyrazinamide + ethambutol).
 
 | source | rows | notes |
 |---|---|---|
-| github-jr | 253,973 | MIT dataset; primary bulk |
+| github-jr | 253,973 | MIT dataset; primary bulk. MIT covers the uploader's compilation only and does **not** clear underlying (likely scraped) rights — provenance risk. See [licensing report](docs/LICENSING_REPORT.md) |
 | janaushadhi | 2,111 | official list; internal/restricted until reuse permission is cleared |
 | kaggle-2025 | optional | disabled for interaction artifacts while its dataset licence is unknown |
 | cdsco-fdc | validation | internal/restricted until reuse permission is cleared |
 | onemg-live | gap-fill | private/internal only; non-redistributable |
+| pharmeasy | gap-fill | private/internal only; non-redistributable — site ToS bars scraping + reproduction |
+| netmeds | gap-fill | private/internal only; non-redistributable — site ToS bars scraping + reproduction |
+| apollo | gap-fill | private/internal only; non-redistributable — site ToS bars reproduction (scraping clause unverified) |
+| nppa | 732 | ceiling prices; **cleared as Official Gazette matter** under Copyright Act s.52(1)(q)(i), attribution to NPPA recommended (manifest flag kept fail-safe pending an open-government licence token) |
+
+See [`docs/LICENSING_REPORT.md`](docs/LICENSING_REPORT.md) for the full per-source
+licensing verdicts, the legal backdrop, and recommended actions, and
+[`docs/PERMISSION_REQUEST_DRAFTS.md`](docs/PERMISSION_REQUEST_DRAFTS.md) for the
+permission-request drafts.
 
 Artifact counts are runtime state and are not hard-coded here. `npm run stats`
 reads the currently indexed immutable cohort and reports its bound totals.
