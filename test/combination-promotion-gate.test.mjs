@@ -27,6 +27,19 @@ const FIXTURE = readJson(
   'data-static/combination-identity-overrides.json',
 );
 
+// The committed gate hashes the operator-provisioned PMBJP source files in the
+// gitignored restricted zone; without them the authenticity chain cannot be
+// exercised, so dependent tests skip with an explicit reason (repo convention
+// for operator-provisioned material, e.g. AUSHADHI_OPENFDA_PAYLOAD_DIR).
+const PMBJP_SOURCE_DIR = path.join(
+  ROOT, 'data', 'interaction', 'internal-evaluation', 'pmbjp-product-list',
+);
+const PMBJP_SOURCE_SKIP = ['pmbjp-product-list.pdf', 'pmbjp-product-list.table.txt']
+  .every((name) => fs.existsSync(path.join(PMBJP_SOURCE_DIR, name)))
+  ? false
+  : 'operator-provisioned PMBJP restricted source files are absent '
+    + '(data/interaction/internal-evaluation/pmbjp-product-list/)';
+
 function scratchRoot(manifest, bundles = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aushadhi-gate-'));
   fs.mkdirSync(path.join(dir, 'data-static', 'combination-rxnorm-evidence'), { recursive: true });
@@ -46,7 +59,7 @@ function scratchRoot(manifest, bundles = {}) {
   return dir;
 }
 
-test('the committed manifest returns an authentic report bound to its frozen manifest', () => {
+test('the committed manifest returns an authentic report bound to its frozen manifest', { skip: PMBJP_SOURCE_SKIP }, () => {
   const result = assertCombinationEvidenceVerified(ROOT);
   assert.equal(
     result.report.combinations_checked,
@@ -62,7 +75,7 @@ test('the committed manifest returns an authentic report bound to its frozen man
   );
 });
 
-test('the committed runtime build consumes the verified manifest handoff', () => {
+test('the committed runtime build consumes the verified manifest handoff', { skip: PMBJP_SOURCE_SKIP }, () => {
   const pack = buildCommittedRuntimePack();
   assert.equal(pack.rules.length, 6);
   assert.equal(pack.profile, 'internal-evaluation');
