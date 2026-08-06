@@ -110,6 +110,11 @@ export function parseApolloProduct(html, { expectedPath = null } = {}) {
     composition_status: ingredients.length ? 'complete' : 'missing',
     substitutes_raw: [],
     is_discontinued: null,
+    // drugSchema above hard-requires a schema.org `Drug` block, so reaching
+    // this return means the page itself typed the product as a drug — a
+    // per-page category statement, not a crawl-scope inference. Listings
+    // without that block never produce a row at all.
+    type: 'allopathy',
   };
 }
 

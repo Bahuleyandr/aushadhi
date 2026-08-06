@@ -26,6 +26,7 @@ test('parseNetmedsProduct: brand + manufacturer + composition from __INITIAL_STA
   assert.deepEqual(r.ingredients.map((i) => i.molecule), ['metformin']);
   assert.equal(r.source, 'netmeds');
   assert.equal(r.source_id, '10230093');
+  assert.equal(r.type, 'allopathy'); // fixture carries schedule "H" + "Rx required" + CIMS
   assert.equal(parseNetmedsProduct(productHtml, '10230094', productPath), null);
   assert.equal(parseNetmedsProduct(productHtml, '10230093', `${productPath}-wrong`), null);
 });
@@ -36,6 +37,28 @@ test('parseNetmedsProduct: non-drug SKU -> null (device filter, no dosage digit)
   // herbal: generic is category text with no dosage -> skipped
   const herbal = '<html><script>window.__INITIAL_STATE__ = {"productDetailsPage":{"product":{"attributes":{"mstar-displaynamewops":"Septilin Syrup","genericnamewithdosage":"Ayurvedic Medicine","manufacturername":"Himalaya"}}}};</script></html>';
   assert.equal(parseNetmedsProduct(herbal), null);
+});
+
+test('parseNetmedsProduct: type only from explicit schedule/Rx/CIMS evidence', () => {
+  const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
+    productDetailsPage: { product: { attributes } },
+  })};</script></html>`;
+  const base = {
+    'mstar-displaynamewops': 'Aciformin 500', manufacturername: 'Acidus',
+    genericnamewithdosage: 'Metformin 500 mg',
+  };
+  // passing the composition digit-filter is NOT category evidence -> null
+  assert.equal(parseNetmedsProduct(page(base)).type, null);
+  assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'H' })).type, 'allopathy');
+  assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'H1' })).type, 'allopathy');
+  // E1 is the ayurvedic/unani poisons schedule -> not accepted
+  assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'E1' })).type, null);
+  assert.equal(parseNetmedsProduct(page({ ...base, 'mstar-rxrequired': 'Rx required' })).type, 'allopathy');
+  assert.equal(parseNetmedsProduct(page({ ...base, 'mstar-rxrequired': 'Not required' })).type, null);
+  assert.equal(
+    parseNetmedsProduct(page({ ...base, cimscategoryname: 'Endocrine & Metabolic System' })).type,
+    'allopathy',
+  );
 });
 
 test('parseSitemapLocs extracts <loc> entries', () => {

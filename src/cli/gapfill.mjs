@@ -331,7 +331,8 @@ export async function runTargeted({
       composition_raw: page.composition_raw,
       composition_status: page.composition_status,
       substitutes_raw: page.substitutes_raw,
-      type: null, // never fabricate a category the page did not state
+      // evidence-derived in parseDrugPage; null when the page stated no category
+      type: page.type ?? null,
     };
     const discoveries = page.substitutes_raw
       .filter((s) => !knownNorms.has(normBrandName(s.name)))
@@ -457,7 +458,7 @@ export async function runAuditSample({
       composition_raw: page.composition_raw,
       composition_status: page.composition_status,
       substitutes_raw: page.substitutes_raw,
-      type: null,
+      type: page.type ?? null,
     };
     await fsp.appendFile(outFile, JSON.stringify(row) + '\n');
     const discoveries = page.substitutes_raw

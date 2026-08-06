@@ -123,6 +123,13 @@ export function parseDrugPage(html) {
     }
   }
 
+  // Category evidence must come from the page itself, never from crawl scope:
+  // 1mg /drugs/ (allopathic catalog) product pages state their category via a
+  // schema.org Drug block and `"pageType":"drug"` in the embedded router
+  // state; the ayurveda/otc namespaces carry neither. Absent both markers the
+  // category is unknown and stays null (fail closed).
+  const isDrugPage = drug !== null || html.includes('"pageType":"drug"');
+
   return {
     brand_name: name,
     manufacturer,
@@ -135,6 +142,7 @@ export function parseDrugPage(html) {
     // a whole-page discontinued regex false-positives on embedded substitute
     // SKUs — leave unknown; merge falls back to the dataset sources' value
     is_discontinued: null,
+    type: isDrugPage ? 'allopathy' : null,
   };
 }
 

@@ -76,6 +76,17 @@ export function parseNetmedsProduct(html, expectedProductId = null, expectedProd
   if (!/\d/.test(generic)) return null;
   const ingredients = parseNetmedsComposition(generic);
   if (!ingredients.length) return null; // device / herbal / no composition -> skip
+  // Category evidence must be an explicit per-row field, never the crawl scope
+  // or the composition filter above: an Indian drug-schedule letter (G/H/H1/X —
+  // modern-medicine schedules only; E1, the ayurvedic/unani poisons schedule,
+  // is deliberately not accepted), an explicit "Rx required" flag, or a CIMS
+  // taxonomy entry (CIMS indexes allopathic medicines). Rows carrying none of
+  // these keep type null (fail closed).
+  const schedule = (a.schedule ?? '').toString().trim().toUpperCase();
+  const rxRequired = (a['mstar-rxrequired'] ?? '').toString().trim().toLowerCase();
+  const cimsCategory = (a.cimscategoryname ?? '').toString().trim();
+  const type = ['G', 'H', 'H1', 'X'].includes(schedule)
+    || rxRequired === 'rx required' || cimsCategory !== '' ? 'allopathy' : null;
   return {
     source: 'netmeds',
     ...(embeddedProductId === null ? {} : { source_id: embeddedProductId }),
@@ -87,6 +98,7 @@ export function parseNetmedsProduct(html, expectedProductId = null, expectedProd
     composition_status: 'complete',
     substitutes_raw: [],
     is_discontinued: null,
+    type,
   };
 }
 

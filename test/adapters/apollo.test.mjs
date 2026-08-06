@@ -53,6 +53,8 @@ test('parseApolloProduct: extracts brand, manufacturer, composition from the Dru
   assert.deepEqual(r.ingredients.map((i) => i.molecule), ['amoxycillin', 'clavulanic acid']);
   assert.equal(r.composition_status, 'complete');
   assert.equal(r.source, 'apollo');
+  // the mandatory Drug JSON-LD block is itself the category evidence
+  assert.equal(r.type, 'allopathy');
 });
 
 test('parseApolloProduct: binds the Drug JSON-LD identity to the requested product path', () => {

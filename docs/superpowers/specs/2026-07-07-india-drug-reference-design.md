@@ -80,7 +80,7 @@ Adapter contract: `fetch(ctx) -> raw files under data/raw/<source>/<date>/` and 
   "substitutes_raw": [               // only when a 1mg page was fetched
     {"name": "Moxikind-CV 625 Tablet", "manufacturer": "Mankind Pharma Ltd"}
   ],
-  "type": "allopathy",               // source's category; artifact keeps all, VH Health imports allopathy
+  "type": "allopathy",               // evidence-derived category (see below); artifact keeps all, VH Health imports allopathy
   "sources": [{"source": "github-jr", "source_id": "12345", "seen_at": "2026-07-07"}],
   "first_seen": "2026-07-07",
   "last_seen": "2026-07-07"
@@ -88,6 +88,32 @@ Adapter contract: `fetch(ctx) -> raw files under data/raw/<source>/<date>/` and 
 ```
 
 Molecule strings are lower-cased, whitespace-collapsed, and passed through a **small, test-pinned alias map** (spelling variants only, e.g. `amoxicillin→amoxycillin`; grows only via reviewed additions). No therapeutic-equivalence logic — that stays in VH Health.
+
+### `type` semantics
+
+`type` is never a blanket constant per crawler: it is set to `'allopathy'` only
+when a **named, fixture-pinned signal in the parsed page/payload** supports it,
+and stays `null` otherwise.
+
+- **`null` means "the source provided no category evidence for this row."** It
+  does **not** mean "not allopathy". Consumers must not assume a type for null
+  rows; filters like `type === 'allopathy'` deliberately exclude them (fail
+  closed), and any consumer that wants those rows must derive its own evidence.
+- Sources with a stated category pass it through (`github-jr`, `kaggle-2025`
+  column values) or are allopathic by definition of the list itself
+  (`janaushadhi` PMBJP generics, `nppa` NLEM ceiling prices).
+- E-pharmacy crawls derive `type` per source from page evidence:
+
+| Source | `type: 'allopathy'` iff | Rows left `null` |
+|---|---|---|
+| `onemg-live` | the product page carries a schema.org `Drug` JSON-LD block or `"pageType":"drug"` in its embedded router state | pages with neither marker |
+| `apollo` | always on a parsed row — the parser hard-requires the schema.org `Drug` block, which is itself the page's category statement | n/a (pages without the block never produce a row) |
+| `netmeds` | payload states drug schedule `G`/`H`/`H1`/`X` (never `E1`, the ayurvedic/unani poisons schedule), or `mstar-rxrequired` = "Rx required", or a CIMS taxonomy category | rows with none of those explicit fields — passing the composition digit-filter alone is not category evidence |
+| `pharmeasy` | product node states `isRxRequired: true` (Rx-only sale under the D&C Rules schedules) | OTC rows; `productType` (unlabelled enum) and `therapy` (unverified vocabulary) are not trusted |
+
+Because the signals live in the raw page cache (`data/raw/<source>/pages/`),
+already-crawled products can be re-derived offline with
+`node src/cli/backfill-type.mjs` — no re-crawl needed for cached pages.
 
 ## 6. 1mg gap-filler
 

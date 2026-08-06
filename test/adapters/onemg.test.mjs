@@ -29,6 +29,7 @@ test('parseDrugPage: Avastin (biologic, no substitutes)', () => {
   assert.equal(d.composition_status, 'complete');
   assert.deepEqual(d.substitutes_raw, []);
   assert.equal(d.form_raw, 'Injection');
+  assert.equal(d.type, 'allopathy'); // Drug JSON-LD + "pageType":"drug" evidence
 });
 
 test('parseDrugPage: Augmentin (combo + substitutes)', () => {
@@ -39,6 +40,18 @@ test('parseDrugPage: Augmentin (combo + substitutes)', () => {
   assert.equal(d.ingredients.find((i) => i.molecule === 'clavulanic acid').strength_value, 125);
   assert.ok(d.substitutes_raw.some((s) => s.name === 'Novaclav 625 Tablet'));
   assert.equal(d.form_raw, 'Tablet');
+  assert.equal(d.type, 'allopathy');
+});
+
+test('parseDrugPage: type requires per-page evidence, else stays null (fail closed)', () => {
+  // no Drug JSON-LD and no "pageType":"drug" router marker -> unknown category
+  const minimal = '<html><head><meta property="og:title" content="Some Product - 1mg"/></head></html>';
+  assert.equal(parseDrugPage(minimal).type, null);
+  // browse listing page carries neither per-drug marker
+  assert.equal(parseDrugPage(browse).type, null);
+  // router pageType alone still counts when the Drug JSON-LD block is absent
+  const noLd = augmentin.replaceAll('"@type":"Drug"', '"@type":"Thing"');
+  assert.equal(parseDrugPage(noLd).type, 'allopathy');
 });
 
 test('readOnemgNormalized: last fetch per identity wins across dates', () => {

@@ -94,6 +94,13 @@ export function parseEasyProduct(html, expectedProductId = null) {
     composition_status: ingredients.length ? 'complete' : 'missing',
     substitutes_raw: [],
     is_discontinued: null,
+    // isRxRequired === true is the one product-node field whose meaning is
+    // certain: prescription-only sale under the Drugs & Cosmetics Rules
+    // schedules, a modern-medicine classification. productType is an
+    // unlabelled numeric enum and the therapy vocabulary is unverified, so
+    // neither is trusted as category evidence; rows without the Rx flag
+    // (including OTC allopathic products) keep type null (fail closed).
+    type: p.isRxRequired === true ? 'allopathy' : null,
   };
 }
 

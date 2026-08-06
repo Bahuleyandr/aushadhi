@@ -232,7 +232,7 @@ export async function main(log = console.log) {
           source_id: String(productId),
           seen_at: c.date,
           price_inr: null,
-          type: null,
+          type: parsed.type ?? null,
         })}\n`);
       },
       persist: async () => await pf.persist(),
