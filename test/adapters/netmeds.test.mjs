@@ -91,6 +91,55 @@ test('parseNetmedsProduct: ASU schedule E/E1 is an unconditional veto, never ove
   })).type, null);
 });
 
+test('parseNetmedsProduct: unrecognized schedule spellings veto (fail closed)', () => {
+  const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
+    productDetailsPage: { product: { attributes } },
+  })};</script></html>`;
+  const base = {
+    'mstar-displaynamewops': 'Aciformin 500', manufacturername: 'Acidus',
+    genericnamewithdosage: 'Metformin 500 mg',
+  };
+  // any non-empty schedule outside the modern allowlist withholds the claim,
+  // even when Rx/CIMS signals are present — spelling variants of E1 must not
+  // slip past the veto and reach 'allopathy' through the OR
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: 'Schedule E1', 'mstar-rxrequired': 'Rx required',
+  })).type, null);
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: 'E-1', cimscategoryname: 'Endocrine & Metabolic System',
+  })).type, null);
+  assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'E1.' })).type, null);
+  // empty schedule is NOT a veto — other branches stay available
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: '', 'mstar-rxrequired': 'Rx required',
+  })).type, 'allopathy');
+});
+
+test('parseNetmedsProduct: AYUSH-system CIMS category is a full veto', () => {
+  const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
+    productDetailsPage: { product: { attributes } },
+  })};</script></html>`;
+  const base = {
+    'mstar-displaynamewops': 'Ashwagandha 500', manufacturername: 'X',
+    genericnamewithdosage: 'Ashwagandha 500 mg',
+  };
+  for (const cims of ['Ayurvedic Medicine', 'Herbals', 'Homoeopathy', 'Unani', 'Siddha Preparation']) {
+    assert.equal(
+      parseNetmedsProduct(page({ ...base, cimscategoryname: cims })).type,
+      null,
+      `AYUSH CIMS value ${JSON.stringify(cims)} must not count as evidence`,
+    );
+  }
+  // an explicit AYUSH statement anywhere withholds the claim entirely — the
+  // Rx flag must not override it (same principle as the schedule veto)
+  assert.equal(parseNetmedsProduct(page({
+    ...base, cimscategoryname: 'Ayurvedic Medicine', 'mstar-rxrequired': 'Rx required',
+  })).type, null);
+  assert.equal(parseNetmedsProduct(page({
+    ...base, cimscategoryname: 'Herbal Supplement', schedule: 'H',
+  })).type, null);
+});
+
 test('parseNetmedsProduct: placeholder CIMS category values are not evidence', () => {
   const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
     productDetailsPage: { product: { attributes } },
@@ -99,8 +148,9 @@ test('parseNetmedsProduct: placeholder CIMS category values are not evidence', (
     'mstar-displaynamewops': 'Aciformin 500', manufacturername: 'Acidus',
     genericnamewithdosage: 'Metformin 500 mg',
   };
-  for (const placeholder of ['NA', 'N.A.', 'n/a', '-', '--', 'None', 'null', 'NIL',
-    'Misc', 'Miscellaneous', 'Others', 'General', 'Not Available', 'Not  Applicable', '123', '.']) {
+  for (const placeholder of ['NA', 'N.A.', 'n/a', 'n. a.', 'N . A .', '-', '--', 'None', 'null', 'NIL',
+    'Misc', 'Miscellaneous', 'Others', 'General', 'Not Available', 'Not  Applicable',
+    'Not-Available', '123', '.']) {
     assert.equal(
       parseNetmedsProduct(page({ ...base, cimscategoryname: placeholder })).type,
       null,
