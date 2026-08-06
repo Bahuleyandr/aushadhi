@@ -111,3 +111,15 @@ from JSON, renaming a held rule, or renaming the internal pack cannot reactivate
 either historical promotion. Until the full
 clearance path exists and is approved, exact held pairs must remain explicitly
 `not_evaluated` and must never be represented as safe or `no_interaction`.
+
+## Addendum — source-policy re-bind (licensing annotation)
+
+`data-static/interaction-sources.json` was later annotated with
+licensing metadata (pharmeasy/netmeds/apollo/nppa entries and
+janaushadhi/cdsco notes; see `docs/LICENSING_REPORT.md`). The hold
+manifest's `source_policy_sha256` was re-bound to the annotated
+manifest (`8a4fc02e2110deaded7f74f6f2c21090258e327717549083d29a22a6f559210b`)
+and `interaction-promotion-holds.runtime.internal-evaluation.json` was
+regenerated; only its `promotion_hold_manifest_sha256` changed. No hold
+was added, removed, or cleared, and the draft-pack, evidence-digest,
+runtime-hold-scope and rule-pack digests recorded above are unchanged.
