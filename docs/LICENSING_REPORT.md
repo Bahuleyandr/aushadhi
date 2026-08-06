@@ -51,6 +51,9 @@ The `aushadhi-data` release dated **2026-08-02** (`releases/2026-08-02/drugs.jso
 | `nppa` (ceiling prices) | 732 | **none** | No licence record; legally clearable (gazette) but unannotated |
 | `github-jr` | 253,973 | `MIT`, `redistributable: true` | Primary bulk source; MIT label does **not** clear the underlying scraped rights (see §6) |
 
+(Rows can carry multiple sources, so the per-source counts above — summing to 682,985 —
+exceed the 676,330 unique release rows; counts are per source tag, not disjoint.)
+
 So the release commingles **open** data (`github-jr`) with **restricted/proprietary**
 data (`onemg-live`), **explicitly not-cleared** government data (`janaushadhi`), and
 **four completely unannotated** sources (`pharmeasy`, `netmeds`, `apollo`, `nppa`). The
@@ -66,8 +69,11 @@ in the first place.
 **What this report does:**
 1. Assigns a researched verdict to every catalogue source and summarises the interaction
    layer (§3–§4).
-2. Corrects the annotations that were wrong or missing (`pharmeasy`, `netmeds`, `apollo`,
-   `nppa`) — see the companion commit.
+2. Documents the correct annotations for the sources that were wrong or missing
+   (`pharmeasy`, `netmeds`, `apollo`, `nppa`). The machine-manifest update itself is
+   **deferred**: `data-static/interaction-sources.json` is digest-bound by the promotion
+   hold file and must be changed through the promotion/re-attestation flow (see the
+   manifest-integrity-binding subsection in §7).
 3. Recommends prioritised actions to clear or contain each risk (§7).
 
 The **release-gate enforcement change itself is intentionally out of scope** of the
@@ -253,8 +259,9 @@ High risk on redistribution.
 
 **Verdict on the price data: cleared** — reproducible and redistributable under
 s.52(1)(q)(i). Reproduce accurately and acknowledge NPPA as source. **Was unannotated;
-now annotated** (see §7b and the companion commit) — note the manifest limitation
-discussed there.
+the manifest annotation is deferred** to the promotion/re-attestation flow (see §7b and
+the manifest-integrity-binding subsection in §7) — note the manifest limitation discussed
+there.
 
 ### 3.8 `kaggle-2025` — Kaggle apkaayush/india-medicines-and-drug-info-dataset (not shipped)
 
@@ -389,9 +396,10 @@ attribution to NPPA is recommended. **Manifest limitation:** the policy enum
 (`interaction-source-policy.mjs` `LICENCE_ID_CLASSES`) currently has **no token for
 "Indian Official Gazette / open-government reproducible matter."** Rather than mis-stamp
 Indian government data with a US (`US-PUBLIC-DOMAIN`), UK (`OGL-3.0`), or CC (`CC0-1.0`)
-token in a licensing record, the companion commit adds an `nppa` entry that records the
-gazette-clearance basis in a `notes`/`rights_scope` field while keeping the machine flag
-fail-safe. **Follow-up (deferred code change):** add an `INDIA-GAZETTE`-style
+token in a licensing record, the recommendation is to add an `nppa` entry that records
+the gazette-clearance basis in a `notes`/`rights_scope` field while keeping the machine
+flag fail-safe — deferred to the re-attestation flow (see the manifest-integrity-binding
+subsection below). **Follow-up (deferred code change):** add an `INDIA-GAZETTE`-style
 open-government licence id to the enum, then flip `nppa` to `redistributable: true` in the
 `production-open` profile with NPPA attribution.
 
@@ -414,6 +422,34 @@ the primary bulk source, resolving its provenance materially de-risks the whole 
 **f. Keep ATC usage within WHOCC terms.** Attribution to WHOCC, non-commercial, no
 full-index redistribution — restrict to per-row code annotation. Keep the dataset's own
 licence NC-compatible or partition the ATC codes.
+
+### Manifest integrity binding (discovered during review)
+
+`data-static/interaction-sources.json` is digest-bound:
+`data-static/interaction-promotion-holds.internal-evaluation.json` pins its SHA-256 in
+`source_policy_sha256`, and `src/lib/interaction-promotion.mjs` enforces the pin
+**fail-closed** — any byte change to the manifest without a re-bound hold breaks the
+promotion pipeline and its tests. Annotation changes to the manifest therefore must land
+via the promotion/re-attestation flow, together with:
+
+- **(a)** an updated catalogue-filter test fixture — `apollo` is currently used as the
+  canonical *unknown* source at `test/interaction-catalogue-filter.test.mjs:45`, so
+  making it a known source invalidates that fixture; and
+- **(b)** a deliberate decision on whether newly-known restricted sources should be
+  admitted to `internal-evaluation` artifacts: as unknown sources they were previously
+  fail-closed **excluded**, and a manifest entry would flip them to admitted there.
+  (`production-open` exclusion is independently triple-enforced either way.)
+
+**Deferred follow-up items (exact list):**
+
+1. Add an India-gazette open-government licence token to the
+   `LICENCE_ID_CLASSES` enum (§7b).
+2. Add manifest entries for `pharmeasy`, `netmeds`, `apollo`, and `nppa`, plus an `atc`
+   (WHO ATC/DDD) entry. The three e-pharmacy entries should record in `notes` that ToS
+   verification was via search-index excerpts pending live-page re-verification (§8).
+3. Re-bind the promotion hold (`source_policy_sha256`) through the attestation flow.
+4. Update the catalogue-filter test fixture (replace `apollo` as the canonical unknown
+   source).
 
 ---
 

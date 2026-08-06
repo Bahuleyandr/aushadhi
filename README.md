@@ -124,12 +124,17 @@ isoniazid + pyrazinamide + ethambutol).
 | pharmeasy | gap-fill | private/internal only; non-redistributable — site ToS bars scraping + reproduction |
 | netmeds | gap-fill | private/internal only; non-redistributable — site ToS bars scraping + reproduction |
 | apollo | gap-fill | private/internal only; non-redistributable — site ToS bars reproduction (scraping clause unverified) |
-| nppa | 732 | ceiling prices; **cleared as Official Gazette matter** under Copyright Act s.52(1)(q)(i), attribution to NPPA recommended (manifest flag kept fail-safe pending an open-government licence token) |
+| nppa | 732 | ceiling prices; **cleared as Official Gazette matter** under Copyright Act s.52(1)(q)(i), attribution to NPPA recommended |
 
-See [`docs/LICENSING_REPORT.md`](docs/LICENSING_REPORT.md) for the full per-source
-licensing verdicts, the legal backdrop, and recommended actions, and
-[`docs/PERMISSION_REQUEST_DRAFTS.md`](docs/PERMISSION_REQUEST_DRAFTS.md) for the
-permission-request drafts.
+The licence verdicts above are documented in
+[`docs/LICENSING_REPORT.md`](docs/LICENSING_REPORT.md) (full per-source
+verdicts, legal backdrop, recommended actions);
+[`docs/PERMISSION_REQUEST_DRAFTS.md`](docs/PERMISSION_REQUEST_DRAFTS.md) holds
+the permission-request drafts. The machine manifest
+(`data-static/interaction-sources.json`) does not yet record the
+pharmeasy/netmeds/apollo/nppa entries — that update is deferred: the manifest is
+digest-bound by the promotion hold file and must be changed via the
+promotion/re-attestation flow (see the report's recommended actions).
 
 Artifact counts are runtime state and are not hard-coded here. `npm run stats`
 reads the currently indexed immutable cohort and reports its bound totals.

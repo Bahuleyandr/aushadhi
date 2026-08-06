@@ -1,5 +1,9 @@
 # Permission-request drafts
 
+[**Pre-send note:** the letters below describe the project as non-commercial and state
+that the data is not sold — confirm that characterization holds for all current and
+planned downstream uses before sending.]
+
 **Status: DRAFTS ONLY — nothing here has been sent.** Fill the `[YOUR NAME]` /
 `[…]` placeholders, have them reviewed, and confirm the current recipient address on each
 organisation's official contact page before sending. These accompany
