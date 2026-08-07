@@ -43,6 +43,9 @@ const DISPENSE_ACTIONS = new Set([
   'confirm_and_monitor',
   'withhold_and_clarify',
 ]);
+// Mirrors the draft-side enum (interaction-engine.mjs / interaction-draft-validation.mjs).
+// Review candidates are separately pinned to severity 'unknown'.
+const SEVERITIES = new Set(['minor', 'moderate', 'major', 'contraindicated']);
 const SHA256 = /^[0-9a-f]{64}$/u;
 const COMMITTED_INTERNAL_PACK_ID = 'aushadhi-internal-interactions';
 const INTERNAL_CLINICIAN_SOURCE_ID = 'aushadhi-open-clinician-rules';
@@ -518,6 +521,9 @@ function validateRule(value, index, schemaVersion) {
   assertStringArray(value.review.source_versions, `${label}.review.source_versions`);
 
   if (value.review.status === 'clinician_reviewed') {
+    if (!SEVERITIES.has(value.severity)) {
+      throw new TypeError(`${label}.severity is invalid`);
+    }
     validateProductPairs(value.product_pairs, `${label}.product_pairs`);
     if (!DISPENSE_ACTIONS.has(value.dispense_action)) {
       throw new TypeError(`${label}.dispense_action is required for clinician-reviewed rules`);

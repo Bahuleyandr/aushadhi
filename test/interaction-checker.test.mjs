@@ -428,6 +428,39 @@ test('only fully clinician-reviewed rules expose severity, mechanism, and manage
   assert.throws(() => validateRulePack(pack({ rules: [missingEvidence] })), /evidence/i);
 });
 
+test('the runtime validator enforces the four-tier severity enum on clinician-reviewed rules', () => {
+  for (const severity of ['minor', 'moderate', 'major', 'contraindicated']) {
+    assert.equal(validateRulePack(pack({ rules: [rule({ severity })] })), true, severity);
+  }
+
+  for (const severity of ['banana', 'unknown', 'severe', 'MAJOR', '']) {
+    assert.throws(
+      () => validateRulePack(pack({ rules: [rule({ severity })] })),
+      /severity/i,
+      `severity ${JSON.stringify(severity)} must be rejected`,
+    );
+  }
+
+  // Fail closed: an invalid severity must be a validation rejection at check
+  // time, never a passthrough onto a pharmacist-facing finding.
+  assert.throws(
+    () => checkResolvedProducts({
+      resolvedInputs: [
+        resolved('Brand A', product('product:1', ['ingredient:a'])),
+        resolved('Brand B', product('product:2', ['ingredient:b'])),
+      ],
+      rulePack: pack({ rules: [rule({ severity: 'banana' })] }),
+    }),
+    /severity is invalid/i,
+  );
+
+  // Review candidates keep their own pinned severity contract.
+  assert.equal(
+    validateRulePack(pack({ rules: [rule({ status: 'review_candidate' })] })),
+    true,
+  );
+});
+
 test('ambiguous products and unmapped ingredients are explicit and coverage uses the safety lattice', () => {
   const mappedProduct = product('product:1', ['ingredient:a']);
   const partlyMappedProduct = product('product:2', [
