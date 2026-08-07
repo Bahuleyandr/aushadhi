@@ -48,7 +48,7 @@ function makeFetcher(responses, over = {}) {
       requestOptions.push(options);
       const r = responses.shift() ?? { status: 500 };
       if (r.waitForAbort) {
-        return new Promise((resolve, reject) => {
+        return new Promise((_resolve, reject) => {
           options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true });
         });
       }

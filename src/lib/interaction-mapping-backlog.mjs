@@ -69,10 +69,6 @@ function stableJson(value) {
   return JSON.stringify(canonicalize(value));
 }
 
-function sha256Text(value) {
-  return createHash('sha256').update(value, 'utf8').digest('hex');
-}
-
 function requirementId(requirement) {
   return `sha256:${createHash('sha256')
     .update(RULE_MAPPING_REQUIREMENT_NAMESPACE, 'utf8')

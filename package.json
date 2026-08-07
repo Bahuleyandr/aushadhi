@@ -1,7 +1,7 @@
 {
   "name": "aushadhi",
   "version": "0.1.0",
-  "description": "India drug reference builder \u2014 brand \u2192 composition dataset pipeline (open data + official sources + polite 1mg gap-filler)",
+  "description": "India drug reference builder — brand → composition dataset pipeline (open data + official sources + polite 1mg gap-filler)",
   "type": "module",
   "private": true,
   "files": [],
@@ -11,6 +11,7 @@
   },
   "scripts": {
     "test": "node --test",
+    "lint": "eslint .",
     "package:production-open": "node src/cli/stage-production-open-package.mjs",
     "package:production-open:check": "node src/cli/stage-production-open-package.mjs --check",
     "fetch": "node src/cli/fetch.mjs",
@@ -41,5 +42,10 @@
     "csv-parse": "^7.0.1",
     "csv-stringify": "^6.8.1",
     "fflate": "^0.8.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "globals": "^17.9.0"
   }
 }

@@ -501,7 +501,6 @@ test('triple-whammy is a quarantined non-action review hypothesis', () => {
   const ramipril = { drug: 'ramipril', route: 'systemic' };
   const furosemide = { drug: 'furosemide', route: 'systemic' };
   const ibuprofen = { drug: 'ibuprofen', route: 'systemic' };
-  const diclofenac = { drug: 'diclofenac', route: 'systemic' };
   assert.equal(has([ramipril, furosemide], id), false);
   assert.equal(has([ramipril, ibuprofen], id), false);
   assert.equal(has([furosemide, ibuprofen], id), false);

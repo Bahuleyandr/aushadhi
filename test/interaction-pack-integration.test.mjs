@@ -158,7 +158,7 @@ test('rivaroxaban + ketoconazole escalates at confirmed Child-Pugh C to at least
 
 // ── Section A citation-record integrity (reviewer regression guards) ──
 test('DOAC clarithromycin-exception evidence is scoped to the named member, not the inhibitor class', () => {
-  for (const [rid, victim] of [['apixaban__strong_cyp3a4_pgp_inhibitor', 'apixaban'], ['rivaroxaban__strong_cyp3a4_pgp_inhibitor', 'rivaroxaban']]) {
+  for (const [rid] of [['apixaban__strong_cyp3a4_pgp_inhibitor', 'apixaban'], ['rivaroxaban__strong_cyp3a4_pgp_inhibitor', 'rivaroxaban']]) {
     const rule = A_RULES.find((r) => r.rule_id === rid);
     const ex = rule.evidence.find((e) => (e.source_id || '').includes('clarithromycin-exception'));
     assert.ok(ex, `${rid} missing clarithromycin-exception evidence`);

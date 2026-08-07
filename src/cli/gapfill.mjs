@@ -190,8 +190,9 @@ export async function runDiscover({
     const p = cur.nextPath
       ? canonicalBrowseNext(cur.nextPath, label, pageNum)
       : `/drugs-all-medicines?label=${label}`;
+    let html;
     try {
-      var html = await pf.get(p, { fresh: true });
+      html = await pf.get(p, { fresh: true });
     } catch (error) {
       log(`discover: ${p} failed (${error.message}); preserving label/page cursor`);
       throw error;

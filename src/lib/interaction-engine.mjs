@@ -768,7 +768,7 @@ function jurisdictionScope(rule) {
 // the engine must not assert an indication-specific action. Instead it returns a
 // clarify-indication posture (withhold_and_clarify + data_required: indication) so the
 // pharmacist obtains the indication rather than being shown one arbitrary pathway.
-function applyIndicationUnknown(rule, finding, patientContext) {
+function applyIndicationUnknown(rule, finding, _patientContext) {
   const ind = rule.applicability?.indication;
   if (Array.isArray(ind) && ind.length) {
     return {
