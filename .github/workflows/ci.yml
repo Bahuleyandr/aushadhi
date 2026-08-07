@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]  # PR commits run once via pull_request; main runs after merge
+  pull_request:
+
+# One live run per ref: a newer commit cancels the run it supersedes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # engines is >=22; 22.x is the floor, 26.x matches the dev machines.
+        node-version: [22.x, 26.x]
+    name: test (node ${{ matrix.node-version }})
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: interaction-warfarin-cotrimoxazole-vnext verifies
+          # committed review provenance with git merge-base/diff against
+          # pinned ancestor commits, which a shallow clone does not contain.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm test

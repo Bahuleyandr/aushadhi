@@ -21,6 +21,18 @@ const CLI = path.join(ROOT, 'src', 'cli', 'interactions.mjs');
 const RULES = path.join(ROOT, 'data-static', 'interaction-rules.json');
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 
+// The combination-mapping CLI path verifies the operator-provisioned PMBJP
+// source files (pinned by SHA-256) in the gitignored restricted zone; the
+// dependent test skips with an explicit reason when they are absent.
+const PMBJP_SOURCE_DIR = path.join(
+  ROOT, 'data', 'interaction', 'internal-evaluation', 'pmbjp-product-list',
+);
+const PMBJP_SOURCE_SKIP = ['pmbjp-product-list.pdf', 'pmbjp-product-list.table.txt']
+  .every((name) => fs.existsSync(path.join(PMBJP_SOURCE_DIR, name)))
+  ? false
+  : 'operator-provisioned PMBJP restricted source files are absent '
+    + '(data/interaction/internal-evaluation/pmbjp-product-list/)';
+
 function review(sourceId, identifier, sourceUrl) {
   return {
     status: 'reviewed',
@@ -435,7 +447,7 @@ test('CLI resolves exact products, expands FDCs and reports unknown open-rule co
   }
 });
 
-test('internal CLI verifies and maps both reviewed PMBJP combination presentations', () => {
+test('internal CLI verifies and maps both reviewed PMBJP combination presentations', { skip: PMBJP_SOURCE_SKIP }, () => {
   const dir = makeCombinationFixture();
   try {
     const result = runCli([

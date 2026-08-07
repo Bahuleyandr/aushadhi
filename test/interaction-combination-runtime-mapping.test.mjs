@@ -37,6 +37,15 @@ const PMBJP_SOURCE = {
     'data/interaction/internal-evaluation/pmbjp-product-list/pmbjp-product-list.table.txt',
   ),
 };
+
+// Tests that exercise the verified mapping chain need the real
+// operator-provisioned PMBJP source files (pinned by SHA-256) from the
+// gitignored restricted zone; they skip with an explicit reason when absent.
+const PMBJP_SOURCE_SKIP = fs.existsSync(PMBJP_SOURCE.pdfPath)
+  && fs.existsSync(PMBJP_SOURCE.tableTextPath)
+  ? false
+  : 'operator-provisioned PMBJP restricted source files are absent '
+    + '(data/interaction/internal-evaluation/pmbjp-product-list/)';
 const readJson = (relativePath) => JSON.parse(
   fs.readFileSync(path.join(ROOT, relativePath), 'utf8'),
 );
@@ -202,7 +211,7 @@ function reviewedRule(ruleId, pair, productIds, relationship = null) {
   };
 }
 
-test('a verified reviewed combination maps its exact product and both product-scoped components', () => {
+test('a verified reviewed combination maps its exact product and both product-scoped components', { skip: PMBJP_SOURCE_SKIP }, () => {
   const { manifest, compiled } = compileCommittedManifest();
   assert.equal(manifest.combinations.length, 1);
 
@@ -240,7 +249,7 @@ test('a verified reviewed combination maps its exact product and both product-sc
   }]).runtime_subjects, 3);
 });
 
-test('mapping rejects a stateful product accessor before it can transplant catalogue content', () => {
+test('mapping rejects a stateful product accessor before it can transplant catalogue content', { skip: PMBJP_SOURCE_SKIP }, () => {
   const { compiled } = compileCommittedManifest();
   const authenticProduct = resolved(PMBJP_89).product;
   const suspensionProduct = {
@@ -273,7 +282,7 @@ test('mapping rejects a stateful product accessor before it can transplant catal
   assert.equal(productReads, 0);
 });
 
-test('an authentic mapped combination supplements its component subjects in the checker', () => {
+test('an authentic mapped combination supplements its component subjects in the checker', { skip: PMBJP_SOURCE_SKIP }, () => {
   const { manifest, compiled } = compileCommittedManifest();
   const combinationProduct = map(PMBJP_89, compiled);
   const trimethoprimId = manifest.combinations[0].components.find(
@@ -674,7 +683,7 @@ test('explicit product form and strength basis must agree with the reviewed tabl
   }
 });
 
-test('editing PMBJP identifier text cannot relabel a reviewed tablet as drug code 88', () => {
+test('editing PMBJP identifier text cannot relabel a reviewed tablet as drug code 88', { skip: PMBJP_SOURCE_SKIP }, () => {
   const { manifest, bundles } = loadCommittedManifestAndBundles();
   const combination = manifest.combinations[0];
   combination.presentations[0].source_identity.code = '88';
@@ -721,7 +730,7 @@ test('custom serialization cannot hide manifest mutation from the evidence capab
   }, /plain data|changed since evidence verification|custom serialization/u);
 });
 
-test('an unreviewed product and its components remain unmapped', () => {
+test('an unreviewed product and its components remain unmapped', { skip: PMBJP_SOURCE_SKIP }, () => {
   const { compiled } = compileCommittedManifest();
   const product = map(UNREVIEWED, compiled);
 
@@ -755,7 +764,7 @@ test('mapping rejects raw and audit-only combination manifests', () => {
   );
 });
 
-test('production-open never turns an internal reviewed combination into mapped runtime subjects', () => {
+test('production-open never turns an internal reviewed combination into mapped runtime subjects', { skip: PMBJP_SOURCE_SKIP }, () => {
   const { compiled } = compileCommittedManifest();
   const product = map(PMBJP_89, compiled, 'production-open');
 
