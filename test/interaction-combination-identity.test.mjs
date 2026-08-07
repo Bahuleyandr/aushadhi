@@ -55,6 +55,15 @@ const PMBJP_SOURCE = {
     'data/interaction/internal-evaluation/pmbjp-product-list/pmbjp-product-list.table.txt',
   ),
 };
+
+// Tests that build a *verified* compiled manifest need the real
+// operator-provisioned PMBJP source files (pinned by SHA-256) from the
+// gitignored restricted zone; they skip with an explicit reason when absent.
+const PMBJP_SOURCE_SKIP = fs.existsSync(PMBJP_SOURCE.pdfPath)
+  && fs.existsSync(PMBJP_SOURCE.tableTextPath)
+  ? false
+  : 'operator-provisioned PMBJP restricted source files are absent '
+    + '(data/interaction/internal-evaluation/pmbjp-product-list/)';
 const readJson = (p) => JSON.parse(fs.readFileSync(path.join(ROOT, p), 'utf8'));
 const INTEGRATION_BUNDLE = readJson(
   'data-static/combination-rxnorm-evidence/integration-fixture/'
@@ -350,7 +359,7 @@ test('SCD denominator value and unit are both required or both absent', () => {
 
 // ── 1. release profile fails closed ──────────────────────────────────────────
 
-test('BLOCKER 1: the release profile must be explicit', () => {
+test('BLOCKER 1: the release profile must be explicit', { skip: PMBJP_SOURCE_SKIP }, () => {
   const manifest = compiled();
   for (const profile of [undefined, null, '', 'internal', 'PRODUCTION-OPEN']) {
     assert.throws(
@@ -365,14 +374,14 @@ test('BLOCKER 1: the release profile must be explicit', () => {
   );
 });
 
-test('BLOCKER 1: an internal-only combination never resolves for production-open', () => {
+test('BLOCKER 1: an internal-only combination never resolves for production-open', { skip: PMBJP_SOURCE_SKIP }, () => {
   assert.equal(resolve(PMBJP_89, manifestOf(cotrimoxazole()), 'production-open').status,
     'no_combination');
   assert.equal(resolve(PMBJP_89, manifestOf(cotrimoxazole()), 'internal-evaluation').status,
     'reviewed_override');
 });
 
-test('BLOCKER 1: an audit result is a DISTINCT type a runtime consumer cannot use', () => {
+test('BLOCKER 1: an audit result is a DISTINCT type a runtime consumer cannot use', { skip: PMBJP_SOURCE_SKIP }, () => {
   const result = auditCombinationIdentityAcrossProfiles({ product: PMBJP_89, manifest: compiled() });
   // not merely a flag on an otherwise runtime-shaped result: a different status,
   // no runtime_subject at all, and the match reported under a different key
@@ -531,7 +540,7 @@ test('BLOCKER 3: the combination term type must still be MIN, and components IN 
 
 // ── 4. drift on a reviewed product is loud ───────────────────────────────────
 
-test('BLOCKER 4: an ingredient change on a reviewed product yields stale, not a quiet miss', () => {
+test('BLOCKER 4: an ingredient change on a reviewed product yields stale, not a quiet miss', { skip: PMBJP_SOURCE_SKIP }, () => {
   // the drifted row no longer matches the active set AND its product_id changes,
   // so only the stable source identity can still recognise it as reviewed
   const drifted = {
@@ -567,7 +576,7 @@ test('BLOCKER 4: an incoherent reviewed assertion hash is rejected before compil
   ));
 });
 
-test('BLOCKER 4: an unusable ingredient identity is reported, not silently dropped', () => {
+test('BLOCKER 4: an unusable ingredient identity is reported, not silently dropped', { skip: PMBJP_SOURCE_SKIP }, () => {
   const broken = { ...PMBJP_89, ingredients: [{ strength_raw: '800mg', strength_value: 800 }] };
   const result = resolve(broken);
   assert.equal(result.status, 'invalid_product_assertion');
@@ -831,7 +840,7 @@ test('an audit fixture cannot produce a runtime-acceptable result', () => {
   assert.deepEqual([...COMPILED_KINDS].sort(), ['audit_fixture', 'verified_manifest']);
 });
 
-test('a non-empty manifest cannot compile as verified without evidence verification', () => {
+test('a non-empty manifest cannot compile as verified without evidence verification', { skip: PMBJP_SOURCE_SKIP }, () => {
   const source = manifestOf(cotrimoxazole());
   assert.throws(
     () => compileCombinationIdentityManifest(source, { kind: 'verified_manifest' }),
@@ -906,7 +915,7 @@ test('compilation snapshots the manifest once and rejects stateful accessors', (
   assert.equal(reads, 0);
 });
 
-test('HARDENING: no reachable value in the compiled form is a Map or a Set', () => {
+test('HARDENING: no reachable value in the compiled form is a Map or a Set', { skip: PMBJP_SOURCE_SKIP }, () => {
   const compiledManifest = compiled();
   const seen = new Set();
   const offenders = [];
@@ -931,7 +940,7 @@ test('HARDENING: no reachable value in the compiled form is a Map or a Set', () 
   assert.equal(compiledManifest.reviewed_products.get('constructor'), null);
 });
 
-test('HARDENING: the compiled form is DEEPLY immutable and detached from its source', () => {
+test('HARDENING: the compiled form is DEEPLY immutable and detached from its source', { skip: PMBJP_SOURCE_SKIP }, () => {
   const source = manifestOf(cotrimoxazole());
   const compiledManifest = compiled(source);
 
@@ -964,7 +973,7 @@ test('HARDENING: the compiled form is DEEPLY immutable and detached from its sou
   );
 });
 
-test('HARDENING: the manifest is compiled once, not revalidated per product', () => {
+test('HARDENING: the manifest is compiled once, not revalidated per product', { skip: PMBJP_SOURCE_SKIP }, () => {
   const compiledManifest = compiled();
   assert.equal(compiledManifest.compiled, true);
   assert.equal(Object.isFrozen(compiledManifest), true);
@@ -1064,7 +1073,7 @@ test('duplicate combination ids are rejected', () => {
 
 // ── resolution: positives and negatives ──────────────────────────────────────
 
-test('C2: both reviewed tablet strengths resolve', () => {
+test('C2: both reviewed tablet strengths resolve', { skip: PMBJP_SOURCE_SKIP }, () => {
   for (const row of [PMBJP_89, PMBJP_90]) {
     const result = resolve(row);
     assert.equal(result.status, 'reviewed_override');
@@ -1075,7 +1084,7 @@ test('C2: both reviewed tablet strengths resolve', () => {
   assert.equal(resolve(PMBJP_90).rxnorm_scd.rxcui, '142118');
 });
 
-test('multiple reviewed source identities fail closed independent of source order', () => {
+test('multiple reviewed source identities fail closed independent of source order', { skip: PMBJP_SOURCE_SKIP }, () => {
   for (const sources of [
     [
       { source: 'janaushadhi', source_id: '89', seen_at: '2026-07-07' },
@@ -1093,7 +1102,7 @@ test('multiple reviewed source identities fail closed independent of source orde
   }
 });
 
-test('no component of a combination ever inherits it', () => {
+test('no component of a combination ever inherits it', { skip: PMBJP_SOURCE_SKIP }, () => {
   for (const [label, row] of [
     ['trimethoprim alone', TRIMETHOPRIM_ONLY],
     ['sulfamethoxazole in a different combination', SMX_PLUS_PYRIMETHAMINE],
@@ -1107,7 +1116,7 @@ test('no component of a combination ever inherits it', () => {
   }
 });
 
-test('an unreviewed product matching the component set still fails closed', () => {
+test('an unreviewed product matching the component set still fails closed', { skip: PMBJP_SOURCE_SKIP }, () => {
   const unlisted = pmbjpRow(
     'Co-trimoxazole (Sulphamethoxazole 400mg and Trimethoprim 80mg) Tablets IP',
     [['co-trimoxazole sulphamethoxazole', '400mg', 400], ['trimethoprim', '80mg', 80]],
