@@ -42,6 +42,15 @@ const PMBJP_SOURCE = {
   ),
 };
 
+// Tests that exercise the verified promotion chain need the real
+// operator-provisioned PMBJP source files (pinned by SHA-256) from the
+// gitignored restricted zone; they skip with an explicit reason when absent.
+const PMBJP_SOURCE_SKIP = fs.existsSync(PMBJP_SOURCE.pdfPath)
+  && fs.existsSync(PMBJP_SOURCE.tableTextPath)
+  ? false
+  : 'operator-provisioned PMBJP restricted source files are absent '
+    + '(data/interaction/internal-evaluation/pmbjp-product-list/)';
+
 function readJson(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, relativePath), 'utf8'));
 }
@@ -223,7 +232,7 @@ function expectedProductPairs(source) {
   )).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
 }
 
-test('schema v2 binds an authenticated combination side to its exact reviewed products', () => {
+test('schema v2 binds an authenticated combination side to its exact reviewed products', { skip: PMBJP_SOURCE_SKIP }, () => {
   const source = combinationInputs();
   assert.equal(validatePromotionManifest(source.promotionManifest), true);
 
@@ -243,7 +252,7 @@ test('schema v2 binds an authenticated combination side to its exact reviewed pr
   assert.deepEqual(rule.product_pairs, expectedProductPairs(source));
 });
 
-test('schema v2 compiles clinician-approved D1 metadata with derived subject roles', () => {
+test('schema v2 compiles clinician-approved D1 metadata with derived subject roles', { skip: PMBJP_SOURCE_SKIP }, () => {
   const source = combinationInputs();
 
   assert.equal(validatePromotionManifest(source.promotionManifest), true);
@@ -281,7 +290,7 @@ test('schema v2 retains the exact legacy side shape and byte-identical held outp
   assert.equal(serializeInteractionRuntimePack(compiled), checkedIn);
 });
 
-test('schema versions 1 and 2 enforce their exact side variants', () => {
+test('schema versions 1 and 2 enforce their exact side variants', { skip: PMBJP_SOURCE_SKIP }, () => {
   const v1 = baseInputs().promotionManifest;
   v1.promotions[0].scope.sides[1] = {
     draft_role: 'perpetrator',
@@ -302,7 +311,7 @@ test('schema versions 1 and 2 enforce their exact side variants', () => {
   );
 });
 
-test('D1 promotion metadata is exact, deterministic and schema-version gated', () => {
+test('D1 promotion metadata is exact, deterministic and schema-version gated', { skip: PMBJP_SOURCE_SKIP }, () => {
   const supersession = {
     interaction_family_id: 'warfarin-anticoagulation-potentiation',
     subject_specificity: 'exact_member',
@@ -414,7 +423,7 @@ test('D1 promotion metadata is exact, deterministic and schema-version gated', (
   );
 });
 
-test('promotion accessors cannot change D1 authority after validation', () => {
+test('promotion accessors cannot change D1 authority after validation', { skip: PMBJP_SOURCE_SKIP }, () => {
   const source = combinationInputs();
   const approved = structuredClone(
     source.promotionManifest.promotions[0].supersession,
@@ -437,7 +446,7 @@ test('promotion accessors cannot change D1 authority after validation', () => {
   );
 });
 
-test('combination promotion rejects forged, wrong-object and mutation-stale evidence reports', () => {
+test('combination promotion rejects forged, wrong-object and mutation-stale evidence reports', { skip: PMBJP_SOURCE_SKIP }, () => {
   const forged = combinationInputs();
   forged.combinationEvidenceReport = {
     verified: true,
@@ -475,7 +484,7 @@ test('combination promotion rejects forged, wrong-object and mutation-stale evid
   );
 });
 
-test('combination promotion rejects unreviewed identity and profile widening', () => {
+test('combination promotion rejects unreviewed identity and profile widening', { skip: PMBJP_SOURCE_SKIP }, () => {
   const unreviewed = combinationInputs();
   unreviewed.combinationManifest.combinations[0].review.status = 'review_candidate';
   attachAuthenticReport(unreviewed);
@@ -493,7 +502,7 @@ test('combination promotion rejects unreviewed identity and profile widening', (
   );
 });
 
-test('combination promotion binds runtime drug, presentation scope and explicit products', () => {
+test('combination promotion binds runtime drug, presentation scope and explicit products', { skip: PMBJP_SOURCE_SKIP }, () => {
   const wrongDrug = combinationInputs();
   wrongDrug.combinationManifest.combinations[0].runtime_drug = 'sulfamethoxazole';
   const wrongDrugPmbjpSourceReport = verifyPmbjpCombinationEvidenceFiles(
@@ -535,7 +544,7 @@ test('combination promotion binds runtime drug, presentation scope and explicit 
   );
 });
 
-test('an unauthoritative later presentation cannot widen an existing approval', () => {
+test('an unauthoritative later presentation cannot widen an existing approval', { skip: PMBJP_SOURCE_SKIP }, () => {
   const source = combinationInputs();
   const combination = source.combinationManifest.combinations[0];
   const additional = structuredClone(combination.presentations[0]);
@@ -590,7 +599,7 @@ test('an unauthoritative later presentation cannot widen an existing approval', 
   );
 });
 
-test('combination promotion rejects a Cartesian product count mismatch', () => {
+test('combination promotion rejects a Cartesian product count mismatch', { skip: PMBJP_SOURCE_SKIP }, () => {
   const source = combinationInputs();
   source.promotionManifest.promotions[0].scope.expected_product_pair_count = 7;
   assert.throws(

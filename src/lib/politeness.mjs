@@ -260,19 +260,27 @@ function retryAfterMs(response, now) {
   return Number.isFinite(timestamp) ? Math.max(0, timestamp - now) : null;
 }
 
+// Uses an explicit ref'd timer instead of AbortSignal.timeout(): the latter's
+// internal timer is unref'd on some Node lines (observed on 22.x), so when the
+// in-flight request is the only pending work the event loop drains before the
+// deadline can fire and the returned promise never settles.
 async function withDeadline(timeoutMs, operation) {
-  const signal = AbortSignal.timeout(timeoutMs);
-  let removeAbortListener;
+  const controller = new AbortController();
+  let timer;
   const deadline = new Promise((resolve, reject) => {
-    const onAbort = () => reject(signal.reason);
-    removeAbortListener = () => signal.removeEventListener('abort', onAbort);
-    if (signal.aborted) onAbort();
-    else signal.addEventListener('abort', onAbort, { once: true });
+    timer = setTimeout(() => {
+      const reason = new DOMException(
+        `operation timed out after ${timeoutMs}ms`,
+        'TimeoutError',
+      );
+      controller.abort(reason);
+      reject(reason);
+    }, timeoutMs);
   });
   try {
-    return await Promise.race([operation(signal), deadline]);
+    return await Promise.race([operation(controller.signal), deadline]);
   } finally {
-    removeAbortListener?.();
+    clearTimeout(timer);
   }
 }
 

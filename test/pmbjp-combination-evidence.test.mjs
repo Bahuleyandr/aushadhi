@@ -30,7 +30,16 @@ const loadManifest = () => JSON.parse(fs.readFileSync(
   'utf8',
 ));
 
-test('PMBJP source verification returns a non-forgeable report bound to one manifest', () => {
+// The verifier pins the operator-provisioned PMBJP PDF and its pdftotext
+// -table extract by exact SHA-256; both live in the gitignored restricted
+// zone. Without them the authenticity chain cannot be exercised, so the
+// dependent tests skip with an explicit reason.
+const PMBJP_SOURCE_SKIP = fs.existsSync(SOURCE.pdfPath) && fs.existsSync(SOURCE.tableTextPath)
+  ? false
+  : 'operator-provisioned PMBJP restricted source files are absent '
+    + '(data/interaction/internal-evaluation/pmbjp-product-list/)';
+
+test('PMBJP source verification returns a non-forgeable report bound to one manifest', { skip: PMBJP_SOURCE_SKIP }, () => {
   const manifest = loadManifest();
   const report = verifyPmbjpCombinationEvidenceFiles(manifest, SOURCE);
 
@@ -52,7 +61,7 @@ test('PMBJP source verification returns a non-forgeable report bound to one mani
   );
 });
 
-test('PMBJP source authority expires when the reviewed manifest changes', () => {
+test('PMBJP source authority expires when the reviewed manifest changes', { skip: PMBJP_SOURCE_SKIP }, () => {
   const manifest = loadManifest();
   const report = verifyPmbjpCombinationEvidenceFiles(manifest, SOURCE);
   manifest.combinations[0].presentations[0].source_identity.code = '88';
@@ -63,7 +72,7 @@ test('PMBJP source authority expires when the reviewed manifest changes', () => 
   );
 });
 
-test('PMBJP source files are refused outside the restricted internal-evaluation root', () => {
+test('PMBJP source files are refused outside the restricted internal-evaluation root', { skip: PMBJP_SOURCE_SKIP }, () => {
   const manifest = loadManifest();
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'aushadhi-pmbjp-boundary-'));
   const outsidePdf = path.join(scratch, 'outside.pdf');
