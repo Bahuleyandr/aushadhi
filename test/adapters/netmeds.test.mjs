@@ -26,6 +26,7 @@ test('parseNetmedsProduct: brand + manufacturer + composition from __INITIAL_STA
   assert.deepEqual(r.ingredients.map((i) => i.molecule), ['metformin']);
   assert.equal(r.source, 'netmeds');
   assert.equal(r.source_id, '10230093');
+  assert.equal(r.type, 'allopathy'); // fixture carries schedule "H" + "Rx required" + CIMS
   assert.equal(parseNetmedsProduct(productHtml, '10230094', productPath), null);
   assert.equal(parseNetmedsProduct(productHtml, '10230093', `${productPath}-wrong`), null);
 });
@@ -36,6 +37,131 @@ test('parseNetmedsProduct: non-drug SKU -> null (device filter, no dosage digit)
   // herbal: generic is category text with no dosage -> skipped
   const herbal = '<html><script>window.__INITIAL_STATE__ = {"productDetailsPage":{"product":{"attributes":{"mstar-displaynamewops":"Septilin Syrup","genericnamewithdosage":"Ayurvedic Medicine","manufacturername":"Himalaya"}}}};</script></html>';
   assert.equal(parseNetmedsProduct(herbal), null);
+});
+
+test('parseNetmedsProduct: type only from an explicit recognized modern schedule', () => {
+  const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
+    productDetailsPage: { product: { attributes } },
+  })};</script></html>`;
+  const base = {
+    'mstar-displaynamewops': 'Aciformin 500', manufacturername: 'Acidus',
+    genericnamewithdosage: 'Metformin 500 mg',
+  };
+  // passing the composition digit-filter is NOT category evidence -> null
+  assert.equal(parseNetmedsProduct(page(base)).type, null);
+  assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'H' })).type, 'allopathy');
+  assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'H1' })).type, 'allopathy');
+  // E1 is the ayurvedic/unani poisons schedule -> not accepted
+  assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'E1' })).type, null);
+  assert.equal(parseNetmedsProduct(page({ ...base, 'mstar-rxrequired': 'Rx required' })).type, null);
+  assert.equal(parseNetmedsProduct(page({ ...base, 'mstar-rxrequired': 'Not required' })).type, null);
+  assert.equal(
+    parseNetmedsProduct(page({ ...base, cimscategoryname: 'Endocrine & Metabolic System' })).type,
+    null,
+  );
+});
+
+test('parseNetmedsProduct: ASU schedule E/E1 is an unconditional veto, never overridden', () => {
+  const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
+    productDetailsPage: { product: { attributes } },
+  })};</script></html>`;
+  const base = {
+    'mstar-displaynamewops': 'Kamini Vidrawan Ras', manufacturername: 'X',
+    // standardized-extract listing passes the digit filter
+    genericnamewithdosage: 'Ashwagandha 500 mg',
+  };
+  // Schedule E1 ASU preparations are exactly what e-pharmacies mark Rx-required
+  // — the Rx flag must NOT reach 'allopathy' through the OR
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: 'E1', 'mstar-rxrequired': 'Rx required',
+  })).type, null);
+  // nor may a CIMS category entry override the veto
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: 'E1', cimscategoryname: 'Endocrine & Metabolic System',
+  })).type, null);
+  // all signals at once still lose to the veto; legacy 'E' vetoes the same way
+  assert.equal(parseNetmedsProduct(page({
+    ...base,
+    schedule: 'E1',
+    'mstar-rxrequired': 'Rx required',
+    cimscategoryname: 'Endocrine & Metabolic System',
+  })).type, null);
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: 'E', 'mstar-rxrequired': 'Rx required',
+  })).type, null);
+});
+
+test('parseNetmedsProduct: unrecognized schedule spellings veto (fail closed)', () => {
+  const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
+    productDetailsPage: { product: { attributes } },
+  })};</script></html>`;
+  const base = {
+    'mstar-displaynamewops': 'Aciformin 500', manufacturername: 'Acidus',
+    genericnamewithdosage: 'Metformin 500 mg',
+  };
+  // any non-empty schedule outside the modern allowlist withholds the claim,
+  // even when Rx/CIMS signals are present — spelling variants of E1 must not
+  // slip past the veto and reach 'allopathy' through the OR
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: 'Schedule E1', 'mstar-rxrequired': 'Rx required',
+  })).type, null);
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: 'E-1', cimscategoryname: 'Endocrine & Metabolic System',
+  })).type, null);
+  assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'E1.' })).type, null);
+  // an empty schedule cannot be rescued by a prescription-sale flag
+  assert.equal(parseNetmedsProduct(page({
+    ...base, schedule: '', 'mstar-rxrequired': 'Rx required',
+  })).type, null);
+});
+
+test('parseNetmedsProduct: AYUSH-system CIMS category is a full veto', () => {
+  const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
+    productDetailsPage: { product: { attributes } },
+  })};</script></html>`;
+  const base = {
+    'mstar-displaynamewops': 'Ashwagandha 500', manufacturername: 'X',
+    genericnamewithdosage: 'Ashwagandha 500 mg',
+  };
+  for (const cims of ['Ayurvedic Medicine', 'Herbals', 'Homoeopathy', 'Unani', 'Siddha Preparation']) {
+    assert.equal(
+      parseNetmedsProduct(page({ ...base, cimscategoryname: cims })).type,
+      null,
+      `AYUSH CIMS value ${JSON.stringify(cims)} must not count as evidence`,
+    );
+  }
+  // an explicit AYUSH statement anywhere withholds the claim entirely — the
+  // Rx flag must not override it (same principle as the schedule veto)
+  assert.equal(parseNetmedsProduct(page({
+    ...base, cimscategoryname: 'Ayurvedic Medicine', 'mstar-rxrequired': 'Rx required',
+  })).type, null);
+  assert.equal(parseNetmedsProduct(page({
+    ...base, cimscategoryname: 'Herbal Supplement', schedule: 'H',
+  })).type, null);
+});
+
+test('parseNetmedsProduct: placeholder CIMS category values are not evidence', () => {
+  const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
+    productDetailsPage: { product: { attributes } },
+  })};</script></html>`;
+  const base = {
+    'mstar-displaynamewops': 'Aciformin 500', manufacturername: 'Acidus',
+    genericnamewithdosage: 'Metformin 500 mg',
+  };
+  for (const placeholder of ['NA', 'N.A.', 'n/a', 'n. a.', 'N . A .', '-', '--', 'None', 'null', 'NIL',
+    'Misc', 'Miscellaneous', 'Others', 'General', 'Not Available', 'Not  Applicable',
+    'Not-Available', '123', '.']) {
+    assert.equal(
+      parseNetmedsProduct(page({ ...base, cimscategoryname: placeholder })).type,
+      null,
+      `placeholder ${JSON.stringify(placeholder)} must not qualify as CIMS evidence`,
+    );
+  }
+  // even a plausible therapeutic-class phrase is not system-of-medicine evidence
+  assert.equal(
+    parseNetmedsProduct(page({ ...base, cimscategoryname: 'Cardiovascular System' })).type,
+    null,
+  );
 });
 
 test('parseSitemapLocs extracts <loc> entries', () => {

@@ -80,7 +80,7 @@ Adapter contract: `fetch(ctx) -> raw files under data/raw/<source>/<date>/` and 
   "substitutes_raw": [               // only when a 1mg page was fetched
     {"name": "Moxikind-CV 625 Tablet", "manufacturer": "Mankind Pharma Ltd"}
   ],
-  "type": "allopathy",               // source's category; artifact keeps all, VH Health imports allopathy
+  "type": "allopathy",               // evidence-derived category (see below); artifact keeps all, VH Health imports allopathy
   "sources": [{"source": "github-jr", "source_id": "12345", "seen_at": "2026-07-07"}],
   "first_seen": "2026-07-07",
   "last_seen": "2026-07-07"
@@ -88,6 +88,46 @@ Adapter contract: `fetch(ctx) -> raw files under data/raw/<source>/<date>/` and 
 ```
 
 Molecule strings are lower-cased, whitespace-collapsed, and passed through a **small, test-pinned alias map** (spelling variants only, e.g. `amoxicillin→amoxycillin`; grows only via reviewed additions). No therapeutic-equivalence logic — that stays in VH Health.
+
+### `type` semantics
+
+`type` is never a blanket constant per crawler: it is set to `'allopathy'` only
+when a **named, fixture-pinned signal in the parsed page/payload** supports it,
+and stays `null` otherwise.
+
+- **`null` means "the source provided no category evidence for this row."** It
+  does **not** mean "not allopathy". Consumers must not assume a type for null
+  rows; filters like `type === 'allopathy'` deliberately exclude them (fail
+  closed), and any consumer that wants those rows must derive its own evidence.
+- Sources with a stated category pass it through (`github-jr`, `kaggle-2025`
+  column values) or are allopathic by definition of the list itself
+  (`janaushadhi` PMBJP generics, `nppa` NLEM ceiling prices).
+- E-pharmacy crawls derive `type` per source from page evidence:
+
+| Source | `type: 'allopathy'` iff | Rows left `null` |
+|---|---|---|
+| `onemg-live` | `pageType: 'drug'` is read structurally from the parsed embedded app state (`window.__INITIAL_STATE__` → `drugPageReducer.dynamicData.pageType` — never a raw-HTML substring grep) | pages without that exact marker; a generic schema.org `Drug` block alone is insufficient |
+| `apollo` | no current field qualifies | every row; schema.org `Drug`, absence of AYUSH terms, and generic breadcrumb categories are not exclusive system-of-medicine evidence |
+| `netmeds` | the payload's exact schedule field states `G`, `H`, `H1`, or `X`, and no contradictory AYUSH-system CIMS value is present | absent, empty, unknown, or non-modern schedule values; Rx-only or CIMS-only rows; conflicting AYUSH CIMS rows |
+| `pharmeasy` | no current field qualifies | every row; `isRxRequired` is prescription-sale status, `productType` is an unlabelled enum, and `therapy` has an unverified vocabulary |
+
+Prescription status is never used as a system-of-medicine proxy. Schedule E1
+(ASU poisons) can also require supervision, so an Rx flag cannot distinguish
+modern medicine from AYUSH. Crawl namespace, absence of AYUSH wording, and a
+therapeutic category likewise cannot create a positive claim.
+
+Because the signals live in the raw page cache (`data/raw/<source>/pages/`),
+already-crawled products can be re-derived offline without a re-crawl. Running
+`node src/cli/backfill-type.mjs` is a write-free dry run. An explicit
+`--apply --generation <id>` writes an immutable review candidate under
+`data/raw/.type-backfill/<id>/<source>/`; that directory is outside the runtime
+normalized inputs and its manifest declares no promotion or deployment
+authority. A separate reviewed import is required before any candidate can
+affect a build.
+Provenance nuance: the cache holds the **latest** capture per request path, so
+a backfilled `type` may derive from a page fetched *after* the row's preserved
+`seen_at`; `seen_at` still describes the original observation of the row's
+other fields, not the capture the `type` patch was parsed from.
 
 ## 6. 1mg gap-filler
 

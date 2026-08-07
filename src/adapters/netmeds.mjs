@@ -28,6 +28,16 @@ function retainLatestSourceProduct(byProduct, row) {
 // "+"-joined for combos ("Amoxicillin 500 mg+Clavulanic Acid 125 mg").
 const PART_RE = /^(.+?)\s+([\d.]+)\s*(mg|mcg|g|ml|iu|kiu|%|units?)\b/i;
 
+// Only the exact modern-medicine schedules observed in the source are positive
+// classification evidence. Prescription-sale status is not exclusive: AYUSH
+// Schedule E1 products can also require supervision. A CIMS category is a
+// therapeutic classification, not a system-of-medicine assertion.
+const MODERN_SCHEDULES = new Set(['G', 'H', 'H1', 'X']);
+
+// An explicit contradictory AYUSH category withholds even a recognized schedule
+// so inconsistent source records fail closed for manual review.
+const CIMS_AYUSH_RE = /ayurved|homoeopath|homeopath|unani|siddha|herbal/i;
+
 export function parseNetmedsComposition(generic) {
   const parts = String(generic ?? '').split(/\s*\+\s*/).map((s) => s.trim()).filter(Boolean);
   const ingredients = [];
@@ -76,6 +86,12 @@ export function parseNetmedsProduct(html, expectedProductId = null, expectedProd
   if (!/\d/.test(generic)) return null;
   const ingredients = parseNetmedsComposition(generic);
   if (!ingredients.length) return null; // device / herbal / no composition -> skip
+  // Category evidence must be an exact per-row modern schedule, never crawl
+  // scope, prescription status, CIMS taxonomy, or the composition filter.
+  const schedule = (a.schedule ?? '').toString().trim().toUpperCase();
+  const cims = (a.cimscategoryname ?? '').toString();
+  const type = MODERN_SCHEDULES.has(schedule) && !CIMS_AYUSH_RE.test(cims)
+    ? 'allopathy' : null;
   return {
     source: 'netmeds',
     ...(embeddedProductId === null ? {} : { source_id: embeddedProductId }),
@@ -87,6 +103,7 @@ export function parseNetmedsProduct(html, expectedProductId = null, expectedProd
     composition_status: 'complete',
     substitutes_raw: [],
     is_discontinued: null,
+    type,
   };
 }
 

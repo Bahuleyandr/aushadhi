@@ -94,6 +94,10 @@ export function parseEasyProduct(html, expectedProductId = null) {
     composition_status: ingredients.length ? 'complete' : 'missing',
     substitutes_raw: [],
     is_discontinued: null,
+    // Prescription status is not an exclusive modern-medicine signal: AYUSH
+    // Schedule E1 products may also require supervision. The current payload
+    // exposes no independently verified system-of-medicine field.
+    type: null,
   };
 }
 

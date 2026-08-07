@@ -429,7 +429,7 @@ export async function runApolloIndex({
       seen_at: date,
       pack_label: parsed.pack_label ?? '',
       price_inr: null,
-      type: null,
+      type: parsed.type ?? null,
     })}\n`);
     productOutcomes.clear(requestPath);
     releaseQuarantine(state, 'product', requestPath);

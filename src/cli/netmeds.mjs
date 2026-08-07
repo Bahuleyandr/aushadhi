@@ -256,7 +256,7 @@ export async function main(log = console.log) {
           seen_at: c.date,
           pack_label: parsed.pack_label ?? '',
           price_inr: null,
-          type: null,
+          type: parsed.type ?? null,
         })}\n`);
       },
       persist: async () => await pf.persist(),

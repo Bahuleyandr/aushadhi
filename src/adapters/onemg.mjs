@@ -123,6 +123,18 @@ export function parseDrugPage(html) {
     }
   }
 
+  // Category evidence must come from the page itself, never from crawl scope:
+  // 1mg product pages state their category via `pageType: 'drug'` at a pinned path inside the
+  // parsed embedded app state (`window.__INITIAL_STATE__` →
+  // drugPageReducer.dynamicData.pageType); the ayurveda/otc namespaces carry
+  // neither. A generic schema.org Drug block is not sufficient. The marker is
+  // read structurally from the parsed state, never
+  // grepped from raw HTML — the same substring can appear in serialized
+  // cross-page references anywhere in the document. Absent that marker the
+  // category is unknown and stays null (fail closed).
+  const initialState = jsonAtMarker(html, 'window.__INITIAL_STATE__', '{')[0] ?? null;
+  const isDrugPage = initialState?.drugPageReducer?.dynamicData?.pageType === 'drug';
+
   return {
     brand_name: name,
     manufacturer,
@@ -135,6 +147,7 @@ export function parseDrugPage(html) {
     // a whole-page discontinued regex false-positives on embedded substitute
     // SKUs — leave unknown; merge falls back to the dataset sources' value
     is_discontinued: null,
+    type: isDrugPage ? 'allopathy' : null,
   };
 }
 

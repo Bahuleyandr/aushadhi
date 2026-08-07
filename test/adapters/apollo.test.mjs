@@ -53,6 +53,36 @@ test('parseApolloProduct: extracts brand, manufacturer, composition from the Dru
   assert.deepEqual(r.ingredients.map((i) => i.molecule), ['amoxycillin', 'clavulanic acid']);
   assert.equal(r.composition_status, 'complete');
   assert.equal(r.source, 'apollo');
+  // schema.org Drug is not specific to a system of medicine
+  assert.equal(r.type, null);
+});
+
+test('parseApolloProduct: generic Drug and category labels never infer allopathy', () => {
+  const drugBlock = {
+    '@type': 'Drug',
+    name: 'Liv.52 Tablet',
+    nonProprietaryName: 'HIMSRA-500MG',
+  };
+  const breadcrumb = (categoryName) => ({
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.apollopharmacy.in/' },
+      { '@type': 'ListItem', position: 2, name: categoryName, item: 'https://www.apollopharmacy.in/shop-by-category/x' },
+    ],
+  });
+  const pageFor = (categoryName) => `<script type="application/ld+json">${JSON.stringify(drugBlock)}</script>`
+    + `<script type="application/ld+json">${JSON.stringify(breadcrumb(categoryName))}</script>`;
+  for (const category of ['LIVER CARE', 'Antibiotics', 'Ayurvedic Products', 'Ayurveda', 'Homeopathy', 'Homoeopathic Remedies', 'Unani', 'Siddha']) {
+    const row = parseApolloProduct(pageFor(category));
+    assert.notEqual(row, null, `${category}: row is still emitted`);
+    assert.equal(row.type, null, `${category}: category is not exclusive evidence`);
+  }
+  const ayushDrug = `<script type="application/ld+json">${JSON.stringify({
+    ...drugBlock, description: 'An Ayurvedic proprietary medicine.',
+  })}</script>`;
+  assert.equal(parseApolloProduct(ayushDrug).type, null);
+  assert.match(medHtml, /Ayurvedic Products/);
+  assert.equal(parseApolloProduct(medHtml).type, null);
 });
 
 test('parseApolloProduct: binds the Drug JSON-LD identity to the requested product path', () => {

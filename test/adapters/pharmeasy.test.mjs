@@ -24,7 +24,14 @@ test('parseEasyProduct: brand + manufacturer + composition from __NEXT_DATA__', 
   assert.equal(r.composition_status, 'complete');
   assert.equal(r.source, 'pharmeasy');
   assert.equal(r.source_id, '108');
+  assert.equal(r.type, null); // prescription status is not a system-of-medicine claim
   assert.equal(parseEasyProduct(productHtml, '109'), null);
+});
+
+test('parseEasyProduct: Rx-required and OTC rows both stay unclassified', () => {
+  assert.equal(parseEasyProduct(productHtml, '108').type, null);
+  const otc = productHtml.replaceAll('"isRxRequired":true', '"isRxRequired":false');
+  assert.equal(parseEasyProduct(otc, '108').type, null);
 });
 
 test('parseSitemapLocs: extracts every <loc>', () => {

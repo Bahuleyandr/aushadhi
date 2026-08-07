@@ -56,16 +56,15 @@ export function parseApolloComposition(nonProprietaryName) {
   return ingredients;
 }
 
-function drugSchema($) {
-  let drug = null;
+function ldBlocks($) {
+  const blocks = [];
   $('script[type="application/ld+json"]').each((_, el) => {
-    if (drug) return;
     try {
       const j = JSON.parse($(el).text());
-      for (const b of Array.isArray(j) ? j : [j]) if (b && b['@type'] === 'Drug') { drug = b; break; }
+      blocks.push(...(Array.isArray(j) ? j : [j]));
     } catch { /* skip bad JSON */ }
   });
-  return drug;
+  return blocks;
 }
 
 export function apolloProductUrlMatches(value, expectedPath) {
@@ -93,7 +92,8 @@ function drugIdentityMatches(drug, expectedPath) {
 // Parse an Apollo /medicine/<slug> product page -> common row shape (source='apollo').
 export function parseApolloProduct(html, { expectedPath = null } = {}) {
   const $ = cheerio.load(html);
-  const drug = drugSchema($);
+  const blocks = ldBlocks($);
+  const drug = blocks.find((b) => b && b['@type'] === 'Drug') ?? null;
   if (!drug) return null;
   if (expectedPath !== null && !drugIdentityMatches(drug, expectedPath)) return null;
   const comp = typeof drug.nonProprietaryName === 'string' ? drug.nonProprietaryName : '';
@@ -110,6 +110,9 @@ export function parseApolloProduct(html, { expectedPath = null } = {}) {
     composition_status: ingredients.length ? 'complete' : 'missing',
     substitutes_raw: [],
     is_discontinued: null,
+    // schema.org Drug is shared by different systems of medicine. Apollo's
+    // current structured data has no verified, exclusive modern-medicine field.
+    type: null,
   };
 }
 
