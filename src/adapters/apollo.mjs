@@ -67,15 +67,6 @@ function ldBlocks($) {
   return blocks;
 }
 
-// Fail-safe negative signal: schema.org `Drug` is not allopathy-specific, and
-// a template catalog can stamp it on any product page — so if the page's OWN
-// structured data (any JSON-LD block: the Drug block, breadcrumb trail, FAQ)
-// names an AYUSH system, the allopathy claim is withheld and the row keeps
-// type null. Untrusted fields may only ever WITHHOLD a claim, never make one.
-// The scan is confined to parsed JSON-LD — the site-wide nav names "Ayurveda"
-// on every page, so a raw-HTML grep would false-positive universally.
-const AYUSH_TERM_RE = /ayurved|homoeopath|homeopath|unani|siddha/i;
-
 export function apolloProductUrlMatches(value, expectedPath) {
   if (typeof value !== 'string' || !APOLLO_PRODUCT_PATH.test(String(expectedPath))) return false;
   try {
@@ -119,12 +110,9 @@ export function parseApolloProduct(html, { expectedPath = null } = {}) {
     composition_status: ingredients.length ? 'complete' : 'missing',
     substitutes_raw: [],
     is_discontinued: null,
-    // Reaching this return means the page carried a schema.org `Drug` block —
-    // a per-page category statement, not a crawl-scope inference; listings
-    // without it never produce a row at all. But the claim is withheld when
-    // the page's own JSON-LD names an AYUSH system (see AYUSH_TERM_RE): a
-    // Drug-templated ayurvedic/homoeopathic proprietary keeps type null.
-    type: blocks.some((b) => AYUSH_TERM_RE.test(JSON.stringify(b))) ? null : 'allopathy',
+    // schema.org Drug is shared by different systems of medicine. Apollo's
+    // current structured data has no verified, exclusive modern-medicine field.
+    type: null,
   };
 }
 

@@ -39,7 +39,7 @@ test('parseNetmedsProduct: non-drug SKU -> null (device filter, no dosage digit)
   assert.equal(parseNetmedsProduct(herbal), null);
 });
 
-test('parseNetmedsProduct: type only from explicit schedule/Rx/CIMS evidence', () => {
+test('parseNetmedsProduct: type only from an explicit recognized modern schedule', () => {
   const page = (attributes) => `<html><script>window.__INITIAL_STATE__ = ${JSON.stringify({
     productDetailsPage: { product: { attributes } },
   })};</script></html>`;
@@ -53,11 +53,11 @@ test('parseNetmedsProduct: type only from explicit schedule/Rx/CIMS evidence', (
   assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'H1' })).type, 'allopathy');
   // E1 is the ayurvedic/unani poisons schedule -> not accepted
   assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'E1' })).type, null);
-  assert.equal(parseNetmedsProduct(page({ ...base, 'mstar-rxrequired': 'Rx required' })).type, 'allopathy');
+  assert.equal(parseNetmedsProduct(page({ ...base, 'mstar-rxrequired': 'Rx required' })).type, null);
   assert.equal(parseNetmedsProduct(page({ ...base, 'mstar-rxrequired': 'Not required' })).type, null);
   assert.equal(
     parseNetmedsProduct(page({ ...base, cimscategoryname: 'Endocrine & Metabolic System' })).type,
-    'allopathy',
+    null,
   );
 });
 
@@ -109,10 +109,10 @@ test('parseNetmedsProduct: unrecognized schedule spellings veto (fail closed)', 
     ...base, schedule: 'E-1', cimscategoryname: 'Endocrine & Metabolic System',
   })).type, null);
   assert.equal(parseNetmedsProduct(page({ ...base, schedule: 'E1.' })).type, null);
-  // empty schedule is NOT a veto — other branches stay available
+  // an empty schedule cannot be rescued by a prescription-sale flag
   assert.equal(parseNetmedsProduct(page({
     ...base, schedule: '', 'mstar-rxrequired': 'Rx required',
-  })).type, 'allopathy');
+  })).type, null);
 });
 
 test('parseNetmedsProduct: AYUSH-system CIMS category is a full veto', () => {
@@ -157,10 +157,10 @@ test('parseNetmedsProduct: placeholder CIMS category values are not evidence', (
       `placeholder ${JSON.stringify(placeholder)} must not qualify as CIMS evidence`,
     );
   }
-  // a real therapeutic-class phrase still qualifies
+  // even a plausible therapeutic-class phrase is not system-of-medicine evidence
   assert.equal(
     parseNetmedsProduct(page({ ...base, cimscategoryname: 'Cardiovascular System' })).type,
-    'allopathy',
+    null,
   );
 });
 

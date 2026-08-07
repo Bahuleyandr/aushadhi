@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 import * as cheerio from 'cheerio';
@@ -13,11 +14,10 @@ import { parseEasyProduct, readPharmeasyNormalized } from '../adapters/pharmeasy
 // learned to derive the category from per-page evidence. That evidence still
 // lives in the raw page cache (data/raw/<source>/pages/), so already-crawled
 // products can be re-parsed without a single network request. This tool walks
-// each source's cache, re-derives `type` with the same adapter code the live
-// crawl uses, and appends type-patched copies of the affected normalized rows
-// under today's date dir — the read*Normalized latest-wins refresh then picks
-// them up on the next build. Every other field, including seen_at, is kept
-// verbatim: re-parsing a cached page is not a new observation.
+// each source's cache and re-derives candidate `type` values with the same
+// adapter code the live crawl uses. Dry-run is the default. An explicit apply
+// writes an immutable, generation-scoped review candidate under
+// data/raw/.type-backfill; it never mutates or shadows normalized runtime input.
 
 function canonicalPath($, base) {
   const href = $('link[rel="canonical"]').attr('href');
@@ -90,9 +90,79 @@ export function scanCachedTypes(pagesDir, identify) {
   return byId;
 }
 
-export function backfillSource({ rawRoot, source, date, log = console.log }) {
+const GENERATION_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+
+function assertGeneration(generation) {
+  if (generation === null || generation === undefined || generation === '') {
+    throw new TypeError('generation is required when apply is enabled');
+  }
+  if (!GENERATION_RE.test(String(generation))) {
+    throw new TypeError(`invalid generation: ${generation}`);
+  }
+  return String(generation);
+}
+
+function withBackfillLock(rawRoot, work) {
+  const lockDir = path.join(rawRoot, '.type-backfill.lock');
+  fs.mkdirSync(rawRoot, { recursive: true });
+  try {
+    fs.mkdirSync(lockDir);
+  } catch (error) {
+    if (error?.code === 'EEXIST') throw new Error(`backfill lock already exists: ${lockDir}`);
+    throw error;
+  }
+  const ownerPath = path.join(lockDir, 'owner.json');
+  try {
+    fs.writeFileSync(ownerPath, `${JSON.stringify({ pid: process.pid, started_at: new Date().toISOString() })}\n`, { flag: 'wx' });
+    return work();
+  } finally {
+    if (fs.existsSync(ownerPath)) fs.unlinkSync(ownerPath);
+    fs.rmdirSync(lockDir);
+  }
+}
+
+function writeCandidate({ rawRoot, source, generation, patched, result }) {
+  const candidateRoot = path.join(rawRoot, '.type-backfill');
+  const generationRoot = path.join(candidateRoot, generation);
+  const output = path.join(generationRoot, source);
+  const staging = path.join(generationRoot, `.${source}.staging-${process.pid}`);
+  fs.mkdirSync(generationRoot, { recursive: true });
+  if (fs.existsSync(output)) throw new Error(`backfill candidate already exists: ${output}`);
+  fs.mkdirSync(staging);
+  const rowsText = `${patched.map((row) => JSON.stringify(row)).join('\n')}\n`;
+  const rowsPath = path.join(staging, 'normalized.jsonl');
+  const manifestPath = path.join(staging, 'manifest.json');
+  try {
+    fs.writeFileSync(rowsPath, rowsText, { flag: 'wx' });
+    const manifest = {
+      schema_version: 1,
+      kind: 'type_backfill_review_candidate',
+      generation_id: generation,
+      source,
+      promotion_authority: 'none',
+      deployment_authority: 'none',
+      rows_scanned: result.rows,
+      cached_matches: result.cached,
+      candidate_rows: result.patched,
+      normalized_jsonl_sha256: createHash('sha256').update(rowsText).digest('hex'),
+    };
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { flag: 'wx' });
+    fs.renameSync(staging, output);
+  } catch (error) {
+    if (fs.existsSync(manifestPath)) fs.unlinkSync(manifestPath);
+    if (fs.existsSync(rowsPath)) fs.unlinkSync(rowsPath);
+    if (fs.existsSync(staging)) fs.rmdirSync(staging);
+    throw error;
+  }
+  return output;
+}
+
+export function backfillSource({
+  rawRoot, source, apply = false, generation = null, log = console.log,
+}) {
   const spec = SOURCES[source];
   if (!spec) throw new TypeError(`unknown backfill source: ${source}`);
+  const generationId = apply ? assertGeneration(generation) : null;
   const typeById = scanCachedTypes(path.join(rawRoot, source, 'pages'), spec.identify);
   const rows = spec.read(rawRoot);
   const patched = [];
@@ -103,29 +173,54 @@ export function backfillSource({ rawRoot, source, date, log = console.log }) {
     if (!type) continue;
     patched.push({ ...row, type });
   }
-  if (patched.length) {
-    const outDir = path.join(rawRoot, source, date);
-    fs.mkdirSync(outDir, { recursive: true });
-    fs.appendFileSync(
-      path.join(outDir, 'normalized.jsonl'),
-      `${patched.map((row) => JSON.stringify(row)).join('\n')}\n`,
-    );
+  const result = {
+    source, cached: typeById.size, rows: rows.length, patched: patched.length,
+    mode: apply ? 'candidate' : 'dry-run', output: null,
+  };
+  if (apply && patched.length) {
+    result.output = withBackfillLock(rawRoot, () => writeCandidate({
+      rawRoot, source, generation: generationId, patched, result,
+    }));
   }
-  const result = { source, cached: typeById.size, rows: rows.length, patched: patched.length };
-  log(`backfill-type ${source}: cached=${result.cached}, rows=${result.rows}, patched=${result.patched}`);
+  log(`backfill-type ${source}: mode=${result.mode}, cached=${result.cached}, rows=${result.rows}, patched=${result.patched}${result.output ? `, output=${result.output}` : ''}`);
   return result;
 }
 
-export async function main() {
-  const c = ctx();
-  const sources = process.argv.slice(2);
-  for (const source of sources) {
+export function parseBackfillArgs(args) {
+  let apply = false;
+  let generation = null;
+  const sources = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--apply') {
+      if (apply) throw new TypeError('duplicate --apply');
+      apply = true;
+    } else if (arg === '--generation') {
+      if (generation !== null) throw new TypeError('duplicate --generation');
+      generation = args[++i] ?? null;
+      if (generation === null) throw new TypeError('--generation requires a value');
+    } else if (arg.startsWith('-')) {
+      throw new TypeError(`unknown option: ${arg}`);
+    } else {
+      sources.push(arg);
+    }
+  }
+  if (apply && generation === null) throw new TypeError('--apply requires --generation <id>');
+  if (!apply && generation !== null) throw new TypeError('--generation requires --apply');
+  const selected = sources.length ? sources : Object.keys(SOURCES);
+  for (const source of selected) {
     if (!SOURCES[source]) {
       throw new TypeError(`unknown source ${source}; expected one of: ${Object.keys(SOURCES).join(', ')}`);
     }
   }
-  for (const source of sources.length ? sources : Object.keys(SOURCES)) {
-    backfillSource({ rawRoot: c.rawRoot, source, date: c.date });
+  return { apply, generation, sources: selected };
+}
+
+export async function main() {
+  const c = ctx();
+  const options = parseBackfillArgs(process.argv.slice(2));
+  for (const source of options.sources) {
+    backfillSource({ rawRoot: c.rawRoot, source, ...options });
   }
 }
 

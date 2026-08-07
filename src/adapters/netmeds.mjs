@@ -28,49 +28,15 @@ function retainLatestSourceProduct(byProduct, row) {
 // "+"-joined for combos ("Amoxicillin 500 mg+Clavulanic Acid 125 mg").
 const PART_RE = /^(.+?)\s+([\d.]+)\s*(mg|mcg|g|ml|iu|kiu|%|units?)\b/i;
 
-// Indian drug-schedule letters (Drugs & Cosmetics Rules). G/H/H1/X govern
-// modern (allopathic) medicines; E1 is the poisons schedule for
-// Ayurvedic/Siddha/Unani medicines — a row stating it is affirmatively NOT
-// modern medicine. The gate is fail-closed on the whole field, not just on a
-// spelled-out E/E1: ANY non-empty schedule value outside the modern allowlist
-// ("Schedule E1", "E-1", "E1.", or a letter we have never seen) vetoes the
-// row unconditionally — no Rx/CIMS signal may override it. Only an empty or
-// absent schedule leaves the other evidence branches available. The cost is
-// deliberate: an eccentric spelling of a genuinely modern schedule (e.g.
-// "Sch. H") keeps type null until the spelling is allowlisted, rather than
-// letting an ASU variant slip through the veto.
+// Only the exact modern-medicine schedules observed in the source are positive
+// classification evidence. Prescription-sale status is not exclusive: AYUSH
+// Schedule E1 products can also require supervision. A CIMS category is a
+// therapeutic classification, not a system-of-medicine assertion.
 const MODERN_SCHEDULES = new Set(['G', 'H', 'H1', 'X']);
 
-// CIMS therapeutic-class names are alphabetic phrases ("Endocrine & Metabolic
-// System" is the fixture-pinned observed value). The field is Netmeds catalog
-// data, not CIMS itself — its population discipline is unverified and the full
-// CIMS vocabulary cannot be allowlisted from the committed fixtures — so the
-// gate rejects placeholder-shaped values instead of accepting any non-empty
-// string. Real categories a placeholder word happens to shadow (e.g. a genuine
-// "Miscellaneous" class) are sacrificed to fail-closed: those rows keep type
-// null unless schedule/Rx evidence qualifies them. Comparison strips all
-// non-alphanumerics first, so spacing/punctuation variants ("n. a.",
-// "N . A .", "n/a", "not-available") all collapse onto the same key.
-const CIMS_PLACEHOLDER_KEYS = new Set([
-  'na', 'none', 'null', 'nil', 'nan', 'no', 'yes', 'tbd', 'todo', 'test',
-  'default', 'unknown', 'unclassified', 'uncategorized', 'uncategorised',
-  'notavailable', 'notapplicable', 'notclassified', 'misc', 'miscellaneous',
-  'other', 'others', 'general',
-]);
-
-// An AYUSH system named in the CIMS category field is an explicit statement
-// that the row is NOT modern medicine — the same class of signal as an ASU
-// schedule letter, just in a different field. Consistent with the schedule
-// veto above, it withholds the type claim entirely (full veto, not merely
-// "doesn't count as evidence"): an AYUSH-flagged row with "Rx required" set
-// is exactly the Schedule-E1-under-supervision shape the veto exists for.
+// An explicit contradictory AYUSH category withholds even a recognized schedule
+// so inconsistent source records fail closed for manual review.
 const CIMS_AYUSH_RE = /ayurved|homoeopath|homeopath|unani|siddha|herbal/i;
-
-function isCimsCategoryEvidence(value) {
-  const key = String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (!/[a-z]/.test(key)) return false; // '', '-', digits: never a class name
-  return !CIMS_PLACEHOLDER_KEYS.has(key);
-}
 
 export function parseNetmedsComposition(generic) {
   const parts = String(generic ?? '').split(/\s*\+\s*/).map((s) => s.trim()).filter(Boolean);
@@ -120,25 +86,12 @@ export function parseNetmedsProduct(html, expectedProductId = null, expectedProd
   if (!/\d/.test(generic)) return null;
   const ingredients = parseNetmedsComposition(generic);
   if (!ingredients.length) return null; // device / herbal / no composition -> skip
-  // Category evidence must be an explicit per-row field, never the crawl scope
-  // or the composition filter above. Order matters: vetoes fire first and are
-  // unconditional — Schedule E1 ayurvedic preparations are exactly the
-  // products e-pharmacies mark "Rx required" (the D&C Rules demand medical
-  // supervision for them), so no other signal may override a veto. A veto is
-  // (a) any non-empty schedule outside the modern allowlist (unrecognized
-  // spellings included — see MODERN_SCHEDULES), or (b) an AYUSH system named
-  // in the CIMS category field. Otherwise positive evidence is a
-  // modern-medicine schedule (G/H/H1/X), an explicit "Rx required" flag, or a
-  // plausible CIMS therapeutic-class entry (placeholder-shaped values
-  // rejected). Rows carrying none of these keep type null (fail closed).
+  // Category evidence must be an exact per-row modern schedule, never crawl
+  // scope, prescription status, CIMS taxonomy, or the composition filter.
   const schedule = (a.schedule ?? '').toString().trim().toUpperCase();
-  const rxRequired = (a['mstar-rxrequired'] ?? '').toString().trim().toLowerCase();
   const cims = (a.cimscategoryname ?? '').toString();
-  const veto = (schedule !== '' && !MODERN_SCHEDULES.has(schedule)) || CIMS_AYUSH_RE.test(cims);
-  const type = veto ? null
-    : MODERN_SCHEDULES.has(schedule)
-      || rxRequired === 'rx required'
-      || isCimsCategoryEvidence(cims) ? 'allopathy' : null;
+  const type = MODERN_SCHEDULES.has(schedule) && !CIMS_AYUSH_RE.test(cims)
+    ? 'allopathy' : null;
   return {
     source: 'netmeds',
     ...(embeddedProductId === null ? {} : { source_id: embeddedProductId }),

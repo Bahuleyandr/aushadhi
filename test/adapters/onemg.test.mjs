@@ -52,6 +52,11 @@ test('parseDrugPage: type requires per-page evidence, else stays null (fail clos
   // app-state pageType alone still counts when the Drug JSON-LD block is absent
   const noLd = augmentin.replaceAll('"@type":"Drug"', '"@type":"Thing"');
   assert.equal(parseDrugPage(noLd).type, 'allopathy');
+  // schema.org Drug alone is generic and cannot establish the medicine system
+  const ldOnly = '<script type="application/ld+json">'
+    + '{"@type":"Drug","name":"Some Product","activeIngredient":"Metformin (500mg)"}'
+    + '</script>';
+  assert.equal(parseDrugPage(ldOnly).type, null);
 });
 
 test('parseDrugPage: "pageType":"drug" outside the parsed app state is not evidence', () => {

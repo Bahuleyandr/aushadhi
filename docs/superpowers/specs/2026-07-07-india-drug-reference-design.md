@@ -106,22 +106,24 @@ and stays `null` otherwise.
 
 | Source | `type: 'allopathy'` iff | Rows left `null` |
 |---|---|---|
-| `onemg-live` | the product page carries a schema.org `Drug` JSON-LD block, or `pageType: 'drug'` read structurally from the parsed embedded app state (`window.__INITIAL_STATE__` → `drugPageReducer.dynamicData.pageType` — never a raw-HTML substring grep) | pages with neither marker, including pages that merely embed the `"pageType":"drug"` substring elsewhere |
-| `apollo` | the parser hard-requires the schema.org `Drug` block (the page's category statement) **and** none of the page's own JSON-LD blocks (Drug, breadcrumbs, FAQ) name an AYUSH system (Ayurveda/Homoeopathy/Unani/Siddha) — an untrusted field may withhold the claim, never make it | Drug-templated pages whose structured data names an AYUSH system (pages without the block never produce a row) |
-| `netmeds` | payload's schedule field is empty or states `G`/`H`/`H1`/`X` — **any other non-empty schedule value is an unconditional veto** (`E`, `E1`, "Schedule E1", "E-1", unrecognized spellings alike) no other signal can override — and states a modern schedule, or `mstar-rxrequired` = "Rx required", or a non-placeholder, non-AYUSH CIMS taxonomy category | any row with a non-empty schedule outside `G`/`H`/`H1`/`X`, regardless of Rx/CIMS signals; any row whose CIMS category names an AYUSH system (ayurved/homoeopath/unani/siddha/herbal — also an unconditional veto); rows whose only CIMS value is placeholder-shaped ("NA", "n. a.", "-", "None", "Misc", … — punctuation/spacing-normalized before comparison); rows with no explicit field — passing the composition digit-filter alone is not category evidence |
-| `pharmeasy` | product node states `isRxRequired: true` (Rx-only sale under the D&C Rules schedules) | OTC rows; `productType` (unlabelled enum) and `therapy` (unverified vocabulary) are not trusted |
+| `onemg-live` | `pageType: 'drug'` is read structurally from the parsed embedded app state (`window.__INITIAL_STATE__` → `drugPageReducer.dynamicData.pageType` — never a raw-HTML substring grep) | pages without that exact marker; a generic schema.org `Drug` block alone is insufficient |
+| `apollo` | no current field qualifies | every row; schema.org `Drug`, absence of AYUSH terms, and generic breadcrumb categories are not exclusive system-of-medicine evidence |
+| `netmeds` | the payload's exact schedule field states `G`, `H`, `H1`, or `X`, and no contradictory AYUSH-system CIMS value is present | absent, empty, unknown, or non-modern schedule values; Rx-only or CIMS-only rows; conflicting AYUSH CIMS rows |
+| `pharmeasy` | no current field qualifies | every row; `isRxRequired` is prescription-sale status, `productType` is an unlabelled enum, and `therapy` has an unverified vocabulary |
 
-**PharmEasy caveat:** the `isRxRequired` gate is a **strong proxy, not a
-guarantee**. Schedule E1 (ASU poisons) is also part of the D&C Rules, so
-Rx-marked ayurvedic products exist, and the PharmEasy payload carries no
-schedule field to cross-check (unlike netmeds, where E/E1 vetoes). The gate
-additionally leans on discovery scope: the crawl seeds only from the medicine
-sitemaps, which is assumed — not verified per row — to exclude the ayurveda
-catalog.
+Prescription status is never used as a system-of-medicine proxy. Schedule E1
+(ASU poisons) can also require supervision, so an Rx flag cannot distinguish
+modern medicine from AYUSH. Crawl namespace, absence of AYUSH wording, and a
+therapeutic category likewise cannot create a positive claim.
 
 Because the signals live in the raw page cache (`data/raw/<source>/pages/`),
-already-crawled products can be re-derived offline with
-`node src/cli/backfill-type.mjs` — no re-crawl needed for cached pages.
+already-crawled products can be re-derived offline without a re-crawl. Running
+`node src/cli/backfill-type.mjs` is a write-free dry run. An explicit
+`--apply --generation <id>` writes an immutable review candidate under
+`data/raw/.type-backfill/<id>/<source>/`; that directory is outside the runtime
+normalized inputs and its manifest declares no promotion or deployment
+authority. A separate reviewed import is required before any candidate can
+affect a build.
 Provenance nuance: the cache holds the **latest** capture per request path, so
 a backfilled `type` may derive from a page fetched *after* the row's preserved
 `seen_at`; `seen_at` still describes the original observation of the row's

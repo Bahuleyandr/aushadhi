@@ -1,22 +1,29 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { backfillSource, scanCachedTypes } from '../src/cli/backfill-type.mjs';
+import {
+  backfillSource, parseBackfillArgs, scanCachedTypes,
+} from '../src/cli/backfill-type.mjs';
 import { readNetmedsNormalized } from '../src/adapters/netmeds.mjs';
-import { readOnemgNormalized } from '../src/adapters/onemg.mjs';
-import { readApolloNormalized } from '../src/adapters/apollo.mjs';
 
 const netmedsHtml = fs.readFileSync('test/fixtures/netmeds/product.html', 'utf8');
 const pharmeasyHtml = fs.readFileSync('test/fixtures/pharmeasy/product.html', 'utf8');
-const onemgHtml = fs.readFileSync('test/fixtures/onemg/drug_page_tablet.html', 'utf8');
-const apolloHtml = fs.readFileSync('test/fixtures/apollo/medicine_elmox.html', 'utf8');
+
+function tempRoot(t) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aushadhi-backfill-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  return root;
+}
 
 function writeRows(root, source, date, rows) {
-  fs.mkdirSync(`${root}/${source}/${date}`, { recursive: true });
+  const dir = path.join(root, source, date);
+  fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
-    `${root}/${source}/${date}/normalized.jsonl`,
-    `${rows.map((row) => JSON.stringify(row)).join('\n')}\n`,
+    path.join(dir, 'normalized.jsonl'),
+    `${rows.map((value) => JSON.stringify(value)).join('\n')}\n`,
   );
 }
 
@@ -30,92 +37,97 @@ function row(source, sourceId, over = {}) {
   };
 }
 
-test('backfillSource: patches null-type netmeds rows from the cached page evidence', () => {
-  const root = 'test/.tmp-backfill-netmeds';
-  fs.rmSync(root, { recursive: true, force: true });
-  fs.mkdirSync(`${root}/netmeds/pages`, { recursive: true });
-  fs.writeFileSync(`${root}/netmeds/pages/aaaa.html`, netmedsHtml); // uid 10230093, schedule H
+test('backfillSource: defaults to a write-free dry run', (t) => {
+  const root = tempRoot(t);
+  fs.mkdirSync(path.join(root, 'netmeds', 'pages'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'netmeds', 'pages', 'aaaa.html'), netmedsHtml);
   writeRows(root, 'netmeds', '2026-07-01', [
     row('netmeds', '10230093'),
-    row('netmeds', '999'), // no cached page -> must stay null
-    row('netmeds', '888', { type: 'allopathy' }), // already typed -> not re-emitted
+    row('netmeds', '999'),
+    row('netmeds', '888', { type: 'allopathy' }),
   ]);
 
-  const result = backfillSource({ rawRoot: root, source: 'netmeds', date: '2026-08-06', log: () => {} });
-  assert.deepEqual(result, { source: 'netmeds', cached: 1, rows: 3, patched: 1 });
+  const result = backfillSource({ rawRoot: root, source: 'netmeds', log: () => {} });
+  assert.deepEqual(result, {
+    source: 'netmeds', cached: 1, rows: 3, patched: 1, mode: 'dry-run', output: null,
+  });
+  assert.equal(fs.existsSync(path.join(root, '.type-backfill')), false);
+  assert.equal(readNetmedsNormalized(root).find((value) => value.source_id === '10230093').type, null);
+});
 
-  const patchedLines = fs.readFileSync(`${root}/netmeds/2026-08-06/normalized.jsonl`, 'utf8')
+test('backfillSource: apply writes an immutable generation-scoped candidate outside runtime inputs', (t) => {
+  const root = tempRoot(t);
+  fs.mkdirSync(path.join(root, 'netmeds', 'pages'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'netmeds', 'pages', 'aaaa.html'), netmedsHtml);
+  writeRows(root, 'netmeds', '2026-07-01', [row('netmeds', '10230093')]);
+
+  const result = backfillSource({
+    rawRoot: root, source: 'netmeds', apply: true, generation: 'review-2026-08-07', log: () => {},
+  });
+  const output = path.join(root, '.type-backfill', 'review-2026-08-07', 'netmeds');
+  assert.equal(result.mode, 'candidate');
+  assert.equal(result.output, output);
+  const candidate = fs.readFileSync(path.join(output, 'normalized.jsonl'), 'utf8')
     .trim().split('\n').map((line) => JSON.parse(line));
-  assert.equal(patchedLines.length, 1);
-  assert.equal(patchedLines[0].source_id, '10230093');
-  assert.equal(patchedLines[0].type, 'allopathy');
-  // re-parsing a cached page is not a new observation: seen_at is untouched
-  assert.equal(patchedLines[0].seen_at, '2026-07-01');
+  assert.equal(candidate.length, 1);
+  assert.equal(candidate[0].source_id, '10230093');
+  assert.equal(candidate[0].type, 'allopathy');
+  assert.equal(candidate[0].seen_at, '2026-07-01');
+  const manifest = JSON.parse(fs.readFileSync(path.join(output, 'manifest.json'), 'utf8'));
+  assert.equal(manifest.generation_id, 'review-2026-08-07');
+  assert.equal(manifest.promotion_authority, 'none');
+  assert.equal(manifest.deployment_authority, 'none');
+  assert.equal(manifest.candidate_rows, 1);
+  assert.match(manifest.normalized_jsonl_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(readNetmedsNormalized(root)[0].type, null);
 
-  const merged = readNetmedsNormalized(root);
-  assert.equal(merged.find((r) => r.source_id === '10230093').type, 'allopathy');
-  assert.equal(merged.find((r) => r.source_id === '999').type, null);
-  fs.rmSync(root, { recursive: true, force: true });
+  assert.throws(() => backfillSource({
+    rawRoot: root, source: 'netmeds', apply: true, generation: 'review-2026-08-07', log: () => {},
+  }), /already exists/);
 });
 
-test('backfillSource: onemg source_id comes from the cached page canonical link', () => {
-  const root = 'test/.tmp-backfill-onemg';
-  fs.rmSync(root, { recursive: true, force: true });
-  fs.mkdirSync(`${root}/onemg/pages`, { recursive: true });
-  fs.writeFileSync(`${root}/onemg/pages/bbbb.html`, onemgHtml); // canonical .../augmentin-625-duo-tablet-138629
-  writeRows(root, 'onemg', '2026-07-01', [
-    row('onemg-live', '138629', { brand_name: 'Augmentin 625 Duo Tablet' }),
-  ]);
-
-  const result = backfillSource({ rawRoot: root, source: 'onemg', date: '2026-08-06', log: () => {} });
-  assert.deepEqual(result, { source: 'onemg', cached: 1, rows: 1, patched: 1 });
-  assert.equal(readOnemgNormalized(root)[0].type, 'allopathy');
-  assert.equal(readOnemgNormalized(root)[0].seen_at, '2026-07-01');
-  fs.rmSync(root, { recursive: true, force: true });
-});
-
-test('backfillSource: apollo binds the JSON-LD identity to the cached canonical path', () => {
-  const root = 'test/.tmp-backfill-apollo';
-  fs.rmSync(root, { recursive: true, force: true });
-  fs.mkdirSync(`${root}/apollo/pages`, { recursive: true });
-  fs.writeFileSync(`${root}/apollo/pages/cccc.html`, apolloHtml);
-  writeRows(root, 'apollo', '2026-07-01', [row('apollo', 'elmox-cv-625mg-tablet')]);
-
-  const result = backfillSource({ rawRoot: root, source: 'apollo', date: '2026-08-06', log: () => {} });
-  assert.deepEqual(result, { source: 'apollo', cached: 1, rows: 1, patched: 1 });
-  assert.equal(readApolloNormalized(root)[0].type, 'allopathy');
-  fs.rmSync(root, { recursive: true, force: true });
-});
-
-test('backfillSource: reads retention-compressed .html.gz entries', () => {
-  const root = 'test/.tmp-backfill-gz';
-  fs.rmSync(root, { recursive: true, force: true });
-  fs.mkdirSync(`${root}/pharmeasy/pages`, { recursive: true });
-  fs.writeFileSync(`${root}/pharmeasy/pages/dddd.html.gz`, gzipSync(pharmeasyHtml));
-  writeRows(root, 'pharmeasy', '2026-07-01', [row('pharmeasy', '108')]);
-
-  const result = backfillSource({ rawRoot: root, source: 'pharmeasy', date: '2026-08-06', log: () => {} });
-  assert.deepEqual(result, { source: 'pharmeasy', cached: 1, rows: 1, patched: 1 });
-  fs.rmSync(root, { recursive: true, force: true });
-});
-
-test('scanCachedTypes: honors .invalid markers and pages without category evidence', () => {
-  const root = 'test/.tmp-backfill-invalid';
-  fs.rmSync(root, { recursive: true, force: true });
-  const pages = `${root}/pharmeasy/pages`;
-  fs.mkdirSync(pages, { recursive: true });
-  // invalidated entry: parser rejected this capture; it must never be trusted
-  fs.writeFileSync(`${pages}/eeee.html`, pharmeasyHtml);
-  fs.writeFileSync(`${pages}/eeee.html.invalid`, '2026-08-06T00:00:00.000Z\n');
-  // evidence-free page: parses but carries no category signal
-  fs.writeFileSync(
-    `${pages}/ffff.html`,
-    pharmeasyHtml.replaceAll('"isRxRequired":true', '"isRxRequired":false'),
+test('backfillSource: apply requires a safe generation and respects an existing lock', (t) => {
+  const root = tempRoot(t);
+  assert.throws(
+    () => backfillSource({ rawRoot: root, source: 'netmeds', apply: true, log: () => {} }),
+    /generation is required/,
   );
-  writeRows(root, 'pharmeasy', '2026-07-01', [row('pharmeasy', '108')]);
+  assert.throws(
+    () => backfillSource({ rawRoot: root, source: 'netmeds', apply: true, generation: '../escape', log: () => {} }),
+    /invalid generation/,
+  );
+  fs.mkdirSync(path.join(root, 'netmeds', 'pages'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'netmeds', 'pages', 'aaaa.html'), netmedsHtml);
+  writeRows(root, 'netmeds', '2026-07-01', [row('netmeds', '10230093')]);
+  fs.mkdirSync(path.join(root, '.type-backfill.lock'));
+  assert.throws(
+    () => backfillSource({ rawRoot: root, source: 'netmeds', apply: true, generation: 'locked', log: () => {} }),
+    /backfill lock already exists/,
+  );
+});
 
-  const result = backfillSource({ rawRoot: root, source: 'pharmeasy', date: '2026-08-06', log: () => {} });
-  assert.deepEqual(result, { source: 'pharmeasy', cached: 0, rows: 1, patched: 0 });
-  assert.equal(fs.existsSync(`${root}/pharmeasy/2026-08-06`), false);
-  fs.rmSync(root, { recursive: true, force: true });
+test('parseBackfillArgs: dry-run is default and apply requires an explicit generation', () => {
+  assert.deepEqual(parseBackfillArgs([]), {
+    apply: false, generation: null, sources: ['onemg', 'apollo', 'netmeds', 'pharmeasy'],
+  });
+  assert.deepEqual(parseBackfillArgs(['netmeds']), {
+    apply: false, generation: null, sources: ['netmeds'],
+  });
+  assert.deepEqual(parseBackfillArgs(['--apply', '--generation', 'g-1', 'netmeds']), {
+    apply: true, generation: 'g-1', sources: ['netmeds'],
+  });
+  assert.throws(() => parseBackfillArgs(['--apply']), /--generation/);
+  assert.throws(() => parseBackfillArgs(['--generation', 'g-1']), /requires --apply/);
+  assert.throws(() => parseBackfillArgs(['--unknown']), /unknown option/);
+});
+
+test('scanCachedTypes: reads compressed cache entries and ignores invalidated pages', (t) => {
+  const root = tempRoot(t);
+  const pages = path.join(root, 'pharmeasy', 'pages');
+  fs.mkdirSync(pages, { recursive: true });
+  fs.writeFileSync(path.join(pages, 'valid.html.gz'), gzipSync(pharmeasyHtml));
+  fs.writeFileSync(path.join(pages, 'invalid.html'), pharmeasyHtml);
+  fs.writeFileSync(path.join(pages, 'invalid.html.invalid'), 'invalid\n');
+  const found = scanCachedTypes(pages, () => ({ sourceId: '108', type: 'allopathy' }));
+  assert.deepEqual([...found], [['108', 'allopathy']]);
 });

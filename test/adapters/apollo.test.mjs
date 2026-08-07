@@ -53,11 +53,11 @@ test('parseApolloProduct: extracts brand, manufacturer, composition from the Dru
   assert.deepEqual(r.ingredients.map((i) => i.molecule), ['amoxycillin', 'clavulanic acid']);
   assert.equal(r.composition_status, 'complete');
   assert.equal(r.source, 'apollo');
-  // the mandatory Drug JSON-LD block is itself the category evidence
-  assert.equal(r.type, 'allopathy');
+  // schema.org Drug is not specific to a system of medicine
+  assert.equal(r.type, null);
 });
 
-test('parseApolloProduct: AYUSH-named JSON-LD withholds the allopathy claim (fail safe)', () => {
+test('parseApolloProduct: generic Drug and category labels never infer allopathy', () => {
   const drugBlock = {
     '@type': 'Drug',
     name: 'Liv.52 Tablet',
@@ -72,23 +72,17 @@ test('parseApolloProduct: AYUSH-named JSON-LD withholds the allopathy claim (fai
   });
   const pageFor = (categoryName) => `<script type="application/ld+json">${JSON.stringify(drugBlock)}</script>`
     + `<script type="application/ld+json">${JSON.stringify(breadcrumb(categoryName))}</script>`;
-  // a Drug block alone still claims allopathy...
-  assert.equal(parseApolloProduct(pageFor('LIVER CARE')).type, 'allopathy');
-  // ...but an AYUSH system named in the page's own structured data withholds it
-  for (const category of ['Ayurvedic Products', 'Ayurveda', 'Homeopathy', 'Homoeopathic Remedies', 'Unani', 'Siddha']) {
+  for (const category of ['LIVER CARE', 'Antibiotics', 'Ayurvedic Products', 'Ayurveda', 'Homeopathy', 'Homoeopathic Remedies', 'Unani', 'Siddha']) {
     const row = parseApolloProduct(pageFor(category));
     assert.notEqual(row, null, `${category}: row is still emitted`);
-    assert.equal(row.type, null, `${category}: allopathy claim must be withheld`);
+    assert.equal(row.type, null, `${category}: category is not exclusive evidence`);
   }
-  // an AYUSH term inside the Drug block itself also withholds
   const ayushDrug = `<script type="application/ld+json">${JSON.stringify({
     ...drugBlock, description: 'An Ayurvedic proprietary medicine.',
   })}</script>`;
   assert.equal(parseApolloProduct(ayushDrug).type, null);
-  // the scan is confined to JSON-LD: the real fixture's site-wide nav says
-  // "Ayurvedic Products" in plain HTML, yet its clean JSON-LD keeps the claim
   assert.match(medHtml, /Ayurvedic Products/);
-  assert.equal(parseApolloProduct(medHtml).type, 'allopathy');
+  assert.equal(parseApolloProduct(medHtml).type, null);
 });
 
 test('parseApolloProduct: binds the Drug JSON-LD identity to the requested product path', () => {
