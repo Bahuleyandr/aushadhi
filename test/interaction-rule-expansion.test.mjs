@@ -315,6 +315,39 @@ test('self-pairs are refused instead of instantiated', () => {
   );
 });
 
+test('a selector carrying both drug and class refuses as ambiguous', () => {
+  // PR #14 Finding 3: pre-fix, a dual-identity selector expanded on `drug`
+  // and silently dropped the class roster the author embedded.
+  const rule = classRule();
+  rule.perpetrator = {
+    drug: 'alphacillin',
+    class: 'test_inhibitor',
+    strength: ['strong'],
+    route: ['systemic'],
+  };
+  const report = expand(rule);
+  assert.equal(report.expandable, false);
+  assert.deepEqual(report.expansions, []);
+  assert.equal(report.refusals.length, 1);
+  assert.equal(report.refusals[0].reason, 'ambiguous_selector_identity');
+  assert.equal(report.refusals[0].side, 'perpetrator');
+  assert.match(
+    report.refusals[0].message,
+    /carries both a drug selector and a class selector/u,
+  );
+  assert.match(report.refusals[0].message, /through the draft flow/u);
+
+  // Even a null placeholder under the second identity key is ambiguous —
+  // the selector's intent is unreadable, so it refuses.
+  const nullClass = classRule();
+  nullClass.perpetrator = { drug: 'alphacillin', class: null, route: ['systemic'] };
+  const nullReport = expand(nullClass);
+  assert.deepEqual(
+    nullReport.refusals.map((entry) => entry.reason),
+    ['ambiguous_selector_identity'],
+  );
+});
+
 test('combination and substance selectors are not expandable', () => {
   const rule = classRule();
   rule.perpetrator = {

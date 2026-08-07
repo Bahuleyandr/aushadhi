@@ -160,6 +160,19 @@ function resolveSideRoster({ rule, role, memberSetClasses, refusals }) {
     return null;
   }
 
+  // A selector must carry exactly one identity. `drug` and `class` together
+  // are ambiguous — expansion refuses rather than silently preferring one
+  // and dropping the roster the author embedded under the other.
+  if (Object.hasOwn(selector, 'drug') && Object.hasOwn(selector, 'class')) {
+    refusal(
+      refusals, ruleId, role, null, 'ambiguous_selector_identity',
+      `rule "${ruleId}" ${role} carries both a drug selector and a class `
+        + 'selector; expansion refuses dual-identity selectors — pin exactly '
+        + 'one identity through the draft flow',
+    );
+    return null;
+  }
+
   let baseMembers;
   if (typeof selector.drug === 'string' && selector.drug.trim() !== '') {
     baseMembers = [selector.drug.trim().toLowerCase()];
