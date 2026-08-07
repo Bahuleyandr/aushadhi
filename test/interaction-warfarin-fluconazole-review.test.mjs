@@ -5,6 +5,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function readJson(relativePath) {
@@ -31,7 +35,6 @@ const promotions = readJson(
 const internalPack = readJson(
   'data-static/interaction-rules.internal-evaluation.json',
 );
-const productionPack = readJson('data-static/interaction-rules.json');
 const sectionLines = fs.readFileSync(
   path.join(
     root,
@@ -225,6 +228,5 @@ test('approved packet maps and promotes only its exact internal-evaluation scope
   assert.equal(runtimeRule.review.reviewer_id, 'clinician:subas');
   assert.deepEqual(runtimeRule.product_pairs, packet.proposed_rule.scope.product_pairs);
 
-  assert.equal(productionPack.rules.length, 0);
-  assert.equal(productionPack.declared_coverage, 'unknown');
+  assertCommittedProductionOpenPack();
 });

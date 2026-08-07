@@ -36,6 +36,9 @@ import {
   verifyPmbjpCombinationEvidenceFiles,
 } from '../src/lib/pmbjp-combination-evidence.mjs';
 import { ingredientIdForName } from '../src/lib/ingredient-identity.mjs';
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
 import { validateIngredientMappingManifest } from '../src/lib/interaction-mapping.mjs';
 import {
   productAssertionForRow,
@@ -1143,7 +1146,7 @@ test('the committed manifest records only the reviewed co-trimoxazole tablet ide
     ['89', '90'],
   );
   assert.deepEqual(combination.allowed_profiles, ['internal-evaluation']);
-  assert.equal(readJson('data-static/interaction-rules.json').rules.length, 0);
+  assertCommittedProductionOpenPack();
 });
 
 test('no component of co-trimoxazole is mapped in the single-ingredient manifest', () => {

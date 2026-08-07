@@ -14,6 +14,9 @@ import {
   createDraftPackAttestation,
   parseDraftPackAttestation,
 } from '../src/lib/interaction-draft-attestation.mjs';
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -252,8 +255,57 @@ test('promotion rejects presentation profile drift and pair-count widening', () 
   );
 });
 
-test('production-open remains empty and independent of internal promotion', () => {
-  const production = readJson('data-static/interaction-rules.json');
+test('production-open promotion requires approval explicitly bound to that profile', () => {
+  const source = inputs();
+  source.promotionManifest.profile = 'production-open';
+  source.promotionHoldManifest.profile = 'production-open';
+  for (const mapping of source.presentationManifest.mappings) {
+    mapping.allowed_profiles = ['production-open'];
+  }
+
+  assert.throws(
+    () => compileInteractionRuntimePack(source),
+    /production-open approval must explicitly authorize the production-open profile/iu,
+  );
+});
+
+test('production-open promotion rejects approval text that preserves an internal-only ceiling', () => {
+  const source = inputs();
+  source.promotionManifest.profile = 'production-open';
+  source.promotionHoldManifest.profile = 'production-open';
+  for (const promotion of source.promotionManifest.promotions) {
+    promotion.approval.authorized_profile = 'production-open';
+  }
+  for (const mapping of source.presentationManifest.mappings) {
+    mapping.allowed_profiles = ['production-open'];
+  }
+
+  assert.throws(
+    () => compileInteractionRuntimePack(source),
+    /production-open approval text contradicts its authorized profile/iu,
+  );
+});
+
+test('production-open approval text must explicitly name its authorized profile', () => {
+  const manifest = inputs().promotionManifest;
+  manifest.profile = 'production-open';
+  for (const promotion of manifest.promotions) {
+    promotion.approval.authorized_profile = 'production-open';
+    promotion.approval.approval_text = 'I approve this exact rule for public evaluation.';
+  }
+
+  assert.throws(
+    () => validatePromotionManifest(manifest),
+    /production-open approval text must explicitly name the production-open profile/iu,
+  );
+
+  for (const promotion of manifest.promotions) {
+    promotion.approval.approval_text = 'I approve this exact rule for production-open.';
+  }
+  assert.equal(validatePromotionManifest(manifest), true);
+});
+
+test('production-open equals its owner-approved recompilation and stays independent of internal promotion', () => {
   const attestation = parseDraftPackAttestation(
     fs.readFileSync(
       path.join(
@@ -264,7 +316,6 @@ test('production-open remains empty and independent of internal promotion', () =
     ),
   );
   assert.equal(attestation.payload_binding, 'verified');
+  const production = assertCommittedProductionOpenPack();
   assert.equal(production.profile, 'production-open');
-  assert.equal(production.declared_coverage, 'unknown');
-  assert.deepEqual(production.rules, []);
 });

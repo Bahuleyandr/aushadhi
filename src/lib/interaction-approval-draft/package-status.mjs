@@ -103,10 +103,59 @@ const EXPECTED_PACKAGE_STATUS = {
   ],
 };
 
-export function assertPackageStatus(status) {
+// Governance policy v1.1 (owner-approved 2026-08-07) rewords exactly two
+// checklist strings: production-open is no longer required to remain empty
+// as policy, so the implemented control and the pre-promotion confirmation
+// pin the replacement invariant — deterministic recompilation from
+// owner-approved, digest-bound production-open manifests. The 1.0.0-draft
+// strings stay frozen so the committed 2026-07-29 package keeps validating
+// byte-identically. A future v1.1 approval package must also resolve its own
+// package identity fields in its own reviewed change; only the two
+// production-open strings are keyed here.
+const PACKAGE_STATUS_STRINGS_BY_POLICY_VERSION = new Map([
+  ['1.0.0-draft', {
+    implementedControl: 'production-open remains empty',
+    promotionConfirmation: 'confirm data-static/interaction-rules.json remains empty',
+  }],
+  ['1.1.0-draft', {
+    implementedControl:
+      'production-open contains only owner-approved, digest-bound promotions',
+    promotionConfirmation:
+      'confirm data-static/interaction-rules.json equals its deterministic '
+        + 'recompilation from the owner-approved production-open promotions '
+        + 'manifest (interactions:promote:check)',
+  }],
+]);
+
+function expectedPackageStatusForPolicyVersion(policyVersion, kind) {
+  const strings = PACKAGE_STATUS_STRINGS_BY_POLICY_VERSION.get(policyVersion);
+  if (strings === undefined) {
+    fail(kind, 'policy_version is not a reviewed package-status boundary version');
+  }
+  return {
+    ...EXPECTED_PACKAGE_STATUS,
+    implemented_controls: EXPECTED_PACKAGE_STATUS.implemented_controls.map((entry) => (
+      entry === 'production-open remains empty' ? strings.implementedControl : entry
+    )),
+    required_before_promotion: EXPECTED_PACKAGE_STATUS.required_before_promotion.map(
+      (entry) => (
+        entry === 'confirm data-static/interaction-rules.json remains empty'
+          ? strings.promotionConfirmation
+          : entry
+      ),
+    ),
+  };
+}
+
+export function assertPackageStatus(status, { policyVersion = '1.0.0-draft' } = {}) {
   const kind = 'draft approval package status';
   status = immutableValidatedSnapshot(status);
-  requireExactObject(status, EXPECTED_PACKAGE_STATUS, kind, 'status');
+  requireExactObject(
+    status,
+    expectedPackageStatusForPolicyVersion(policyVersion, kind),
+    kind,
+    'status',
+  );
   if (status.package_status !== 'draft_non_authorizing') {
     fail(kind, 'package_status must be draft_non_authorizing');
   }

@@ -12,6 +12,9 @@ import {
   checkResolvedProducts,
   validateRulePack,
 } from '../src/lib/interaction-checker.mjs';
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -474,8 +477,7 @@ test('approved candidates map and promote only their exact internal-evaluation s
       `${ruleId} must remain technically held after live provenance drift`,
     );
   }
-  assert.equal(productionPack.rules.length, 0);
-  assert.equal(productionPack.declared_coverage, 'unknown');
+  assertCommittedProductionOpenPack();
 });
 
 const runtimeProductIds = new Map([

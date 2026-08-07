@@ -769,8 +769,14 @@ export function validateTechnicalHoldPack(technicalHoldPack, {
   if (technicalHoldPack.schema_version !== 2) {
     throw new TypeError('technical hold pack schema_version must equal 2');
   }
-  if (technicalHoldPack.profile !== 'internal-evaluation') {
-    throw new TypeError('technical hold pack profile must be internal-evaluation');
+  // Governance policy v1.1 (owner-approved 2026-08-07): technical hold packs
+  // mirror the release profiles. The identity cross-check below still requires
+  // the hold pack profile to equal its rule pack profile exactly.
+  if (technicalHoldPack.profile !== 'internal-evaluation'
+      && technicalHoldPack.profile !== 'production-open') {
+    throw new TypeError(
+      'technical hold pack profile must be internal-evaluation or production-open',
+    );
   }
   requireString(technicalHoldPack.rule_pack_id, 'technical hold pack rule_pack_id');
   requireString(technicalHoldPack.rule_pack_version, 'technical hold pack rule_pack_version');
