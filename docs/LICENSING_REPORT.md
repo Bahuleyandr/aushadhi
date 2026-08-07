@@ -345,8 +345,9 @@ partitioned from the CC0/OGL/CC-BY-SA open core (see §6).
   a GIGW-style policy, or express permission) to reproduce — **unlike** US federal works.
 - **Gazette exception — s.52(1)(q)(i):** reproduction/publication of "any matter which has
   been published in any Official Gazette except an Act of a Legislature" is not
-  infringement. **This is what clears the NPPA ceiling prices** (and CDSCO gazette ban
-  notifications) regardless of website policy.
+  infringement. This may support use of an NPPA or CDSCO record only after that record is
+  bound to an exact verified Gazette instrument; it does not clear the current source-level
+  rows or replace independent legal review.
 - **Facts are not copyrightable; thin compilation copyright.** EBC v. D.B. Modak, (2008) 1
   SCC 1 rejected pure "sweat of the brow" and required a "modicum of creativity" for
   compilations. Raw fields — drug name, salt composition, MRP, availability — are facts
