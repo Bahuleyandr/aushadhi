@@ -959,10 +959,7 @@ export function compileInteractionRuntimeArtifacts({
   }
   // A required drift hold covers the DRAFT rule, so an expansion promotion
   // resolves to its parent id here: promoting an expanded member of a held
-  // parent without the exact required hold fails closed below (and a hold
-  // keyed to the parent cannot attach to the expanded promotion either, so
-  // held parents cannot be promoted through expansion at all until the
-  // owner resolves the hold).
+  // parent without the exact required hold fails closed below.
   const promotedDraftRuleIds = new Set(
     promotionManifest.promotions.map((promotion) => (
       promotion.expansion?.parent_rule_id ?? promotion.rule_id
@@ -977,6 +974,32 @@ export function compileInteractionRuntimeArtifacts({
     if (!actual || Object.keys(required).some((key) => actual[key] !== required[key])) {
       throw new TypeError(
         `required promotion hold is missing or changed: ${required.rule_id}`,
+      );
+    }
+  }
+  // A drift hold covers the DRAFT rule, not just one promotion of it. When
+  // the held parent is itself promoted exactly, its hold attaches to that
+  // exact promotion and satisfies the required-hold check above — but the
+  // hold-exclusion filter below keys on the compiled rule_id, so it would
+  // never reach an expansion sibling's distinct expanded id. A held draft
+  // rule therefore hard-refuses EVERY expansion promotion of it — whether
+  // the hold is code-pinned (REQUIRED_PROMOTION_HOLDS) or attaches through
+  // the manifest, and independent of whether the parent is also promoted
+  // exactly — until the owner resolves the hold.
+  const heldDraftRuleIds = new Set(
+    REQUIRED_PROMOTION_HOLDS.map((required) => required.rule_id),
+  );
+  for (const hold of promotionHoldManifest.holds) {
+    const held = promotionsById.get(hold.rule_id);
+    heldDraftRuleIds.add(held.expansion?.parent_rule_id ?? held.rule_id);
+  }
+  for (const promotion of promotionManifest.promotions) {
+    if (promotion.expansion
+        && heldDraftRuleIds.has(promotion.expansion.parent_rule_id)) {
+      throw new TypeError(
+        `${promotion.rule_id} expands drift-held draft rule `
+          + `${promotion.expansion.parent_rule_id}; a held draft rule cannot `
+          + 'be promoted through expansion until the hold is resolved',
       );
     }
   }

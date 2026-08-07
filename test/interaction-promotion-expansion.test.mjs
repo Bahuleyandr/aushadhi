@@ -437,6 +437,60 @@ test('an expansion of a drift-held parent rule cannot bypass the required promot
   );
 });
 
+test('an expansion sibling of a promoted-and-held parent rule is hard-refused', () => {
+  // Adversarial-review probe (PR #14 Finding 1): the committed manifest
+  // promotes warfarin__azithromycin_oral exactly, and its committed drift
+  // hold attaches to that exact promotion — so the required-hold check is
+  // satisfied and the hold-exclusion filter (keyed on compiled rule_id)
+  // never reaches an expansion sibling's distinct expanded id. With a
+  // synthetic reviewed azithromycin presentation carrying a different
+  // product_id, the sibling's product pairs also escape the historically
+  // held scope leaves. Pre-fix this compiled the expanded rule as ACTIVE,
+  // citing the very evidence whose provenance drift the hold records. It
+  // must hard-refuse instead: a held draft rule blocks all expansion
+  // promotions of it.
+  const source = inputs();
+  const legacy = source.promotionManifest.promotions.find(
+    (promotion) => promotion.rule_id === 'warfarin__azithromycin_oral',
+  );
+  const expandedRuleId = 'warfarin__azithromycin_oral::warfarin__azithromycin';
+  source.presentationManifest.mappings.push(
+    syntheticPresentationMapping('990001', 'probe-azithromycin-tablet'),
+  );
+  source.promotionManifest.schema_version = 2;
+  source.promotionManifest.promotions.push({
+    rule_id: expandedRuleId,
+    draft_rule_sha256: legacy.draft_rule_sha256,
+    expansion: {
+      parent_rule_id: 'warfarin__azithromycin_oral',
+      object_member: 'warfarin',
+      perpetrator_member: 'azithromycin',
+    },
+    approval: {
+      ...structuredClone(legacy.approval),
+      approval_text: `${legacy.approval.approval_text} This approval covers `
+        + `the expanded exact rule ${expandedRuleId}.`,
+    },
+    scope: {
+      route: 'oral',
+      formulation: 'tablet',
+      expected_product_pair_count: 3,
+      sides: [
+        structuredClone(legacy.scope.sides[0]),
+        {
+          draft_role: 'perpetrator',
+          ingredient_mapping_id: 'ingredient:azithromycin:rxnorm-18631',
+          presentation_mapping_ids: ['presentation:testcat:990001:oral-tablet'],
+        },
+      ],
+    },
+  });
+  assert.throws(
+    () => compileInteractionRuntimePack(source),
+    /warfarin__azithromycin_oral::warfarin__azithromycin expands drift-held draft rule warfarin__azithromycin_oral/u,
+  );
+});
+
 test('a schema_version 1 manifest rejects expansion entries', () => {
   const source = warfarinExpansionInputs();
   source.promotionManifest.schema_version = 1;
