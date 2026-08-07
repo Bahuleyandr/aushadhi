@@ -78,6 +78,19 @@ into its set of exact instantiation candidates:
    named refuse with `evidence_does_not_name_member` ("evidence does not
    name member"); the owner resolves those by adding evidence through the
    draft flow, not by the compiler assuming class coverage.
+
+   The naming gate is deliberately **lexical**: it tests word-boundary
+   presence of the member's name in attested text, not the semantics of the
+   sentence around it. A member named in a negative context ("no interaction
+   was observed with X") passes the gate exactly like one named in a warning.
+   That is acceptable because the gate governs **dry-run candidate quality
+   only** — it decides which member pairs may be *proposed* as expansion
+   candidates, never which rules go live. Every candidate still requires its
+   own signed clinician approval naming the expanded rule id, and that review
+   reads the actual evidence; a lexically admitted but clinically wrong
+   candidate dies at the approval step. The gate's job is to keep members the
+   evidence never mentions out of the candidate list, and for that a strict
+   word-boundary test is the right, deterministic tool.
 3. **Reviewed route scope.** A side's reviewed routes come from its own
    `route` array, else from `applicability.routes`; a side with neither
    refuses (`missing_route_data`) — the compiler never invents an exposure
@@ -97,9 +110,14 @@ into its set of exact instantiation candidates:
    supersession metadata or combination-bound sides.
 5. **Drift holds still bind the parent.** The code-pinned required promotion
    holds (azithromycin/tramadol, 2026-08-06) are enforced against the
-   expansion's **parent** rule id, and a hold keyed to the parent cannot
-   attach to an expanded promotion — so a drift-held parent cannot be
-   promoted through expansion at all until the owner resolves the hold.
+   expansion's **parent** rule id, and the compiler additionally
+   hard-refuses any expansion promotion whose parent draft rule is held —
+   whether the hold is code-pinned or attaches through the manifest, and
+   independent of whether the held parent is also promoted exactly (where
+   the hold attaches to the exact promotion and rule_id-keyed hold
+   exclusion alone would not reach an expansion sibling's distinct id). A
+   drift-held parent cannot be promoted through expansion at all until the
+   owner resolves the hold.
 
 ### The known erythromycin inconsistency
 
