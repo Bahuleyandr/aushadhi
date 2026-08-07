@@ -1,5 +1,24 @@
-import crypto from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
+
+import {
+  assertNoKeyRecursively,
+  assertNoOwn,
+  fail,
+  immutableValidatedSnapshot,
+  requireExactKeys,
+  requireExactObject,
+  requireFalse,
+  requireNonEmptyString,
+  requireNull,
+  requireObject,
+  requireStringArray,
+} from './interaction-approval-draft/validation-primitives.mjs';
+import {
+  assertClinicianReviewRendering,
+} from './interaction-approval-draft/clinician-review-rendering.mjs';
+
+export { parseDraftApprovalJson } from './interaction-approval-draft/raw-json.mjs';
+export { assertClinicianReviewRendering };
 
 const POLICY_KEYS = new Set([
   'schema_id',
@@ -1021,152 +1040,6 @@ const EXPECTED_PACKAGE_STATUS = {
     'obtain separate production and deployment authorization',
   ],
 };
-
-function isObject(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function fail(kind, message) {
-  throw new TypeError(`${kind}: ${message}`);
-}
-
-export { parseDraftApprovalJson } from './interaction-approval-draft/raw-json.mjs';
-
-function deepFreeze(value) {
-  if (value === null || typeof value !== 'object' || Object.isFrozen(value)) {
-    return value;
-  }
-  for (const child of Object.values(value)) deepFreeze(child);
-  return Object.freeze(value);
-}
-
-function immutableValidatedSnapshot(value) {
-  return deepFreeze(structuredClone(value));
-}
-
-function normalizedTextSha256(text) {
-  if (typeof text !== 'string') {
-    throw new TypeError('clinician review rendering: source must be a string');
-  }
-  const normalized = text
-    .normalize('NFC')
-    .replace(/\r\n?/gu, '\n')
-    .replace(/\n+$/gu, '');
-  return crypto.createHash('sha256').update(normalized, 'utf8').digest('hex');
-}
-
-export function assertClinicianReviewRendering(text) {
-  const expected =
-    '58e83f86cfd16a633f4ba7f4fd72f9e6e7a75f0fca8031b24471ff4b9f332a9b';
-  if (normalizedTextSha256(text) !== expected) {
-    fail(
-      'clinician review rendering',
-      'normalized whole-document SHA-256 does not match the reviewed rendering',
-    );
-  }
-  return Object.freeze({
-    sha256_profile: 'UTF-8-NFC-LF-no-trailing-LF',
-    sha256: expected,
-  });
-}
-
-function requireObject(value, kind, label) {
-  if (!isObject(value)) fail(kind, `${label} must be an object`);
-  return value;
-}
-
-function requireExactKeys(value, allowed, kind, label) {
-  requireObject(value, kind, label);
-  const actual = Object.keys(value);
-  const unknown = actual.filter((key) => !allowed.has(key));
-  const missing = [...allowed].filter((key) => !Object.hasOwn(value, key));
-  if (unknown.length > 0) {
-    fail(kind, `${label} contains unknown ${unknown.join(', ')}`);
-  }
-  if (missing.length > 0) {
-    fail(kind, `${label} is missing ${missing.join(', ')}`);
-  }
-}
-
-function firstDifference(actual, expected, label) {
-  if (Object.is(actual, expected)) return null;
-  if (Array.isArray(actual) || Array.isArray(expected)) {
-    if (!Array.isArray(actual) || !Array.isArray(expected)) return label;
-    if (actual.length !== expected.length) return `${label}.length`;
-    for (let index = 0; index < actual.length; index += 1) {
-      const difference = firstDifference(actual[index], expected[index], `${label}[${index}]`);
-      if (difference !== null) return difference;
-    }
-    return null;
-  }
-  if (isObject(actual) || isObject(expected)) {
-    if (!isObject(actual) || !isObject(expected)) return label;
-    const keys = new Set([...Object.keys(actual), ...Object.keys(expected)]);
-    for (const key of keys) {
-      if (!Object.hasOwn(actual, key) || !Object.hasOwn(expected, key)) {
-        return `${label}.${key}`;
-      }
-      const difference = firstDifference(actual[key], expected[key], `${label}.${key}`);
-      if (difference !== null) return difference;
-    }
-    return null;
-  }
-  return label;
-}
-
-function requireExactObject(value, expected, kind, label) {
-  requireExactKeys(value, new Set(Object.keys(expected)), kind, label);
-  if (!isDeepStrictEqual(value, expected)) {
-    const difference = firstDifference(value, expected, label);
-    fail(kind, `${difference} does not match the fixed draft boundary`);
-  }
-}
-
-function requireFalse(value, kind, label) {
-  if (value !== false) fail(kind, `${label} must be false`);
-}
-
-function requireNull(value, kind, label) {
-  if (value !== null) fail(kind, `${label} must remain null in a template`);
-}
-
-function requireNonEmptyString(value, kind, label) {
-  if (typeof value !== 'string' || value.trim() === '') {
-    fail(kind, `${label} must be a non-empty string`);
-  }
-}
-
-function requireStringArray(value, kind, label, { allowEmpty = false } = {}) {
-  if (!Array.isArray(value) || (!allowEmpty && value.length === 0)) {
-    fail(kind, `${label} must be ${allowEmpty ? 'an' : 'a non-empty'} array`);
-  }
-  const seen = new Set();
-  for (const item of value) {
-    requireNonEmptyString(item, kind, `${label} entry`);
-    if (seen.has(item)) fail(kind, `${label} contains duplicate ${item}`);
-    seen.add(item);
-  }
-}
-
-function assertNoOwn(value, keys, kind, label) {
-  for (const key of keys) {
-    if (Object.hasOwn(value, key)) fail(kind, `${label} must not contain ${key}`);
-  }
-}
-
-function assertNoKeyRecursively(value, keys, kind, label) {
-  if (Array.isArray(value)) {
-    value.forEach((entry, index) => (
-      assertNoKeyRecursively(entry, keys, kind, `${label}[${index}]`)
-    ));
-    return;
-  }
-  if (!isObject(value)) return;
-  for (const [key, entry] of Object.entries(value)) {
-    if (keys.has(key)) fail(kind, `${label} must not contain ${key}`);
-    assertNoKeyRecursively(entry, keys, kind, `${label}.${key}`);
-  }
-}
 
 function assertAuthorityCeiling(authority, kind) {
   requireExactKeys(
