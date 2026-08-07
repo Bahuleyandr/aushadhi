@@ -335,6 +335,67 @@ test('live verifier rejects a forged openFDA hash against the fetched payload', 
   );
 });
 
+test('live verifier bounds a hung request with a deadline that keeps the event loop alive', async () => {
+  // Regression guard for the Node 22 drained-event-loop hang: the request
+  // deadline must be driven by a ref'd timer, so a fetch that never settles
+  // on its own is aborted with a TimeoutError instead of the awaited promise
+  // pending forever. With an unref'd AbortSignal.timeout() deadline this test
+  // never settles and the runner reports the promise as still pending.
+  const openFda = openFdaFixture();
+  const abortReasons = [];
+  const hangingFetch = (_url, options) => new Promise((_resolve, reject) => {
+    options.signal.addEventListener('abort', () => {
+      abortReasons.push(options.signal.reason);
+      reject(options.signal.reason);
+    }, { once: true });
+  });
+
+  await assert.rejects(
+    () => verifyInteractionEvidenceRecords({
+      records: [{
+        section: 'G',
+        rule_id: 'hung-request',
+        evidence: openFda.evidence,
+        storagePath:
+          'docs/interaction-review/batch-01-v2/sections/G.verified.jsonl',
+      }],
+      retries: 0,
+      requestTimeoutMs: 50,
+      fetchImpl: hangingFetch,
+    }),
+    (error) => error instanceof AggregateError
+      && error.errors.some(
+        (failure) => failure.cause?.name === 'TimeoutError'
+          && /request timed out after 50ms/.test(failure.cause.message),
+      ),
+  );
+  assert.ok(abortReasons.length >= 1, 'the hung request must have been aborted');
+  assert.ok(abortReasons.every((reason) => reason?.name === 'TimeoutError'));
+});
+
+test('live verifier validates requestTimeoutMs before any network request', async () => {
+  const openFda = openFdaFixture();
+  const calls = [];
+  for (const invalid of [0, -1, 1.5, 'soon']) {
+    await assert.rejects(
+      () => verifyInteractionEvidenceRecords({
+        records: [{
+          section: 'G',
+          rule_id: 'fixture-openfda',
+          evidence: openFda.evidence,
+          storagePath:
+            'docs/interaction-review/batch-01-v2/sections/G.verified.jsonl',
+        }],
+        requestTimeoutMs: invalid,
+        fetchImpl: fixtureFetch(openFda.payload, null, calls),
+      }),
+      (error) => error instanceof TypeError
+        && /requestTimeoutMs must be a positive integer/.test(error.message),
+    );
+  }
+  assert.deepEqual(calls, []);
+});
+
 test('live verifier rejects restricted metadata before any network request', async () => {
   const openFda = openFdaFixture();
   openFda.evidence.source_policy_id = 'onemg-live';

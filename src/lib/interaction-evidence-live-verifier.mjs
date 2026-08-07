@@ -8,6 +8,7 @@ const OPENFDA_POLICY = 'openfda-labels';
 const GOVUK_POLICY = 'mhra-govuk-drug-safety-updates';
 const DEFAULT_CONCURRENCY = 6;
 const DEFAULT_RETRIES = 2;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 const MAX_RESPONSE_BYTES = 32 * 1024 * 1024;
 
 function positiveInteger(value, fallback, label) {
@@ -44,16 +45,30 @@ function wait(delayMs) {
 async function fetchTextWithRetry(url, {
   fetchImpl,
   retries,
+  requestTimeoutMs,
 }) {
   let lastError;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
+    // Uses an explicit ref'd timer instead of AbortSignal.timeout(): the
+    // latter's internal timer is unref'd on some Node lines (observed on
+    // 22.x), so when the in-flight request is the only pending work the event
+    // loop drains before the deadline can fire and the awaited promise never
+    // settles. Aborting with a TimeoutError DOMException keeps the observable
+    // error contract identical to AbortSignal.timeout().
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      controller.abort(new DOMException(
+        `${url}: request timed out after ${requestTimeoutMs}ms`,
+        'TimeoutError',
+      ));
+    }, requestTimeoutMs);
     try {
       const response = await fetchImpl(url, {
         headers: {
           accept: 'application/json, application/xml, text/html;q=0.9, */*;q=0.5',
           'user-agent': 'aushadhi-interaction-evidence-verifier/1.0',
         },
-        signal: AbortSignal.timeout(30_000),
+        signal: controller.signal,
       });
       const contentLength = Number(response.headers?.get?.('content-length'));
       if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) {
@@ -73,9 +88,14 @@ async function fetchTextWithRetry(url, {
       }
       return body;
     } catch (error) {
+      clearTimeout(timer);
       lastError = error;
       if (attempt === retries || error.retryable === false) break;
       await wait(300 * (2 ** attempt));
+    } finally {
+      // Also covers the success path; double-clearing after a caught error
+      // is a no-op. No stray ref'd timer outlives its request.
+      clearTimeout(timer);
     }
   }
   throw lastError;
@@ -153,6 +173,7 @@ export async function verifyInteractionEvidenceRecords({
   profile = 'production-open',
   concurrency,
   retries,
+  requestTimeoutMs,
   fetchImpl = globalThis.fetch,
 } = {}) {
   if (!Array.isArray(records) || records.length === 0) {
@@ -170,6 +191,11 @@ export async function verifyInteractionEvidenceRecords({
     retries,
     DEFAULT_RETRIES,
     'retries',
+  );
+  const timeoutMs = positiveInteger(
+    requestTimeoutMs,
+    DEFAULT_REQUEST_TIMEOUT_MS,
+    'requestTimeoutMs',
   );
   const failures = [];
   const failedIndexes = new Set();
@@ -231,6 +257,7 @@ export async function verifyInteractionEvidenceRecords({
       const xml = await fetchTextWithRetry(url, {
         fetchImpl,
         retries: retryCount,
+        requestTimeoutMs: timeoutMs,
       });
       currentBySetId.set(setId, parseCurrentSplXml(xml, setId, url));
     } catch (error) {
@@ -262,6 +289,7 @@ export async function verifyInteractionEvidenceRecords({
       const body = await fetchTextWithRetry(url, {
         fetchImpl,
         retries: retryCount,
+        requestTimeoutMs: timeoutMs,
       });
       const response = parseJson(body, url);
       openFdaPayloadByUrl.set(
@@ -284,6 +312,7 @@ export async function verifyInteractionEvidenceRecords({
       const xml = await fetchTextWithRetry(url, {
         fetchImpl,
         retries: retryCount,
+        requestTimeoutMs: timeoutMs,
       });
       const currentAfterOpenFda = parseCurrentSplXml(xml, setId, url);
       const currentBeforeOpenFda = currentBySetId.get(setId);
@@ -318,10 +347,12 @@ export async function verifyInteractionEvidenceRecords({
         fetchTextWithRetry(contentApiUrl, {
           fetchImpl,
           retries: retryCount,
+          requestTimeoutMs: timeoutMs,
         }),
         fetchTextWithRetry(pageUrl, {
           fetchImpl,
           retries: retryCount,
+          requestTimeoutMs: timeoutMs,
         }),
       ]);
       govPayloadByUrl.set(pageUrl, {
