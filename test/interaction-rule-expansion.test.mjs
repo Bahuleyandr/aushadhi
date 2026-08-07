@@ -188,6 +188,41 @@ test('member exceptions narrow the pinned roster and must exist in it', () => {
   assert.equal(refusal.reason, 'member_exception_not_in_pinned_member_set');
 });
 
+test('exceptions that empty the roster refuse explicitly instead of yielding a silent non-expansion', () => {
+  // PR #14 Finding 2: pre-fix, a side whose member_exceptions removed every
+  // pinned member reported expandable:false with ZERO refusals — nothing
+  // expanded and nothing explained why.
+  const allExcepted = classRule();
+  allExcepted.perpetrator.member_exceptions = [
+    'alphacillin', 'betacillin', 'gammacillin',
+  ];
+  const report = expand(allExcepted);
+  assert.equal(report.expandable, false);
+  assert.deepEqual(report.expansions, []);
+  assert.equal(report.refusals.length, 1);
+  assert.equal(report.refusals[0].reason, 'empty_roster_after_exceptions');
+  assert.equal(report.refusals[0].side, 'perpetrator');
+  assert.match(
+    report.refusals[0].message,
+    /no expandable member of pinned member set test_inhibitor\[strong\] remains/u,
+  );
+  assert.match(report.refusals[0].message, /through the draft flow/u);
+
+  // Same silent case with an embedded roster fully intersected away by the
+  // exceptions.
+  const embeddedExcepted = classRule();
+  embeddedExcepted.perpetrator.members = ['alphacillin', 'betacillin', 'gammacillin'];
+  embeddedExcepted.perpetrator.member_exceptions = [
+    'alphacillin', 'betacillin', 'gammacillin',
+  ];
+  const embeddedReport = expand(embeddedExcepted);
+  assert.equal(embeddedReport.expandable, false);
+  assert.deepEqual(
+    embeddedReport.refusals.map((entry) => entry.reason),
+    ['empty_roster_after_exceptions'],
+  );
+});
+
 test('non-canonical identities are refused, never renamed', () => {
   const pinnedBad = classRule();
   pinnedBad.perpetrator = {

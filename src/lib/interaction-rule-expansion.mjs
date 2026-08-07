@@ -315,9 +315,29 @@ function resolveClassRoster({ rule, role, selector, memberSetClasses, refusals }
     exceptions.add(canonical);
   }
 
+  // An emptied-out side is refused explicitly, never reported as a bare
+  // non-expansion: an operator reading the dry run must see that the side
+  // yielded nothing because member_exceptions (alone, or intersected with
+  // the embedded roster) removed every member — not wonder why a rule
+  // neither expanded nor refused.
+  const refuseEmptyRoster = (roster) => {
+    if (roster.length > 0) return roster;
+    refusal(
+      refusals, ruleId, role, null, 'empty_roster_after_exceptions',
+      `rule "${ruleId}" ${role} class "${className}" resolves to an empty `
+        + 'roster after applying member_exceptions and the embedded roster '
+        + '(if any): no expandable member of pinned member set '
+        + `${className}[${bucketName}] remains; a side that excepts every `
+        + 'member must be resolved through the draft flow',
+    );
+    return null;
+  };
+
   const embedded = nonEmptyStringArray(selector.members);
   if (embedded === null) {
-    return [...pinned].filter((member) => !exceptions.has(member));
+    return refuseEmptyRoster(
+      [...pinned].filter((member) => !exceptions.has(member)),
+    );
   }
 
   const roster = [];
@@ -351,7 +371,7 @@ function resolveClassRoster({ rule, role, selector, memberSetClasses, refusals }
       );
     }
   }
-  return roster;
+  return refuseEmptyRoster(roster);
 }
 
 function sortRefusals(refusals) {
