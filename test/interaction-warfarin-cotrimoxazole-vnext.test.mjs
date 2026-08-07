@@ -8,6 +8,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   parseDraftApprovalJson,
 } from '../src/lib/interaction-approval-draft.mjs';
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACKAGE_DIR = path.join(
@@ -207,6 +210,91 @@ test('governance policy separates historical approval from current promotion eli
   assert.equal(Object.hasOwn(policy, 'policy_jcs_sha256'), false);
   assert.equal(Object.hasOwn(policy, 'approval_status'), false);
   assert.equal(Object.hasOwn(policy, 'approval_artifact_commit'), false);
+});
+
+// Parallel case for governance policy v1.1 (owner-approved 2026-08-07): the
+// historical v1.0 package above keeps validating byte-identically, and the
+// v1.1 draft validates under its own version-keyed expectations. v1.1 relaxes
+// only the production-open emptiness requirement; every other fail-closed
+// invariant is asserted unchanged. This validation confers no signature,
+// promotion, production, or deployment authority.
+const V1_1_POLICY_PATH = path.join(
+  ROOT,
+  'docs',
+  'interaction-review',
+  '2026-08-07-production-open-promotion-governance',
+  'governance-policy.internal-evaluation.v1.1.draft.json',
+);
+
+test('governance policy v1.1 validates and relaxes only the production-open emptiness requirement', {
+  skip: !fs.existsSync(V1_1_POLICY_PATH) || !VALIDATOR_PRESENT,
+}, async () => {
+  const {
+    assertDraftGovernancePolicy,
+  } = await import(pathToFileURL(VALIDATOR_PATH));
+  const policy = parseDraftApprovalJson(
+    fs.readFileSync(V1_1_POLICY_PATH, 'utf8'),
+    'governance-policy.internal-evaluation.v1.1.draft.json',
+  );
+  const validatedPolicy = assertDraftGovernancePolicy(policy);
+  assert.deepEqual(validatedPolicy, policy);
+  assertDeepFrozen(validatedPolicy);
+
+  assert.equal(policy.policy_version, '1.1.0-draft');
+  assert.equal(policy.supersedes_policy_jcs_sha256, null);
+  assert.equal(policy.operational_profile, 'internal-evaluation');
+  assert.deepEqual(policy.authority_ceiling, {
+    clinical_use: false,
+    production: false,
+    deployment: false,
+  });
+  assert.equal(
+    policy.profile_requirements.evaluation_watermark,
+    'INTERNAL EVALUATION — NOT FOR CLINICAL USE',
+  );
+  assert.equal(policy.profile_requirements.production_open_required_empty, false);
+  assert.deepEqual(policy.profile_requirements.production_open_promotion_requirements, [
+    'owner-approved production-open promotions manifest and holds manifest, '
+      + 'digest-bound identically to the internal pair',
+    'every presentation mapping allowed_profiles includes production-open and '
+      + 'derives only from redistributable open-class sources',
+    'a new clinician approval per rule whose text explicitly authorizes the '
+      + 'production-open scope',
+    'declared_coverage remains unknown or partial; complete is prohibited',
+    'deterministic regeneration proven by interactions:promote:check before packaging',
+  ]);
+  assert.deepEqual(
+    policy.profile_requirements.prohibited_output_on_unreviewed_scope,
+    ['safe', 'no_interaction'],
+  );
+  assert.equal(
+    policy.gate_policy.required_before_promotion.includes('production_open_empty'),
+    false,
+  );
+  assert.equal(
+    policy.gate_policy.required_before_promotion
+      .includes('production_open_scope_and_licence_clearance'),
+    true,
+  );
+  assert.equal(policy.gate_policy.passing_gates_create_clinical_authority, false);
+
+  // A v1.1 policy that reasserts the empty-pack requirement is rejected: the
+  // frozen v1.1 boundary pins the owner-approved value in both directions.
+  assert.throws(
+    () => assertDraftGovernancePolicy({
+      ...policy,
+      profile_requirements: {
+        ...policy.profile_requirements,
+        production_open_required_empty: true,
+      },
+    }),
+    /does not match the fixed draft boundary/iu,
+  );
+  // Unknown policy versions still fail closed.
+  assert.throws(
+    () => assertDraftGovernancePolicy({ ...policy, policy_version: '1.2.0-draft' }),
+    /policy_version is not the reviewed draft version/iu,
+  );
 });
 
 test('clinical subject binds the exact six reviewed oral-tablet product pairs', {
@@ -1262,11 +1350,11 @@ test('historical draft and production-open remain non-authorizing', () => {
   assert.equal(draft.runtime_status.runtime_enabled, false);
   assert.equal(draft.runtime_status.promotion_eligible, false);
 
-  const productionPack = JSON.parse(fs.readFileSync(
-    path.join(ROOT, 'data-static', 'interaction-rules.json'),
-    'utf8',
-  ));
+  const productionPack = assertCommittedProductionOpenPack();
   assert.equal(productionPack.profile, 'production-open');
-  assert.equal(productionPack.declared_coverage, 'unknown');
-  assert.deepEqual(productionPack.rules, []);
+  assert.equal(
+    productionPack.rules.some((rule) => rule.rule_id === 'warfarin__cotrimoxazole'),
+    false,
+    'the non-authorizing draft subject must never reach the production-open pack',
+  );
 });

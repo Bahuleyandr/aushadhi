@@ -1,0 +1,135 @@
+{
+  "schema_id": "aushadhi.interaction-governance-policy",
+  "schema_version": "1.0.0",
+  "policy_id": "aushadhi-interaction-governance-internal-evaluation",
+  "policy_version": "1.1.0-draft",
+  "supersedes_policy_jcs_sha256": null,
+  "operational_profile": "internal-evaluation",
+  "authority_ceiling": {
+    "clinical_use": false,
+    "production": false,
+    "deployment": false
+  },
+  "canonicalization_profile": {
+    "method": "RFC8785-JCS",
+    "encoding": "UTF-8",
+    "digest_algorithm": "SHA-256",
+    "implementation_profile_id": null,
+    "conformance_vectors_sha256": null
+  },
+  "trust_profile_bindings": {
+    "bootstrap_governance_policy_jcs_sha256": null,
+    "signature_profile_id": null,
+    "event_store_profile_id": null,
+    "signer_registry_id": null,
+    "authorization_registry_id": null
+  },
+  "status_model": {
+    "independent_dimensions": [
+      "event_authenticity",
+      "clinical_approval_authority",
+      "subject_binding_status",
+      "technical_gate_status",
+      "promotion_eligibility",
+      "activation_status"
+    ],
+    "historical_event_authenticity_is_immutable": true,
+    "current_authority_is_derived_from_lifecycle_events": true,
+    "promotion_eligibility_is_derived_from_current_gates": true
+  },
+  "failure_semantics": {
+    "technical_gate_failure": "block_promotion_only",
+    "source_or_identity_drift": "block_current_binding_and_promotion_pending_review",
+    "invalid_signature_or_subject_binding": "event_has_no_approval_effect",
+    "historical_event_mutation": "prohibited",
+    "missing_or_conflicting_applicability": "unresolved"
+  },
+  "runtime_safety": {
+    "missing_stale_ambiguous_or_drifted_identity": "unresolved",
+    "unreviewed_clinical_content_hidden": true,
+    "fuzzy_identity_acceptance": false,
+    "brand_to_systemic_route_inference": false,
+    "blank_result_means_safe": false,
+    "therapeutic_duplication_is_interaction": false
+  },
+  "applicability_model": {
+    "initial_temporal_mode": "current_check_only",
+    "recent_exposure_supported": false,
+    "episode_state_supported": false,
+    "age_derived_branch_supported": false,
+    "current_check_meaning": "both exact products are represented in the same current interaction check"
+  },
+  "workflow_contract": {
+    "pending_states": [
+      "manual_review_required",
+      "clinician_confirmation_pending",
+      "urgent_supply_escalated",
+      "correction_recheck_pending"
+    ],
+    "terminal_states": [
+      "review_confirmed",
+      "no_concurrent_exposure_verified",
+      "order_cancelled",
+      "order_corrected_pair_absent_after_recheck"
+    ],
+    "terminal_state_compatibility_required": true,
+    "pending_state_requirements_required": true,
+    "state_specific_exposure_compatibility_required": true,
+    "state_specific_confirmation_method_compatibility_required": true,
+    "terminal_order_state_requires_trusted_event_and_authorized_actor": true,
+    "pharmacy_self_attestation_can_satisfy_terminal_order_state": false,
+    "urgent_supply_escalated_is_terminal": false,
+    "free_text_only_resolution_allowed": false,
+    "pharmacy_can_change_or_stop_medicine_independently": false
+  },
+  "gate_policy": {
+    "required_before_promotion": [
+      "subject_policy_and_approval_event_integrity",
+      "repository_source_identity_and_product_bindings",
+      "exact_six_product_pairs",
+      "current_check_only_temporal_scope",
+      "medication_status_or_intent_input_contract",
+      "negative_identity_and_presentation_cases",
+      "workflow_and_audience_binding",
+      "supersession_and_duplicate_behavior",
+      "evaluation_watermark",
+      "production_open_scope_and_licence_clearance",
+      "full_regression_suite"
+    ],
+    "passing_gates_create_clinical_authority": false,
+    "failed_or_stale_gate_invalidates_historical_approval": false
+  },
+  "profile_requirements": {
+    "evaluation_watermark": "INTERNAL EVALUATION — NOT FOR CLINICAL USE",
+    "production_open_required_empty": false,
+    "production_open_promotion_requirements": [
+      "owner-approved production-open promotions manifest and holds manifest, digest-bound identically to the internal pair",
+      "every presentation mapping allowed_profiles includes production-open and derives only from redistributable open-class sources",
+      "a new clinician approval per rule whose text explicitly authorizes the production-open scope",
+      "declared_coverage remains unknown or partial; complete is prohibited",
+      "deterministic regeneration proven by interactions:promote:check before packaging"
+    ],
+    "output_on_missing_stale_ambiguous_or_drifted_scope": [
+      "not_evaluated",
+      "unresolved"
+    ],
+    "prohibited_output_on_unreviewed_scope": [
+      "safe",
+      "no_interaction"
+    ]
+  },
+  "change_control": {
+    "material_subject_change_requires_new_approval_event": true,
+    "policy_replacement_does_not_migrate_existing_subjects": true,
+    "completed_event_mutation": "prohibited",
+    "correction_model": "new_superseding_event"
+  },
+  "review_policy": {
+    "governance_policy_approval_required": true,
+    "rule_subject_approval_required": true,
+    "policy_approver_requirements_resolved": false,
+    "rule_approver_requirements_resolved": false,
+    "signature_profile_resolved": false,
+    "event_store_profile_resolved": false
+  }
+}

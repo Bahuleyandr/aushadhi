@@ -42,10 +42,12 @@ export function validateDraftApprovalPackage({
   status,
   clinicianReviewText,
 }) {
-  assertDraftGovernancePolicy(policy);
+  const validatedPolicy = assertDraftGovernancePolicy(policy);
   assertDraftClinicalRuleSubject(subject);
   assertApprovalEventTemplate(eventTemplate);
-  const validatedStatus = assertPackageStatus(status);
+  const validatedStatus = assertPackageStatus(status, {
+    policyVersion: validatedPolicy.policy_version,
+  });
   const validatedRendering = assertClinicianReviewRendering(clinicianReviewText);
   if (
     validatedStatus.clinician_review_sha256_profile

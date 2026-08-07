@@ -27,6 +27,11 @@ import { strictPlainDataSnapshot } from './strict-plain-data.mjs';
 const SHA256 = /^[0-9a-f]{64}$/u;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/u;
 const ROLES = ['object', 'perpetrator'];
+// Governance policy v1.1 (owner-approved 2026-08-07): promotion and hold
+// manifests may declare either release profile. Per-mapping, per-source, and
+// per-approval profile gates still apply — a production-open manifest compiles
+// only over mappings whose allowed_profiles include production-open.
+const RELEASE_PROFILES = ['internal-evaluation', 'production-open'];
 const COMBINATION_BINDING_KIND = 'combination_identity';
 const SUBJECT_SPECIFICITIES = new Set([
   'exact_member',
@@ -389,8 +394,10 @@ export function validatePromotionManifest(manifest) {
   if (manifest.schema_version !== 1 && manifest.schema_version !== 2) {
     throw new TypeError('promotion manifest schema_version must equal 1 or 2');
   }
-  if (manifest.profile !== 'internal-evaluation') {
-    throw new TypeError('promotion manifest profile must be internal-evaluation');
+  if (!RELEASE_PROFILES.includes(manifest.profile)) {
+    throw new TypeError(
+      'promotion manifest profile must be internal-evaluation or production-open',
+    );
   }
   validateOutputPack(manifest.output_pack);
   if (!Array.isArray(manifest.promotions) || manifest.promotions.length === 0) {
@@ -468,8 +475,10 @@ export function validatePromotionHoldManifest(manifest) {
     throw new TypeError('promotion hold manifest schema_version must equal 3');
   }
   requireString(manifest.pack_id, 'promotion hold manifest pack_id');
-  if (manifest.profile !== 'internal-evaluation') {
-    throw new TypeError('promotion hold manifest profile must be internal-evaluation');
+  if (!RELEASE_PROFILES.includes(manifest.profile)) {
+    throw new TypeError(
+      'promotion hold manifest profile must be internal-evaluation or production-open',
+    );
   }
   for (const field of [
     'draft_pack_sha256',

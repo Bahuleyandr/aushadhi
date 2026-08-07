@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { checkInteractions } from '../src/lib/interaction-engine.mjs';
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACK_PATH = path.join(ROOT, 'docs/interaction-review/batch-01-v2/batch-01-v2.jsonl');
@@ -197,10 +200,8 @@ test('the compiled internal rule carries exactly the three approved product pair
   assert.match(rule.management, /not independently change a dose or stop either medicine/u);
 });
 
-test('production-open remains empty and coverage stays unknown', () => {
-  const pack = readJson(path.join(ROOT, 'data-static/interaction-rules.json'));
-  assert.equal(pack.rules.length, 0);
-  assert.equal(pack.declared_coverage, 'unknown');
+test('production-open matches its owner-approved state and never declares complete coverage', () => {
+  assertCommittedProductionOpenPack();
   assert.equal(audit.production_open_enabled, false);
 });
 

@@ -8,6 +8,9 @@ import {
   compileInteractionRuntimePack,
   validatePromotionHoldManifest,
 } from '../src/lib/interaction-promotion.mjs';
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -63,7 +66,7 @@ test('committed provenance holds exclude only the two drifted promotions', () =>
       'warfarin__voriconazole',
     ],
   );
-  assert.deepEqual(readJson('data-static/interaction-rules.json').rules, []);
+  assertCommittedProductionOpenPack();
 });
 
 test('promotion compilation requires a hold manifest and exact draft-evidence binding', () => {

@@ -6,6 +6,10 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const STAGE_CLI = path.join(ROOT, 'src', 'cli', 'stage-production-open-package.mjs');
 const ROOT_PACK_ALLOWLIST = ['README.md', 'package.json'];
@@ -108,7 +112,7 @@ test('production-open package stages an exact data-only allowlist with a narrowe
   assertPackedTextClean(output, OPEN_PACK_ALLOWLIST);
 });
 
-test('production-open package check is non-mutating and canonical rules remain empty', () => {
+test('production-open package check is non-mutating and canonical rules match the owner-approved state', () => {
   const canonicalRulesPath = path.join(ROOT, 'data-static', 'interaction-rules.json');
   const canonicalSchemaPath = path.join(ROOT, 'data-static', 'interaction-rules.schema.json');
   const rulesBefore = fs.readFileSync(canonicalRulesPath, 'utf8');
@@ -121,8 +125,7 @@ test('production-open package check is non-mutating and canonical rules remain e
 
   const rules = JSON.parse(rulesBefore);
   assert.equal(rules.profile, 'production-open');
-  assert.equal(rules.declared_coverage, 'unknown');
-  assert.deepEqual(rules.rules, []);
+  assertCommittedProductionOpenPack();
 });
 
 test('production-open staging rejects a flag as --output value', (t) => {

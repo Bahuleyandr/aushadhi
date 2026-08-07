@@ -82,10 +82,15 @@ function readCanonicalSources() {
   }
 
   if (rules.profile !== 'production-open') fail('canonical rules profile must be production-open');
-  if (rules.declared_coverage !== 'unknown') fail('canonical rules coverage must remain unknown');
-  if (!Array.isArray(rules.rules) || rules.rules.length !== 0) {
-    fail('canonical production-open rules must remain empty');
+  // Governance policy v1.1 (owner-approved 2026-08-07): the pack is no longer
+  // required to remain empty here. Content correctness is proven by
+  // `npm run interactions:promote:check` (deterministic regeneration from the
+  // owner-approved production-open manifests), which packaging documentation
+  // and CI must run first. Coverage may never be declared complete.
+  if (!['unknown', 'partial'].includes(rules.declared_coverage)) {
+    fail('canonical rules coverage must remain unknown or partial; complete is prohibited');
   }
+  if (!Array.isArray(rules.rules)) fail('canonical production-open rules must be an array');
   const profileEnum = schema?.properties?.profile?.enum;
   if (!Array.isArray(profileEnum) || !profileEnum.includes('production-open')) {
     fail('canonical schema must define the production-open profile');
@@ -103,7 +108,7 @@ function readCanonicalSources() {
   };
 }
 
-function publicReadme() {
+function publicReadme(rules) {
   return `# Aushadhi production-open interaction data
 
 This package contains data only:
@@ -113,10 +118,10 @@ This package contains data only:
   the canonical schema. Its profile enum is narrowed to \`production-open\`; every
   other schema constraint is unchanged.
 
-The rule pack currently declares coverage as \`unknown\`. A blank result does
-not mean safe or establish that no interaction exists. Consumers must present
-that limitation and must not use this data as a substitute for clinical
-judgement.
+The rule pack currently declares coverage as \`${rules.declared_coverage}\`. A
+blank result does not mean safe or establish that no interaction exists.
+Consumers must present that limitation and must not use this data as a
+substitute for clinical judgement.
 
 No executable code, private review material, product catalogue, or deployment
 authority is included.
@@ -245,9 +250,8 @@ function assertReplaceableOutput(output) {
   }
   if (
     existingRules.profile !== 'production-open'
-    || existingRules.declared_coverage !== 'unknown'
+    || !['unknown', 'partial'].includes(existingRules.declared_coverage)
     || !Array.isArray(existingRules.rules)
-    || existingRules.rules.length !== 0
     || JSON.stringify(existingSchema?.properties?.profile?.enum) !== JSON.stringify(['production-open'])
   ) {
     fail(`refusing to replace unrecognized output directory ${output}`);
@@ -321,7 +325,7 @@ function stagePackage(output, sources) {
   const staging = `${resolvedOutput}.staging-${randomUUID()}`;
   fs.mkdirSync(path.join(staging, 'data-static'), { recursive: true });
   try {
-    fs.writeFileSync(path.join(staging, 'README.md'), publicReadme(), 'utf8');
+    fs.writeFileSync(path.join(staging, 'README.md'), publicReadme(sources.rules), 'utf8');
     fs.writeFileSync(
       path.join(staging, 'package.json'),
       `${JSON.stringify(packageManifest(sources.rules), null, 2)}\n`,
@@ -365,7 +369,9 @@ function main() {
       fs.rmSync(scratch, { recursive: true, force: true });
     }
     verifyCanonicalUnchanged(sources);
-    process.stdout.write('production-open package check passed (4 files, canonical rules empty)\n');
+    process.stdout.write(
+      `production-open package check passed (4 files, declared coverage ${sources.rules.declared_coverage})\n`,
+    );
     return;
   }
 

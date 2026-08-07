@@ -12,6 +12,9 @@ import {
   checkResolvedProducts,
   validateRulePack,
 } from '../src/lib/interaction-checker.mjs';
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -690,8 +693,7 @@ test('the internal warfarin-amiodarone rule fires only for the six approved PMBJ
   assert.equal(internalPack.profile, 'internal-evaluation');
   assert.equal(internalPack.declared_coverage, 'partial');
   assert.equal(internalPack.rules.length, 6);
-  assert.deepEqual(productionPack.rules, []);
-  assert.equal(productionPack.declared_coverage, 'unknown');
+  assertCommittedProductionOpenPack();
 
   const approvedRule = internalPack.rules.find(
     (rule) => rule.rule_id === 'warfarin__amiodarone',

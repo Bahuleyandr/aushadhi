@@ -14,6 +14,9 @@ import {
   createDraftPackAttestation,
   parseDraftPackAttestation,
 } from '../src/lib/interaction-draft-attestation.mjs';
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -252,8 +255,7 @@ test('promotion rejects presentation profile drift and pair-count widening', () 
   );
 });
 
-test('production-open remains empty and independent of internal promotion', () => {
-  const production = readJson('data-static/interaction-rules.json');
+test('production-open equals its owner-approved recompilation and stays independent of internal promotion', () => {
   const attestation = parseDraftPackAttestation(
     fs.readFileSync(
       path.join(
@@ -264,7 +266,6 @@ test('production-open remains empty and independent of internal promotion', () =
     ),
   );
   assert.equal(attestation.payload_binding, 'verified');
+  const production = assertCommittedProductionOpenPack();
   assert.equal(production.profile, 'production-open');
-  assert.equal(production.declared_coverage, 'unknown');
-  assert.deepEqual(production.rules, []);
 });

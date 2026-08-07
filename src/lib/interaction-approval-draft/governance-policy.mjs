@@ -92,6 +92,13 @@ const POLICY_PROFILE_KEYS = new Set([
   'output_on_missing_stale_ambiguous_or_drifted_scope',
   'prohibited_output_on_unreviewed_scope',
 ]);
+// Governance policy v1.1 (owner-approved 2026-08-07) adds exactly one
+// profile-requirements key: the enumerated production-open promotion
+// requirements that replace the blanket empty-pack ban.
+const POLICY_PROFILE_KEYS_V1_1 = new Set([
+  ...POLICY_PROFILE_KEYS,
+  'production_open_promotion_requirements',
+]);
 const POLICY_CHANGE_CONTROL_KEYS = new Set([
   'material_subject_change_requires_new_approval_event',
   'policy_replacement_does_not_migrate_existing_subjects',
@@ -218,6 +225,79 @@ const EXPECTED_POLICY_PROFILE_REQUIREMENTS = {
   ],
 };
 
+// ── Policy v1.1 (owner-approved 2026-08-07): production-open promotion ──
+// The v1.0 expectations above stay frozen so the committed 2026-07-29
+// package keeps validating byte-identically. v1.1 relaxes exactly one
+// invariant: the production-open pack is no longer required to remain
+// empty; instead its content must be deterministically compiled from
+// owner-approved, digest-bound production-open manifests, never with
+// `complete` declared coverage. Everything else keeps the fail-closed
+// posture (authority ceiling all-false, watermark unchanged, prohibited
+// outputs unchanged). Activation of any non-empty pack remains gated on
+// per-rule clinician approvals and the sanctioned promote tooling.
+const EXPECTED_POLICY_GATES_V1_1 = {
+  required_before_promotion: [
+    'subject_policy_and_approval_event_integrity',
+    'repository_source_identity_and_product_bindings',
+    'exact_six_product_pairs',
+    'current_check_only_temporal_scope',
+    'medication_status_or_intent_input_contract',
+    'negative_identity_and_presentation_cases',
+    'workflow_and_audience_binding',
+    'supersession_and_duplicate_behavior',
+    'evaluation_watermark',
+    'production_open_scope_and_licence_clearance',
+    'full_regression_suite',
+  ],
+  passing_gates_create_clinical_authority: false,
+  failed_or_stale_gate_invalidates_historical_approval: false,
+};
+
+const EXPECTED_PRODUCTION_OPEN_PROMOTION_REQUIREMENTS = [
+  'owner-approved production-open promotions manifest and holds manifest, '
+    + 'digest-bound identically to the internal pair',
+  'every presentation mapping allowed_profiles includes production-open and '
+    + 'derives only from redistributable open-class sources',
+  'a new clinician approval per rule whose text explicitly authorizes the '
+    + 'production-open scope',
+  'declared_coverage remains unknown or partial; complete is prohibited',
+  'deterministic regeneration proven by interactions:promote:check before packaging',
+];
+
+const EXPECTED_POLICY_PROFILE_REQUIREMENTS_V1_1 = {
+  evaluation_watermark: 'INTERNAL EVALUATION — NOT FOR CLINICAL USE',
+  production_open_required_empty: false,
+  production_open_promotion_requirements:
+    EXPECTED_PRODUCTION_OPEN_PROMOTION_REQUIREMENTS,
+  output_on_missing_stale_ambiguous_or_drifted_scope: [
+    'not_evaluated',
+    'unresolved',
+  ],
+  prohibited_output_on_unreviewed_scope: [
+    'safe',
+    'no_interaction',
+  ],
+};
+
+// Frozen expectations keyed by policy_version. The historical 1.0.0-draft
+// entry must never change; new policy versions are added only through an
+// owner-reviewed governance change.
+const EXPECTED_POLICY_BY_VERSION = new Map([
+  ['1.0.0-draft', {
+    gatePolicy: EXPECTED_POLICY_GATES,
+    profileRequirements: EXPECTED_POLICY_PROFILE_REQUIREMENTS,
+    productionOpenRequiredEmpty: true,
+    productionOpenFailureMessage: 'production-open must be required to remain empty',
+  }],
+  ['1.1.0-draft', {
+    gatePolicy: EXPECTED_POLICY_GATES_V1_1,
+    profileRequirements: EXPECTED_POLICY_PROFILE_REQUIREMENTS_V1_1,
+    productionOpenRequiredEmpty: false,
+    productionOpenFailureMessage:
+      'production-open emptiness requirement must be the owner-approved v1.1 value',
+  }],
+]);
+
 const EXPECTED_POLICY_CHANGE_CONTROL = {
   material_subject_change_requires_new_approval_event: true,
   policy_replacement_does_not_migrate_existing_subjects: true,
@@ -253,7 +333,8 @@ export function assertDraftGovernancePolicy(policy) {
   if (policy.policy_id !== 'aushadhi-interaction-governance-internal-evaluation') {
     fail(kind, 'policy_id is not the internal-evaluation governance policy');
   }
-  if (policy.policy_version !== '1.0.0-draft') {
+  const versioned = EXPECTED_POLICY_BY_VERSION.get(policy.policy_version);
+  if (versioned === undefined) {
     fail(kind, 'policy_version is not the reviewed draft version');
   }
   if (policy.supersedes_policy_jcs_sha256 !== null) {
@@ -305,10 +386,10 @@ export function assertDraftGovernancePolicy(policy) {
     kind,
     'workflow_contract',
   );
-  requireExactObject(policy.gate_policy, EXPECTED_POLICY_GATES, kind, 'gate_policy');
+  requireExactObject(policy.gate_policy, versioned.gatePolicy, kind, 'gate_policy');
   requireExactObject(
     policy.profile_requirements,
-    EXPECTED_POLICY_PROFILE_REQUIREMENTS,
+    versioned.profileRequirements,
     kind,
     'profile_requirements',
   );
@@ -344,8 +425,9 @@ export function assertDraftGovernancePolicy(policy) {
   ) {
     fail(kind, 'evaluation watermark is not the fixed internal-evaluation watermark');
   }
-  if (policy.profile_requirements.production_open_required_empty !== true) {
-    fail(kind, 'production-open must be required to remain empty');
+  if (policy.profile_requirements.production_open_required_empty
+      !== versioned.productionOpenRequiredEmpty) {
+    fail(kind, versioned.productionOpenFailureMessage);
   }
   if (policy.gate_policy.passing_gates_create_clinical_authority !== false) {
     fail(kind, 'passing technical gates must not create clinical authority');
@@ -369,6 +451,7 @@ export {
   POLICY_WORKFLOW_KEYS,
   POLICY_GATE_KEYS,
   POLICY_PROFILE_KEYS,
+  POLICY_PROFILE_KEYS_V1_1,
   POLICY_CHANGE_CONTROL_KEYS,
   POLICY_REVIEW_KEYS,
 };

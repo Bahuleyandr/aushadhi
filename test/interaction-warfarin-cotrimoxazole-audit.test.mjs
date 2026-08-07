@@ -12,6 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateIngredientMappingManifest } from '../src/lib/interaction-mapping.mjs';
+import {
+  assertCommittedProductionOpenPack,
+} from './helpers/production-open-pack.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACK_PATH = path.join(ROOT, 'docs/interaction-review/batch-01-v2/batch-01-v2.jsonl');
@@ -181,10 +184,13 @@ test('the PMBJP codes are recorded as drug codes, not serial numbers', () => {
   }
 });
 
-test('production-open remains empty and the packet declares itself non-authorizing', () => {
-  const pack = readJson(path.join(ROOT, 'data-static/interaction-rules.json'));
-  assert.equal(pack.rules.length, 0);
-  assert.equal(pack.declared_coverage, 'unknown');
+test('production-open matches its owner-approved state and the packet declares itself non-authorizing', () => {
+  const pack = assertCommittedProductionOpenPack();
+  assert.equal(
+    pack.rules.some((rule) => rule.rule_id === 'warfarin__cotrimoxazole'),
+    false,
+    'the blocked cotrimoxazole rule must never reach the production-open pack',
+  );
   assert.equal(audit.production_open_enabled, false);
   assert.equal(audit.review_status, 'candidate_audit_blocked_pending_clinician');
   assert.equal(audit.decisions_required.reviewer_id, 'clinician:subas');
