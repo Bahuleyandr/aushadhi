@@ -224,15 +224,23 @@ function validateOutputPack(value) {
   requireString(value.declared_coverage, 'promotion manifest output_pack.declared_coverage');
 }
 
-function validateApproval(value, label) {
+function validateApproval(value, label, profile) {
   requireObject(value, label);
-  requireExactKeys(value, [
+  if (profile === 'production-open'
+      && value.authorized_profile !== 'production-open') {
+    throw new TypeError(
+      'production-open approval must explicitly authorize the production-open profile',
+    );
+  }
+  const keys = [
     'status',
     'reviewer_id',
     'reviewed_at',
     'approval_text',
     'source_versions',
-  ], label);
+  ];
+  if (profile === 'production-open') keys.push('authorized_profile');
+  requireExactKeys(value, keys, label);
   if (value.status !== 'clinician_reviewed') {
     throw new TypeError(`${label}.status must be clinician_reviewed`);
   }
@@ -240,6 +248,20 @@ function validateApproval(value, label) {
   requireIsoDate(value.reviewed_at, `${label}.reviewed_at`);
   requireString(value.approval_text, `${label}.approval_text`);
   requireStringArray(value.source_versions, `${label}.source_versions`, { minItems: 1 });
+  if (profile === 'production-open') {
+    if (/\binternal evaluation only\b|\bkeep production-open disabled\b/iu.test(
+      value.approval_text,
+    )) {
+      throw new TypeError(
+        'production-open approval text contradicts its authorized profile',
+      );
+    }
+    if (!/\bproduction-open\b/iu.test(value.approval_text)) {
+      throw new TypeError(
+        'production-open approval text must explicitly name the production-open profile',
+      );
+    }
+  }
 }
 
 function validateDraftRole(value, label) {
@@ -339,7 +361,7 @@ function validateSupersession(value, label) {
   );
 }
 
-function validatePromotion(value, index, schemaVersion) {
+function validatePromotion(value, index, schemaVersion, profile) {
   const label = `promotion manifest promotions[${index}]`;
   requireObject(value, label);
   const keys = [
@@ -357,7 +379,7 @@ function validatePromotion(value, index, schemaVersion) {
   if (!SHA256.test(value.draft_rule_sha256 ?? '')) {
     throw new TypeError(`${label}.draft_rule_sha256 must be a lowercase SHA-256`);
   }
-  validateApproval(value.approval, `${label}.approval`);
+  validateApproval(value.approval, `${label}.approval`, profile);
   validateScope(value.scope, `${label}.scope`, schemaVersion);
   const combinationSides = value.scope.sides.filter(
     (side) => side.binding_kind === COMBINATION_BINDING_KIND,
@@ -406,7 +428,7 @@ export function validatePromotionManifest(manifest) {
   const ruleIds = new Set();
   for (let index = 0; index < manifest.promotions.length; index += 1) {
     const promotion = manifest.promotions[index];
-    validatePromotion(promotion, index, manifest.schema_version);
+    validatePromotion(promotion, index, manifest.schema_version, manifest.profile);
     if (ruleIds.has(promotion.rule_id)) {
       throw new TypeError(`promotion manifest contains duplicate rule_id ${promotion.rule_id}`);
     }

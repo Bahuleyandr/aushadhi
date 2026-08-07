@@ -7,6 +7,14 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
+import {
+  buildCommittedProductionOpenArtifacts,
+  committedProductionOpenManifestsPresent,
+} from './build-interaction-runtime-pack.mjs';
+import {
+  assertProductionOpenPackMatchesAuthority,
+} from '../lib/production-open-package-boundary.mjs';
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PACKAGE_NAME = '@aushadhi/production-open-interactions';
 const PACKAGE_DESCRIPTION = 'Aushadhi production-open interaction rule data';
@@ -84,13 +92,28 @@ function readCanonicalSources() {
   if (rules.profile !== 'production-open') fail('canonical rules profile must be production-open');
   // Governance policy v1.1 (owner-approved 2026-08-07): the pack is no longer
   // required to remain empty here. Content correctness is proven by
-  // `npm run interactions:promote:check` (deterministic regeneration from the
-  // owner-approved production-open manifests), which packaging documentation
-  // and CI must run first. Coverage may never be declared complete.
+  // deterministic regeneration from the owner-approved production-open
+  // manifests. This staging boundary invokes that same compiler path so the
+  // check cannot be bypassed by running the package command directly. Coverage
+  // may never be declared complete.
   if (!['unknown', 'partial'].includes(rules.declared_coverage)) {
     fail('canonical rules coverage must remain unknown or partial; complete is prohibited');
   }
   if (!Array.isArray(rules.rules)) fail('canonical production-open rules must be an array');
+  const manifestsPresent = committedProductionOpenManifestsPresent();
+  const compiledRulePack = manifestsPresent
+    ? buildCommittedProductionOpenArtifacts()?.rulePack
+    : null;
+  try {
+    assertProductionOpenPackMatchesAuthority({
+      rules,
+      rulesText,
+      productionOpenManifestsPresent: manifestsPresent,
+      compiledRulePack,
+    });
+  } catch (error) {
+    fail(error.message);
+  }
   const profileEnum = schema?.properties?.profile?.enum;
   if (!Array.isArray(profileEnum) || !profileEnum.includes('production-open')) {
     fail('canonical schema must define the production-open profile');

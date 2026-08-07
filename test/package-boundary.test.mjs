@@ -9,6 +9,9 @@ import assert from 'node:assert/strict';
 import {
   assertCommittedProductionOpenPack,
 } from './helpers/production-open-pack.mjs';
+import {
+  assertProductionOpenPackMatchesAuthority,
+} from '../src/lib/production-open-package-boundary.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const STAGE_CLI = path.join(ROOT, 'src', 'cli', 'stage-production-open-package.mjs');
@@ -126,6 +129,32 @@ test('production-open package check is non-mutating and canonical rules match th
   const rules = JSON.parse(rulesBefore);
   assert.equal(rules.profile, 'production-open');
   assertCommittedProductionOpenPack();
+});
+
+test('production-open package boundary rejects content without promotion authority', () => {
+  const canonicalRules = JSON.parse(fs.readFileSync(
+    path.join(ROOT, 'data-static', 'interaction-rules.json'),
+    'utf8',
+  ));
+  assert.doesNotThrow(() => assertProductionOpenPackMatchesAuthority({
+    rules: canonicalRules,
+    rulesText: `${JSON.stringify(canonicalRules, null, 2)}\n`,
+    productionOpenManifestsPresent: false,
+    compiledRulePack: null,
+  }));
+
+  const tamperedRules = structuredClone(canonicalRules);
+  tamperedRules.declared_coverage = 'partial';
+  tamperedRules.rules = [{}];
+  assert.throws(
+    () => assertProductionOpenPackMatchesAuthority({
+      rules: tamperedRules,
+      rulesText: `${JSON.stringify(tamperedRules, null, 2)}\n`,
+      productionOpenManifestsPresent: false,
+      compiledRulePack: null,
+    }),
+    /must remain empty while no production-open promotion manifests are committed/iu,
+  );
 });
 
 test('production-open staging rejects a flag as --output value', (t) => {
