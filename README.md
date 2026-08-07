@@ -116,11 +116,26 @@ isoniazid + pyrazinamide + ethambutol).
 
 | source | rows | notes |
 |---|---|---|
-| github-jr | 253,973 | MIT dataset; primary bulk |
+| github-jr | 253,973 | MIT-labelled dataset; primary bulk. The upstream repository does not document the rows' provenance, so third-party rights remain unverified. See [licensing report](docs/LICENSING_REPORT.md) |
 | janaushadhi | 2,111 | official list; internal/restricted until reuse permission is cleared |
 | kaggle-2025 | optional | disabled for interaction artifacts while its dataset licence is unknown |
 | cdsco-fdc | validation | internal/restricted until reuse permission is cleared |
 | onemg-live | gap-fill | private/internal only; non-redistributable |
+| pharmeasy | gap-fill | private/internal only; redistribution is not authorized; primary-source terms review remains pending |
+| netmeds | gap-fill | private/internal only; redistribution is not authorized; primary-source terms review remains pending |
+| apollo | gap-fill | private/internal only; redistribution is not authorized; primary-source terms review remains pending |
+| nppa | 732 | ceiling prices; private/internal only until every row is bound to an exact Gazette instrument and the proposed legal basis is independently reviewed |
+
+The provisional source assessments above are documented in
+[`docs/LICENSING_REPORT.md`](docs/LICENSING_REPORT.md) (research limitations,
+per-source evidence, and recommended actions). They are not legal clearance or
+public-release authority.
+[`docs/PERMISSION_REQUEST_DRAFTS.md`](docs/PERMISSION_REQUEST_DRAFTS.md) holds
+the permission-request drafts. The machine manifest
+(`data-static/interaction-sources.json`) does not yet record the
+pharmeasy/netmeds/apollo/nppa entries — that update is deferred: the manifest is
+digest-bound by the promotion hold file and must be changed via the
+promotion/re-attestation flow (see the report's recommended actions).
 
 Artifact counts are runtime state and are not hard-coded here. `npm run stats`
 reads the currently indexed immutable cohort and reports its bound totals.
