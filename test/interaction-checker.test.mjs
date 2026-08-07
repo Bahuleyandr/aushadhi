@@ -207,6 +207,16 @@ test('the same product supplied twice never produces a self product-pair or intr
   ));
 });
 
+test('the same product id cannot carry conflicting ingredient assertions', () => {
+  assert.throws(
+    () => generateCrossDrugPairs([
+      product('product:1', ['ingredient:a']),
+      product('product:1', ['ingredient:b']),
+    ]),
+    /product:1.*conflicting ingredient assertions/i,
+  );
+});
+
 test('a forged reviewed combination cannot inject a product-level subject', () => {
   const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
   const combination = {
@@ -907,8 +917,8 @@ test('a reviewed rule is restricted to its exact approved product pairs', () => 
   });
   assert.equal(unapproved.checked_pairs.length, 1);
   assert.deepEqual(unapproved.reviewed_findings, []);
-  assert.equal(unapproved.clinical_interaction_status, 'no_reviewed_interaction_found');
-  assert.equal(unapproved.outcome_code, 'no_reviewed_finding');
+  assert.equal(unapproved.clinical_interaction_status, 'not_evaluated');
+  assert.equal(unapproved.outcome_code, 'manual_review_required');
   const exclusion = unapproved.not_evaluated.find(
     (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
   );
@@ -916,6 +926,34 @@ test('a reviewed rule is restricted to its exact approved product pairs', () => 
   assert.equal(exclusion.rule_id, reviewedRule.rule_id);
   assert.equal(exclusion.pair_key, 'ingredient:a|ingredient:b');
   assert.deepEqual(exclusion.observed_product_pairs, [['product:1', 'product:3']]);
+});
+
+test('a reviewed match preserves not-evaluated status for every observed product pair outside its scope', () => {
+  const reviewedRule = rule();
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Approved Brand B', product('product:2', ['ingredient:b'])),
+      resolved('Unapproved Brand B', product('product:3', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+
+  assert.equal(result.reviewed_findings.length, 1);
+  assert.deepEqual(
+    result.reviewed_findings[0].matched_product_pairs,
+    [['product:1', 'product:2']],
+  );
+  const exclusion = result.not_evaluated.find(
+    (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+  );
+  assert.ok(exclusion);
+  assert.deepEqual(exclusion.observed_product_pairs, [['product:1', 'product:3']]);
+  assert.equal(
+    result.clinical_interaction_status,
+    'reviewed_interaction_found_with_unevaluated_scope',
+  );
+  assert.equal(result.outcome_code, 'reviewed_action_and_manual_review_required');
 });
 
 test('a product-scope-excluded reviewed rule leaves a typed per-pair not_evaluated entry without clinical text', () => {
