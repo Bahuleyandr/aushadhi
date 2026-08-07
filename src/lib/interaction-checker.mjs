@@ -1126,6 +1126,11 @@ function outcomeFor({
     return 'therapeutic_duplication_only';
   }
   if (checkedPairs.length === 0) return 'no_cross_drug_pair';
+  // A duplication finding must stay visible in the outcome even when
+  // cross-drug pairs were checked: consumers keying UI or alerting off
+  // outcome_code must not see a plain "no reviewed finding" while a
+  // double-dosing signal sits only in duplicate_ingredients.
+  if (duplicates.length > 0) return 'no_reviewed_finding_with_duplication';
   return 'no_reviewed_finding';
 }
 

@@ -389,8 +389,49 @@ test('same ingredient across products is reported as therapeutic duplication, no
   }]);
   assert.ok(!result.checked_pairs.some((entry) => entry.pair_key === 'ingredient:a|ingredient:a'));
   assert.equal(result.clinical_interaction_status, 'no_reviewed_interaction_found');
-  assert.equal(result.outcome_code, 'no_reviewed_finding');
+  assert.equal(result.outcome_code, 'no_reviewed_finding_with_duplication');
   assert.equal(result.checks_performed.therapeutic_duplication.finding_count, 1);
+});
+
+test('a duplication finding stays visible in outcome_code even when cross-drug pairs were checked', () => {
+  // {a} + {a, c}: the a|c pair is checked, yet the duplicated ingredient a
+  // must not be buried behind a plain no_reviewed_finding outcome.
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Mono', product('product:1', ['ingredient:a'])),
+      resolved('FDC', product('product:2', ['ingredient:a', 'ingredient:c'])),
+    ],
+    rulePack: pack(),
+  });
+
+  assert.equal(result.checked_pairs.length, 1);
+  assert.deepEqual(result.duplicate_ingredients, [{
+    ingredient_id: 'ingredient:a',
+    product_ids: ['product:1', 'product:2'],
+  }]);
+  assert.equal(result.outcome_code, 'no_reviewed_finding_with_duplication');
+  assert.equal(result.clinical_interaction_status, 'no_reviewed_interaction_found');
+
+  // Without duplication the plain outcome is unchanged.
+  const clean = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Brand B', product('product:2', ['ingredient:b'])),
+    ],
+    rulePack: pack(),
+  });
+  assert.equal(clean.outcome_code, 'no_reviewed_finding');
+
+  // Duplication never outranks a reviewed finding.
+  const withFinding = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Mono', product('product:1', ['ingredient:a'])),
+      resolved('FDC', product('product:2', ['ingredient:a', 'ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [rule()] }),
+  });
+  assert.equal(withFinding.reviewed_findings.length, 1);
+  assert.equal(withFinding.outcome_code, 'reviewed_action_required');
 });
 
 test('pure therapeutic duplication has a typed outcome without claiming interaction safety', () => {
