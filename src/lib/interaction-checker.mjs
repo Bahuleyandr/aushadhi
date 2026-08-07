@@ -305,6 +305,13 @@ export function generateCrossDrugPairs(products) {
     const left = normalized[leftIndex];
     for (let rightIndex = leftIndex + 1; rightIndex < normalized.length; rightIndex += 1) {
       const right = normalized[rightIndex];
+      // The same product supplied twice cannot interact with itself: a
+      // degenerate [X, X] product pair is a shape validateProductPairs
+      // forbids, and pairing an FDC's own components against each other
+      // would surface intra-product pairs that cross-drug checking never
+      // generates. Duplicate entry is still reported as therapeutic
+      // duplication by duplicateIngredients.
+      if (left.product_id === right.product_id) continue;
       const productPair = [left.product_id, right.product_id].sort(compareStrings);
       const productPairKey = JSON.stringify(productPair);
       for (const leftIngredient of left.ingredients) {

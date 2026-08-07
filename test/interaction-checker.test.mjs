@@ -154,6 +154,59 @@ test('generateCrossDrugPairs is deterministic, deduplicates pair keys, and does 
   ]);
 });
 
+test('the same product supplied twice never produces a self product-pair or intra-FDC pairs', () => {
+  // Degenerate [X, X] product pair and leaked intra-FDC component pair.
+  assert.deepEqual(generateCrossDrugPairs([
+    product('product:1', ['ingredient:a', 'ingredient:b']),
+    product('product:1', ['ingredient:a', 'ingredient:b']),
+  ]), []);
+
+  // A third, genuinely different product still pairs normally.
+  const mixed = generateCrossDrugPairs([
+    product('product:1', ['ingredient:a', 'ingredient:b']),
+    product('product:1', ['ingredient:a', 'ingredient:b']),
+    product('product:2', ['ingredient:c']),
+  ]);
+  assert.deepEqual(mixed.map((entry) => entry.pair_key), [
+    'ingredient:a|ingredient:c',
+    'ingredient:b|ingredient:c',
+  ]);
+  assert.ok(mixed.every((entry) => entry.product_pairs.every(
+    ([leftId, rightId]) => leftId !== rightId,
+  )));
+
+  // End to end: no wildcard review-candidate false alarm for a
+  // regulator-approved combination entered twice, while the duplicate
+  // entry itself stays visible as therapeutic duplication.
+  const candidateRule = rule({
+    id: 'candidate:a-b',
+    status: 'review_candidate',
+    severity: 'unknown',
+    mechanism: null,
+    management: null,
+  });
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Same FDC', product('product:1', ['ingredient:a', 'ingredient:b'])),
+      resolved('Same FDC again', product('product:1', ['ingredient:a', 'ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [candidateRule] }),
+  });
+
+  assert.deepEqual(result.checked_pairs, []);
+  assert.deepEqual(result.review_candidates, []);
+  assert.deepEqual(result.reviewed_findings, []);
+  assert.equal(result.clinical_interaction_status, 'not_evaluated');
+  assert.equal(result.outcome_code, 'therapeutic_duplication_only');
+  assert.deepEqual(
+    result.duplicate_ingredients.map((entry) => entry.ingredient_id),
+    ['ingredient:a', 'ingredient:b'],
+  );
+  assert.ok(result.not_evaluated.some(
+    (entry) => entry.code === 'NO_CROSS_DRUG_PAIR_EVALUATED',
+  ));
+});
+
 test('a forged reviewed combination cannot inject a product-level subject', () => {
   const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
   const combination = {
