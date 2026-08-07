@@ -1,11 +1,12 @@
 # Aushadhi data-source licensing report
 
 **Date:** 2026-08-06
-**Repo:** `bahuleyandr/aushadhi` (code) + `bahuleyandr/aushadhi-data` (dataset releases)
+**Repo:** `bahuleyandr/aushadhi` (private code) + `bahuleyandr/aushadhi-data`
+(private internal snapshots)
 **Scope:** Every external data source ingested by the Aushadhi drug-product pipeline and
-its interaction-evidence layer — what ships in the public dataset release, the reuse
-terms found for each source, and whether crawling/ingesting and public redistribution
-are permitted.
+its interaction-evidence layer — what is present in the private snapshot, the reuse
+evidence found for each source, and what must be resolved before any public release is
+considered.
 
 ---
 
@@ -30,75 +31,84 @@ including all four e-pharmacy domains, `cdsco.gov.in`, `nppa.gov.in`,
 **Every quote marked [SEARCH-INDEX] or [MIRROR] must be re-verified against the live page
 in a browser before you rely on it.** The re-verification checklist is in the Appendix.
 
+**Distribution status verified 2026-08-07.** `Bahuleyandr/aushadhi-data` is a private
+repository and has no GitHub Releases. `releases/2026-08-02/` is a directory containing
+an internal snapshot, not evidence of a public release. The repository's export contract
+classifies snapshots as `internal-evaluation`, non-redistributable, and without
+production or deployment authority.
+
 ---
 
 ## 1. Executive summary
 
-**Headline finding: the public dataset release already redistributes data that the repo's
-own annotations mark non-redistributable, plus data from sources that carry no licence
-record at all.** The annotation system is sound; the release gate does not enforce it.
+**Headline finding: the current dataset snapshot is private and explicitly
+non-redistributable. There is no evidence that Aushadhi has publicly redistributed this
+snapshot.** It contains restricted and not-yet-classified sources, so a future public
+catalogue release remains unauthorized unless a separate, fail-closed release process
+proves every included row is eligible.
 
-The `aushadhi-data` release dated **2026-08-02** (`releases/2026-08-02/drugs.jsonl.zst`,
+The private `aushadhi-data` snapshot dated **2026-08-02**
+(`releases/2026-08-02/drugs.jsonl.zst`,
 676,330 records) contains rows sourced from:
 
-| Source in the release | Rows | Repo's own annotation | Problem |
+| Source in the private snapshot | Rows | Repo's own annotation | Public-release status |
 |---|---:|---|---|
-| `onemg-live` (Tata 1mg) | 149,284 | `PROPRIETARY`, `redistributable: false`, `internal-restricted` | Redistributed despite being marked non-redistributable |
-| `pharmeasy` | 141,142 | **none** | No licence record anywhere in the repo |
-| `netmeds` | 120,812 | **none** | No licence record anywhere in the repo |
-| `apollo` | 14,931 | **none** | No licence record anywhere in the repo |
-| `janaushadhi` (PMBJP) | 2,111 | `NOT-CLEARED-FOR-REDISTRIBUTION`, `redistributable: false` | Redistributed despite "not cleared" annotation |
-| `nppa` (ceiling prices) | 732 | **none** | No licence record; legally clearable (gazette) but unannotated |
-| `github-jr` | 253,973 | `MIT`, `redistributable: true` | Primary bulk source; MIT label does **not** clear the underlying scraped rights (see §6) |
+| `onemg-live` (Tata 1mg) | 149,284 | `PROPRIETARY`, `redistributable: false`, `internal-restricted` | Excluded; must remain internal unless separately licensed |
+| `pharmeasy` | 141,142 | **none** | Excluded; primary-source terms and permission unresolved |
+| `netmeds` | 120,812 | **none** | Excluded; primary-source terms and permission unresolved |
+| `apollo` | 14,931 | **none** | Excluded; primary-source terms and permission unresolved |
+| `janaushadhi` (PMBJP) | 2,111 | `NOT-CLEARED-FOR-REDISTRIBUTION`, `redistributable: false` | Excluded; permission unresolved |
+| `nppa` (ceiling prices) | 732 | **none** | Excluded; no row-level Gazette provenance or reviewed rights decision |
+| `github-jr` | 253,973 | `MIT`, `redistributable: true` | Treat as unresolved until upstream provenance and third-party rights are demonstrated |
 
 (Rows can carry multiple sources, so the per-source counts above — summing to 682,985 —
 exceed the 676,330 unique release rows; counts are per source tag, not disjoint.)
 
-So the release commingles **open** data (`github-jr`) with **restricted/proprietary**
-data (`onemg-live`), **explicitly not-cleared** government data (`janaushadhi`), and
-**four completely unannotated** sources (`pharmeasy`, `netmeds`, `apollo`, `nppa`). The
-`aushadhi-data` release manifests carry no licence field and no redistribution statement.
+The private snapshot commingles sources with different rights states for internal
+evaluation. That is not distribution authority. Its stage manifest and export contract
+instead state `internal-evaluation`, non-redistributable, and no production authority.
 
 The machine-readable annotation layer in `data-static/interaction-sources.json` is
-detailed and mostly correct — it already marks `onemg-live` and `janaushadhi` as
-restricted/non-redistributable. **The gap is enforcement:** nothing mechanically excludes
-`redistributable: false` or unannotated sources from a public release, and three of the
-biggest shipped sources (`pharmeasy`, `netmeds`, `apollo`) had no annotation to enforce
-in the first place.
+detailed and already marks `onemg-live` and `janaushadhi` as
+restricted/non-redistributable. The existing internal export path also fails closed on
+its non-redistributable profile. A distinct future public-catalogue staging path would
+still need row-level source reconciliation and a trusted, immutable policy; its absence
+does not mean a public release already occurred.
 
 **What this report does:**
-1. Assigns a researched verdict to every catalogue source and summarises the interaction
+1. Records a provisional research assessment for every catalogue source and summarises the interaction
    layer (§3–§4).
-2. Documents the correct annotations for the sources that were wrong or missing
+2. Documents conservative candidate annotations for sources that are missing
    (`pharmeasy`, `netmeds`, `apollo`, `nppa`). The machine-manifest update itself is
    **deferred**: `data-static/interaction-sources.json` is digest-bound by the promotion
    hold file and must be changed through the promotion/re-attestation flow (see the
    manifest-integrity-binding subsection in §7).
 3. Recommends prioritised actions to clear or contain each risk (§7).
 
-The **release-gate enforcement change itself is intentionally out of scope** of the
-accompanying pull request, to avoid colliding with concurrent CI work on the same repo.
-It is the single highest-value follow-up (§7a).
+This report provides no public-release, production, clinical, or deployment authority.
+Any future release gate is a separately reviewed engineering control, not a substitute
+for source permission or legal review.
 
 ---
 
 ## 2. Per-source verdict table
 
-Legend — **Crawl OK?** / **Redistribute OK?**: Yes / No / Conditional / Uncertain.
-**Risk**: high / medium / low / clear.
+Legend — **Crawl status** / **Redistribution status** describe the conservative repository
+policy recommended from the evidence available here. They are not legal conclusions.
+`Unverified` means the primary source was not successfully checked.
 
 ### Catalogue / drug-product layer
 
-| Source | What ships | Terms found (one line) | Crawl OK? | Redistribute OK? | Risk | Action to clear |
+| Source | Private snapshot use | Preliminary evidence | Crawl status | Redistribution status | Risk | Action to clear |
 |---|---|---|---|---|---|---|
-| `github-jr` (junioralive Indian-Medicine-Dataset) | 253,973 rows — primary bulk | Repo carries an MIT LICENSE (`© 2024 JuniorAlive`); **README states no data provenance at all** | Yes (MIT + public GitHub) | **Uncertain** — MIT covers only the uploader's compilation, not underlying scraped rights | **medium–high** | Ask maintainer to document provenance/rights basis (§7e); decide keep-with-risk vs replace |
-| `onemg-live` (Tata 1mg) | 149,284 rows | 1mg ToS: no scraping, no reproduction/distribution of "TATA 1mg Content" | **No** (ToS bars automated access) | **No** (ToS bars reproduction) | **high** | Exclude from public release; keep internal-only, or seek 1mg permission |
-| `pharmeasy` | 141,142 rows | PharmEasy ToS: "no automated means such as data scraper, deep-link, robot"; no copying/republishing content | **No** | **No** | **high** | Exclude from public release; keep internal-only, or seek permission |
-| `netmeds` | 120,812 rows | Netmeds ToS: bars spiders/robots + data-mining/extraction; limited revocable licence | **No** | **No** | **high** | Exclude from public release; keep internal-only, or seek permission |
-| `apollo` | 14,931 rows | Apollo ToS: "any other use … is strictly prohibited … copy, reproduce, transmit, publish, display, distribute"; explicit scraping clause **not confirmed** | **No (redistribution); crawl uncertain** | **No** | **high** | Exclude from public release; verify scraping clause; keep internal-only or seek permission |
+| `github-jr` (junioralive Indian-Medicine-Dataset) | 253,973 rows — primary bulk | Repo carries an MIT licence but documents no row provenance or third-party rights basis | Unverified beyond access to the public repository | **Not authorized** pending provenance review | **medium–high** | Ask maintainer to document provenance/rights basis (§7e); decide keep-with-risk vs replace |
+| `onemg-live` (Tata 1mg) | 149,284 rows | Search-index excerpts indicate automated-access and reproduction restrictions | **Unverified** against live terms | **Not authorized** by repository policy | **high** | Keep internal-only; verify primary terms and seek permission before any broader use |
+| `pharmeasy` | 141,142 rows | Search-index excerpts indicate automated-access and republication restrictions | **Unverified** against live terms | **Not authorized** | **high** | Keep internal-only; verify primary terms and seek permission before any broader use |
+| `netmeds` | 120,812 rows | Search-index excerpts indicate automated-access and extraction restrictions | **Unverified** against live terms | **Not authorized** | **high** | Keep internal-only; verify primary terms and seek permission before any broader use |
+| `apollo` | 14,931 rows | Search-index excerpts indicate reproduction restrictions; automated-access language was not confirmed | **Unverified** against live terms | **Not authorized** | **high** | Keep internal-only; verify primary terms and seek permission before any broader use |
 | `janaushadhi` (PMBJP list) | 2,111 rows | No published terms found (SPA/unreachable); Government/PSU work → default all-rights-reserved | Uncertain | **No** (permission needed) | **medium–high** | Exclude from public release until PMBI permission (draft provided); or use the aggregate data.gov.in dataset under GODL |
-| `nppa` (ceiling prices) | 732 rows incl. price | Ceiling prices are Official Gazette matter → reproducible under Copyright Act 1957 **s.52(1)(q)(i)** | Yes (gazette matter) | **Yes** (gazette carve-out) | **clear** (data); site policy unverified | Annotate as gazette-cleared, attribute NPPA; re-verify site copyright page |
-| `kaggle-2025` | not shipped (disabled) | Kaggle page indicates **CC BY-NC-SA 4.0**; provenance opaque (likely e-pharmacy scrape) | Yes (with Kaggle acct) | **NC only**, and underlying rights uncleared | medium | Keep disabled, or use NC-partitioned + re-verify live licence field |
+| `nppa` (ceiling prices) | 732 rows incl. price | A Gazette exception may apply only to rows proven to come from an exact Gazette instrument | Unverified at row level | **Not authorized** pending provenance and legal review | **medium** | Bind every row to its source instrument; verify publication and obtain legal review |
+| `kaggle-2025` | not present (disabled) | Search metadata indicates **CC BY-NC-SA 4.0**; upstream provenance is undocumented | Unverified | **Not authorized** | medium | Keep disabled; verify live licence and provenance before reconsidering |
 | `cdsco-fdc` | not shipped (validation-only) | CDSCO Copyright Policy: "may not be reproduced … without due permission" | Uncertain | **No** (permission needed) | medium | Keep validation-only/internal; seek CDSCO permission (draft provided); gazette ban-lists are separately exempt |
 | `atc` (WHO ATC/DDD) | ships as `atc_codes` on 618,324 rows | WHOCC: "requires reference to WHOCC … distribution for commercial purposes is not allowed … changing/manipulating not allowed" | Conditional | **Conditional** — individual codes on own rows OK w/ attribution + NC; full index **No** | medium | Keep to per-row code annotation + WHOCC attribution; keep dataset NC-compatible or partition ATC |
 | `cdci-snomed-ct` | not shipped (export forbidden) | SNOMED CT Affiliate licence; user-supplied | Yes (with affiliate licence) | **No** (affiliate terms) | low (already contained) | No action; export already forbidden |
@@ -136,18 +146,17 @@ are correct:
   composition (CSV + JSON). Its only reuse guidance [MIRROR]:
   > "This dataset is open for use by anyone interested in exploring Indian pharmaceutical
   > products."
-- **Provenance red flag:** the README states **no data source or collection method** —
-  no mention of scraping, 1mg, or any e-pharmacy. The price/pack-size/composition schema
-  is characteristic of e-pharmacy catalogue scraping, but the repo asserts and clears
-  nothing.
-- **Verdict:** MIT covers only *JuniorAlive's own contribution* (the compilation/
-  formatting). An MIT stamp cannot grant rights the uploader never held. If the rows are
+- **Provenance gap:** the README states no data source or collection method. Schema
+  similarity cannot establish where the rows came from, so their provenance is unknown.
+- **Provisional assessment:** the MIT licence clearly covers JuniorAlive's stated
+  contribution, but the upstream repository does not document whether third-party
+  material is present. If the rows were
   scraped from a commercial e-pharmacy catalogue, the underlying facts/compilation may
   carry that site's ToS constraints. Redistribution is **not cleanly cleared by the MIT
   label**. This is the pipeline's PRIMARY bulk source, so the provenance risk is material.
   Homepage: `https://github.com/junioralive/Indian-Medicine-Dataset`
 
-### 3.2 `onemg-live` — Tata 1mg (149,284 rows shipped)
+### 3.2 `onemg-live` — Tata 1mg (149,284 rows in the private snapshot)
 
 Terms page `https://www.1mg.com/Tnc` [SEARCH-INDEX]:
 > prohibits using "any engine, software, tool, agent or other device or mechanism (such
@@ -163,12 +172,12 @@ Terms page `https://www.1mg.com/Tnc` [SEARCH-INDEX]:
 > distribute, or otherwise use the TATA 1mg Content in any way for any public or
 > commercial purpose or for personal gains"
 
-**Verdict:** crawling is a ToS breach; public redistribution squarely breaches the
-copying/republication clauses. 1mg's monographs are heavily editorialised, so copying
-them raises copyright exposure, not just contract. Highest-risk of the four e-pharmacies.
-Correctly annotated `PROPRIETARY`/`redistributable: false` — but shipped anyway.
+**Provisional assessment:** the unverified excerpts indicate restrictions material to
+automated access and redistribution. Repository policy correctly keeps the source
+`PROPRIETARY`/`redistributable: false`; retain that boundary unless primary-source and
+legal review support a change.
 
-### 3.3 `pharmeasy` — PharmEasy (141,142 rows shipped; was unannotated)
+### 3.3 `pharmeasy` — PharmEasy (141,142 rows in the private snapshot; unannotated)
 
 Terms page `https://pharmeasy.in/legal/terms-and-conditions` [SEARCH-INDEX]:
 > "you agree not to access the Website and materials or services by any means other than
@@ -182,9 +191,11 @@ is "owned and controlled by the company and protected by copyright, patent and t
 laws". Users are barred from "copying, republishing, posting, displaying, translating,
 transmitting, reproducing or distributing any content" without authorisation.
 
-**Verdict:** crawling and redistribution both barred by ToS. High risk.
+**Provisional assessment:** the unverified excerpts indicate material automated-access
+and republication restrictions. Keep the source internal and non-redistributable until
+the live terms and any permission are independently reviewed.
 
-### 3.4 `netmeds` — Netmeds (120,812 rows shipped; was unannotated)
+### 3.4 `netmeds` — Netmeds (120,812 rows in the private snapshot; unannotated)
 
 Terms page `https://www.netmeds.com/terms-and-conditions` [SEARCH-INDEX]:
 > prohibits using "any engine, software, tool, agent or other mechanism (such as spiders,
@@ -198,10 +209,11 @@ Terms page `https://www.netmeds.com/terms-and-conditions` [SEARCH-INDEX]:
 > "Your use of the Website, the Services, and access to the Company Content is subject to
 > a limited, revocable and non-exclusive license…"
 
-**Verdict:** crawling barred; redistribution outside the limited revocable licence. High
-risk (Reliance-group plaintiff).
+**Provisional assessment:** the unverified excerpts indicate material automated-access
+and redistribution restrictions. Keep the source internal and non-redistributable until
+the live terms and any permission are independently reviewed.
 
-### 3.5 `apollo` — Apollo Pharmacy (14,931 rows shipped; was unannotated)
+### 3.5 `apollo` — Apollo Pharmacy (14,931 rows in the private snapshot; unannotated)
 
 Terms page `https://www.apollopharmacy.in/terms` [SEARCH-INDEX]:
 > "any other use of the material and content of the APL Platform is strictly prohibited
@@ -213,10 +225,11 @@ An **express** automated-access/scraper clause was **not** found in the availabl
 excerpts and could not be confirmed by direct fetch — treat crawl status as uncertain but
 likely restricted given the sweeping "any other use … strictly prohibited" language.
 
-**Verdict:** redistribution clearly barred; crawling uncertain (verify by direct fetch).
-High risk on redistribution.
+**Provisional assessment:** the available excerpt indicates a reproduction restriction,
+while automated-access terms remain unverified. Keep the source internal and
+non-redistributable until the live terms and any permission are independently reviewed.
 
-### 3.6 `janaushadhi` — PMBJP product & MRP list (2,111 rows shipped)
+### 3.6 `janaushadhi` — PMBJP product & MRP list (2,111 rows in the private snapshot)
 
 - No copyright/terms text could be located: `janaushadhi.gov.in` is a client-side JS app
   that renders only "You need to enable JavaScript to run this app" to the search index,
@@ -235,33 +248,30 @@ High risk on redistribution.
 - The pipeline fetches the list from a PIB-hosted PDF
   (`https://static.pib.gov.in/WriteReadData/specificdocs/documents/2026/feb/doc202626781701.pdf`).
 
-**Verdict:** treat as **permission-needed**. Correctly annotated
-`NOT-CLEARED-FOR-REDISTRIBUTION` — but shipped anyway. Write to PMBI (draft in
+**Provisional assessment:** treat as **permission-needed**. It is correctly annotated
+`NOT-CLEARED-FOR-REDISTRIBUTION` and remains private. Write to PMBI (draft in
 `docs/PERMISSION_REQUEST_DRAFTS.md`), or ship only the aggregate GODL dataset.
 
-### 3.7 `nppa` — NPPA NLEM ceiling-price list (732 rows shipped incl. price)
+### 3.7 `nppa` — NPPA NLEM ceiling-price list (732 rows in the private snapshot)
 
-- NPPA ceiling-price fixations are issued as S.O./notification instruments under the Drugs
-  (Prices Control) Order, 2013 (an order under s.3 of the Essential Commodities Act) and
-  **published in the Official Gazette**. The PDFs on `nppa.gov.in` are copies of these
-  instruments.
+- Some NPPA ceiling-price fixations are issued as S.O./notification instruments and
+  published in the Official Gazette. The current normalized rows do not carry an exact
+  Gazette instrument identity, so this cannot be assumed for every `nppa` row.
 - **Copyright Act 1957, s.52(1)(q)(i)** [MIRROR of full-text Act]:
   > "the reproduction or publication of— (i) any matter which has been published in any
   > Official Gazette except an Act of a Legislature" … does not constitute infringement.
-- Ceiling-price notifications are gazette matter, not Acts, so reproduction and
-  republication is **statutorily permitted irrespective of website terms**. (s.2(k)/
-  s.17(d) make them Government works — copyright vests in Government, so they are not "US
-  public domain" — but s.52(1)(q)(i) is the operative carve-out.)
+- The cited exception may apply to a row only after its source is proven to be matter
+  published in an exact Official Gazette instrument. This report does not establish that
+  document-level provenance and does not make a legal determination.
 - The `nppa.gov.in` footer links a "Copyright Policy" whose **text could not be located
   or fetched** [NOT FOUND / UNREACHABLE]. Non-gazette site content (dashboards, analyses)
   is therefore uncertain until that page is verified; the same price instruments are also
   available from `egazette.gov.in`.
 
-**Verdict on the price data: cleared** — reproducible and redistributable under
-s.52(1)(q)(i). Reproduce accurately and acknowledge NPPA as source. **Was unannotated;
-the manifest annotation is deferred** to the promotion/re-attestation flow (see §7b and
-the manifest-integrity-binding subsection in §7) — note the manifest limitation discussed
-there.
+**Provisional assessment:** keep all `nppa` rows restricted. Before reconsidering,
+record an exact source-instrument identity for every row, verify that instrument against
+the Official Gazette, and obtain independent legal review. A source-level `nppa` tag is
+not sufficient evidence.
 
 ### 3.8 `kaggle-2025` — Kaggle apkaayush/india-medicines-and-drug-info-dataset (not shipped)
 
@@ -372,36 +382,29 @@ partitioned from the CC0/OGL/CC-BY-SA open core (see §6).
   partitions**; do not merge them into the open-core file. For ATC specifically, keep to
   per-row code annotation (not full-index redistribution) and keep the dataset NC-
   compatible or partition the ATC codes.
-- **Provenance-opaque scraped inputs.** `github-jr` (MIT) and the Kaggle dataset (CC
-  BY-NC-SA) are provenance-opaque scraped e-pharmacy data. Their open labels **do not
-  clear the underlying rights** — an uploader cannot license out what they never held.
-  This directly undercuts `github-jr`, the pipeline's **primary bulk source** (253,973
-  rows). It is the single largest unquantified risk in the public dataset.
+- **Provenance-opaque inputs.** `github-jr` (MIT) and the Kaggle dataset do not document
+  the source of their rows. Do not infer scraping from schema similarity. Their labels
+  do not demonstrate third-party rights in any upstream material, so provenance review
+  remains necessary before any public use.
 
 ---
 
 ## 7. Recommended actions (priority order)
 
-**a. Stop shipping restricted / unannotated sources in public releases (highest value).**
-Exclude `onemg-live`, `pharmeasy`, `netmeds`, `apollo`, and `janaushadhi` rows from public
-releases until cleared — or make releases access-controlled. **The release gate should
-enforce `redistributable: false` and missing-licence exclusion mechanically**, so a source
-marked non-redistributable (or with no manifest entry) cannot reach a public artifact.
-*This enforcement code change is deliberately left out of the accompanying PR to avoid
-conflicting with concurrent CI work; it is the top follow-up.*
+**a. Preserve the current private, non-redistributable boundary.** No public catalogue
+release is authorized. Any future staging tool must exclude `redistributable: false`,
+unknown, or incompletely proven sources and must authenticate the trusted policy rather
+than accepting operator-authored clearance.
 
-**b. NPPA ceiling prices — cleared via the gazette exception; annotate as such.** The
-price data is reproducible and redistributable under Copyright Act s.52(1)(q)(i);
-attribution to NPPA is recommended. **Manifest limitation:** the policy enum
+**b. NPPA ceiling prices — require document-level proof before classification.** The
+proposed Gazette exception has not been tied to every normalized row or independently
+reviewed. Keep `nppa` restricted. **Manifest limitation:** the policy enum
 (`interaction-source-policy.mjs` `LICENCE_ID_CLASSES`) currently has **no token for
 "Indian Official Gazette / open-government reproducible matter."** Rather than mis-stamp
 Indian government data with a US (`US-PUBLIC-DOMAIN`), UK (`OGL-3.0`), or CC (`CC0-1.0`)
-token in a licensing record, the recommendation is to add an `nppa` entry that records
-the gazette-clearance basis in a `notes`/`rights_scope` field while keeping the machine
-flag fail-safe — deferred to the re-attestation flow (see the manifest-integrity-binding
-subsection below). **Follow-up (deferred code change):** add an `INDIA-GAZETTE`-style
-open-government licence id to the enum, then flip `nppa` to `redistributable: true` in the
-`production-open` profile with NPPA attribution.
+token in a licensing record. Do not add one or flip `nppa` to redistributable until the
+row schema carries an exact instrument identity, the captured instrument is verified,
+and legal review approves the classification.
 
 **c. GODL attribution template — if/when any data.gov.in dataset is used.** None is used
 today (the government sources are accessed as direct/operator-dropped PDFs, not via the
@@ -414,8 +417,8 @@ exemptions.
 **d. Send permission requests to PMBI/Jan Aushadhi and CDSCO.** Ready-to-send drafts are
 in `docs/PERMISSION_REQUEST_DRAFTS.md`. Do not send until reviewed.
 
-**e. Treat `github-jr` as a provenance risk.** Its MIT label does not clear the rights of
-whatever was scraped to build it. Decide: keep it with documented risk, or seek
+**e. Treat `github-jr` as a provenance risk.** Its MIT label does not establish the
+source or rights status of the underlying rows. Decide: keep it internal, or seek
 clarification from the maintainer (GitHub-issue draft in the drafts file). Because it is
 the primary bulk source, resolving its provenance materially de-risks the whole release.
 
@@ -442,12 +445,13 @@ via the promotion/re-attestation flow, together with:
 
 **Deferred follow-up items (exact list):**
 
-1. Add an India-gazette open-government licence token to the
-   `LICENCE_ID_CLASSES` enum (§7b).
-2. Add manifest entries for `pharmeasy`, `netmeds`, `apollo`, and `nppa`, plus an `atc`
+1. Define document-level provenance fields and verification for any proposed Gazette
+   classification; do not add a blanket source-level clearance.
+2. Add conservative manifest entries for `pharmeasy`, `netmeds`, `apollo`, and `nppa`, plus an `atc`
    (WHO ATC/DDD) entry. The three e-pharmacy entries should record in `notes` that ToS
    verification was via search-index excerpts pending live-page re-verification (§8).
-3. Re-bind the promotion hold (`source_policy_sha256`) through the attestation flow.
+3. Keep all new entries non-redistributable and re-bind the promotion hold
+   (`source_policy_sha256`) only through the attestation flow.
 4. Update the catalogue-filter test fixture (replace `apollo` as the canonical unknown
    source).
 
