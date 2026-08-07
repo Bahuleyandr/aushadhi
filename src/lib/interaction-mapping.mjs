@@ -323,8 +323,14 @@ export function sourceIdentityKey(identity) {
 
 // The catalogue records PMBJP products under the source name `janaushadhi`;
 // reviewed mappings name the namespace `presentation:pmbjp`. Keep the alias
-// explicit rather than guessing at resolution time.
-const SOURCE_NAMESPACE_BY_CATALOGUE_SOURCE = new Map([['janaushadhi', 'presentation:pmbjp']]);
+// explicit rather than guessing at resolution time. The github-jr open
+// catalogue source maps to `presentation:github-jr` so that open-profile
+// presentation mappings keep a stable source identity even when a product's
+// content-derived id drifts (see the D2 note below).
+const SOURCE_NAMESPACE_BY_CATALOGUE_SOURCE = new Map([
+  ['janaushadhi', 'presentation:pmbjp'],
+  ['github-jr', 'presentation:github-jr'],
+]);
 
 export function productSourceIdentityKeys(product) {
   const keys = [];
