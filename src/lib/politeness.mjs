@@ -267,7 +267,7 @@ function retryAfterMs(response, now) {
 async function withDeadline(timeoutMs, operation) {
   const controller = new AbortController();
   let timer;
-  const deadline = new Promise((resolve, reject) => {
+  const deadline = new Promise((_resolve, reject) => {
     timer = setTimeout(() => {
       const reason = new DOMException(
         `operation timed out after ${timeoutMs}ms`,

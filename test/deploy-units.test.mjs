@@ -35,8 +35,8 @@ test('tracked crawler units reproduce the hardened non-root /opt deployment', ()
     assert.match(unit, new RegExp(`^CacheDirectory=aushadhi/${source}$`, 'm'), name);
     assert.match(unit, /^ReadOnlyPaths=\/opt\/aushadhi \/var\/lib\/aushadhi\/dist \/var\/lib\/aushadhi\/data\/raw$/m, name);
     assert.match(unit, new RegExp(`^ReadWritePaths=/var/lib/aushadhi/data/raw/${source} /var/log/aushadhi/${source} /var/cache/aushadhi/${source}$`, 'm'), name);
-    assert.match(unit, new RegExp(`^ExecStartPre=\\+\/usr\/local\/libexec\/aushadhi-network-hook ${name} start$`, 'm'), name);
-    assert.match(unit, new RegExp(`^ExecStopPost=\\+\/usr\/local\/libexec\/aushadhi-network-hook ${name} stop$`, 'm'), name);
+    assert.match(unit, new RegExp(`^ExecStartPre=\\+/usr/local/libexec/aushadhi-network-hook ${name} start$`, 'm'), name);
+    assert.match(unit, new RegExp(`^ExecStopPost=\\+/usr/local/libexec/aushadhi-network-hook ${name} stop$`, 'm'), name);
     assert.match(unit, new RegExp(`^StandardOutput=append:/var/log/aushadhi/${source}/${logName}$`, 'm'), name);
   }
 });
@@ -232,7 +232,7 @@ test('root helpers, log rotation, and a release receipt are tracked', () => {
     'healthcheck-netmeds',
     'healthcheck-pharmeasy',
   ]) {
-    assert.match(sudoers, new RegExp(`^bahuleyan ALL=\\(root\\) NOPASSWD: \/usr\/local\/libexec\/aushadhi-observer ${action}$`, 'm'));
+    assert.match(sudoers, new RegExp(`^bahuleyan ALL=\\(root\\) NOPASSWD: /usr/local/libexec/aushadhi-observer ${action}$`, 'm'));
   }
 
   const sourceProbe = read('aushadhi-source-healthcheck.sh');

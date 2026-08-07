@@ -1,7 +1,7 @@
 import { normMolecule } from './normalize.mjs';
 
 const STRENGTH_RE = /\(([^()]*)\)\s*$/;
-const VALUE_UNIT_RE = /^([\d.]+)\s*([a-zµ%][a-zµ%\/\d.\s]*)$/i;
+const VALUE_UNIT_RE = /^([\d.]+)\s*([a-zµ%][a-zµ%/\d.\s]*)$/i;
 
 export function parseIngredient(part) {
   const raw = (part ?? '').toString().trim();

@@ -43,6 +43,9 @@ const DISPENSE_ACTIONS = new Set([
   'confirm_and_monitor',
   'withhold_and_clarify',
 ]);
+// Mirrors the draft-side enum (interaction-engine.mjs / interaction-draft-validation.mjs).
+// Review candidates are separately pinned to severity 'unknown'.
+const SEVERITIES = new Set(['minor', 'moderate', 'major', 'contraindicated']);
 const SHA256 = /^[0-9a-f]{64}$/u;
 const COMMITTED_INTERNAL_PACK_ID = 'aushadhi-internal-interactions';
 const INTERNAL_CLINICIAN_SOURCE_ID = 'aushadhi-open-clinician-rules';
@@ -288,6 +291,18 @@ function normalizeProducts(products) {
     return { product_id, ingredients };
   });
 
+  const ingredientAssertionsByProductId = new Map();
+  for (const value of normalized) {
+    const assertion = JSON.stringify(value.ingredients);
+    const previous = ingredientAssertionsByProductId.get(value.product_id);
+    if (previous !== undefined && previous !== assertion) {
+      throw new TypeError(
+        `resolved product_id ${value.product_id} has conflicting ingredient assertions`,
+      );
+    }
+    ingredientAssertionsByProductId.set(value.product_id, assertion);
+  }
+
   return normalized.sort((a, b) => (
     compareStrings(a.product_id, b.product_id)
     || compareStrings(a.ingredients.join('\u0000'), b.ingredients.join('\u0000'))
@@ -302,6 +317,13 @@ export function generateCrossDrugPairs(products) {
     const left = normalized[leftIndex];
     for (let rightIndex = leftIndex + 1; rightIndex < normalized.length; rightIndex += 1) {
       const right = normalized[rightIndex];
+      // The same product supplied twice cannot interact with itself: a
+      // degenerate [X, X] product pair is a shape validateProductPairs
+      // forbids, and pairing an FDC's own components against each other
+      // would surface intra-product pairs that cross-drug checking never
+      // generates. Duplicate entry is still reported as therapeutic
+      // duplication by duplicateIngredients.
+      if (left.product_id === right.product_id) continue;
       const productPair = [left.product_id, right.product_id].sort(compareStrings);
       const productPairKey = JSON.stringify(productPair);
       for (const leftIngredient of left.ingredients) {
@@ -518,6 +540,9 @@ function validateRule(value, index, schemaVersion) {
   assertStringArray(value.review.source_versions, `${label}.review.source_versions`);
 
   if (value.review.status === 'clinician_reviewed') {
+    if (!SEVERITIES.has(value.severity)) {
+      throw new TypeError(`${label}.severity is invalid`);
+    }
     validateProductPairs(value.product_pairs, `${label}.product_pairs`);
     if (!DISPENSE_ACTIONS.has(value.dispense_action)) {
       throw new TypeError(`${label}.dispense_action is required for clinician-reviewed rules`);
@@ -993,6 +1018,14 @@ function matchedProductPairs(checkedPair, rule) {
     .map((pair) => [...pair]);
 }
 
+function productPairsOutsideRuleScope(checkedPair, rule) {
+  if (!Array.isArray(rule.product_pairs)) return [];
+  const allowed = new Set(rule.product_pairs.map(productPairKey));
+  return checkedPair.product_pairs
+    .filter((pair) => !allowed.has(productPairKey(pair)))
+    .map((pair) => [...pair]);
+}
+
 function canSupersedeExactProductMatch(suppressor, candidate) {
   if (suppressor === candidate) return false;
   if (!Array.isArray(suppressor.rule.supersedes_rule_ids)
@@ -1098,21 +1131,29 @@ function outcomeFor({
   reviewedFindings,
   reviewCandidates,
   technicalHoldMatches,
+  productScopeExclusions,
   unresolvedInputs,
   duplicateIngredients: duplicates,
   checkedPairs,
 }) {
-  if (technicalHoldMatches.length > 0 && reviewedFindings.length > 0) {
+  const hasUnevaluatedScope = technicalHoldMatches.length > 0
+    || productScopeExclusions.length > 0;
+  if (hasUnevaluatedScope && reviewedFindings.length > 0) {
     return 'reviewed_action_and_manual_review_required';
   }
   if (reviewedFindings.length > 0) return 'reviewed_action_required';
-  if (technicalHoldMatches.length > 0) return 'manual_review_required';
+  if (hasUnevaluatedScope) return 'manual_review_required';
   if (reviewCandidates.length > 0) return 'manual_review_required';
   if (unresolvedInputs.length > 0) return 'input_gaps';
   if (duplicates.length > 0 && checkedPairs.length === 0) {
     return 'therapeutic_duplication_only';
   }
   if (checkedPairs.length === 0) return 'no_cross_drug_pair';
+  // A duplication finding must stay visible in the outcome even when
+  // cross-drug pairs were checked: consumers keying UI or alerting off
+  // outcome_code must not see a plain "no reviewed finding" while a
+  // double-dosing signal sits only in duplicate_ingredients.
+  if (duplicates.length > 0) return 'no_reviewed_finding_with_duplication';
   return 'no_reviewed_finding';
 }
 
@@ -1120,16 +1161,19 @@ function clinicalStatusFor({
   reviewedFindings,
   reviewCandidates,
   technicalHoldMatches,
+  productScopeExclusions,
   checkedPairs,
 }) {
-  if (technicalHoldMatches.length > 0 && reviewedFindings.length > 0) {
+  const hasUnevaluatedScope = technicalHoldMatches.length > 0
+    || productScopeExclusions.length > 0;
+  if (hasUnevaluatedScope && reviewedFindings.length > 0) {
     return 'reviewed_interaction_found_with_unevaluated_scope';
   }
-  if (technicalHoldMatches.length > 0 && reviewCandidates.length > 0) {
+  if (hasUnevaluatedScope && reviewCandidates.length > 0) {
     return 'review_candidate_found_with_unevaluated_scope';
   }
   if (reviewedFindings.length > 0) return 'reviewed_interaction_found';
-  if (technicalHoldMatches.length > 0) return 'not_evaluated';
+  if (hasUnevaluatedScope) return 'not_evaluated';
   if (reviewCandidates.length > 0) return 'review_candidate_found';
   if (checkedPairs.length === 0) return 'not_evaluated';
   return 'no_reviewed_interaction_found';
@@ -1140,6 +1184,7 @@ function buildNotEvaluated({
   checkedPairs,
   rulePack,
   technicalHoldMatches,
+  productScopeExclusions,
 }) {
   const entries = unresolvedInputs.map((input, index) => ({
     code: 'INPUT_GAP',
@@ -1155,6 +1200,16 @@ function buildNotEvaluated({
       reason: match.hold.reason,
       detected_at: match.hold.detected_at,
       matched_product_pairs: structuredClone(match.matched_product_pairs),
+    });
+  }
+  for (const exclusion of productScopeExclusions) {
+    entries.push({
+      code: 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+      rule_id: exclusion.rule_id,
+      pair: exclusion.pair,
+      pair_key: exclusion.pair_key,
+      observed_product_pairs: exclusion.observed_product_pairs,
+      reason: 'A reviewed rule exists for this ingredient pair, but the observed product pair is outside its exact approved product scope. Treat this pair as not evaluated, not as reviewed knowledge of absence.',
     });
   }
   if (checkedPairs.length === 0) {
@@ -1319,10 +1374,20 @@ export function checkResolvedProducts({
   }
   const reviewedMatches = [];
   const packCandidates = [];
+  const productScopeExclusions = [];
   for (const value of rulePack.rules) {
     const checkedPair = checkedByKey.get(pairKey(value.pair));
     if (!checkedPair) continue;
     const matched_product_pairs = matchedProductPairs(checkedPair, value);
+    const outside_product_pairs = productPairsOutsideRuleScope(checkedPair, value);
+    if (value.review.status === 'clinician_reviewed' && outside_product_pairs.length > 0) {
+      productScopeExclusions.push({
+        rule_id: value.rule_id,
+        pair: [...value.pair],
+        pair_key: checkedPair.pair_key,
+        observed_product_pairs: outside_product_pairs,
+      });
+    }
     if (matched_product_pairs.length === 0) continue;
     if (value.review.status === 'clinician_reviewed') {
       reviewedMatches.push({
@@ -1332,8 +1397,12 @@ export function checkResolvedProducts({
     }
     else packCandidates.push(structuredClone(value));
   }
+  productScopeExclusions.sort((left, right) => compareStrings(left.rule_id, right.rule_id));
   const supersession = applyExactProductSupersession(reviewedMatches);
-  const reviewed_findings = supersession.surviving.map(({ rule }) => rule);
+  const reviewed_findings = supersession.surviving.map(({ rule, matched_product_pairs }) => ({
+    ...rule,
+    matched_product_pairs: structuredClone(matched_product_pairs),
+  }));
   const superseded_findings = supersession.superseded;
 
   const suppliedCandidates = reviewCandidates.map((value, index) => ({
@@ -1425,11 +1494,13 @@ export function checkResolvedProducts({
     checkedPairs: checked_pairs,
     rulePack,
     technicalHoldMatches,
+    productScopeExclusions,
   });
   const outcome_code = outcomeFor({
     reviewedFindings: reviewed_findings,
     reviewCandidates: review_candidates,
     technicalHoldMatches,
+    productScopeExclusions,
     unresolvedInputs: unresolved,
     duplicateIngredients: duplicate_ingredients,
     checkedPairs: checked_pairs,
@@ -1438,6 +1509,7 @@ export function checkResolvedProducts({
     reviewedFindings: reviewed_findings,
     reviewCandidates: review_candidates,
     technicalHoldMatches,
+    productScopeExclusions,
     checkedPairs: checked_pairs,
   });
 

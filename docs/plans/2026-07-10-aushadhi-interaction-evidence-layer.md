@@ -174,8 +174,8 @@ when clinician review metadata is absent.
 
 ```json
 {
-  "clinical_interaction_status": "reviewed_interaction_found|review_candidate_found|no_reviewed_interaction_found|not_evaluated",
-  "outcome_code": "reviewed_action_required|manual_review_required|input_gaps|therapeutic_duplication_only|no_cross_drug_pair|no_reviewed_finding",
+  "clinical_interaction_status": "reviewed_interaction_found|reviewed_interaction_found_with_unevaluated_scope|review_candidate_found|review_candidate_found_with_unevaluated_scope|no_reviewed_interaction_found|not_evaluated",
+  "outcome_code": "reviewed_action_required|reviewed_action_and_manual_review_required|manual_review_required|input_gaps|therapeutic_duplication_only|no_cross_drug_pair|no_reviewed_finding_with_duplication|no_reviewed_finding",
   "checks_performed": {
     "profile": "production-open|internal-evaluation",
     "rule_pack_id": "string",
@@ -205,8 +205,12 @@ when clinician review metadata is absent.
     },
     "reviewed_rule_matching": {
       "status": "performed|not_performed",
+      "matched_reviewed_finding_count": 0,
       "reviewed_finding_count": 0,
-      "review_candidate_count": 0
+      "surviving_reviewed_finding_count": 0,
+      "superseded_finding_count": 0,
+      "review_candidate_count": 0,
+      "technical_hold_match_count": 0
     },
     "checked_pair_count": 0
   },
@@ -214,7 +218,13 @@ when clinician review metadata is absent.
   "not_evaluated": [],
   "capability_limitations": [],
   "resolved_inputs": [],
-  "reviewed_findings": [],
+  "reviewed_findings": [
+    {
+      "rule_id": "string",
+      "matched_product_pairs": [["product-id-a", "product-id-b"]]
+    }
+  ],
+  "superseded_findings": [],
   "review_candidates": [
     {
       "candidate_id": "string",
@@ -249,6 +259,15 @@ source-grounded evidence, but their severity remains `unknown` and mechanism
 and management remain null until a clinician-reviewed promotion compiles them
 into the runtime rule pack. `not_evaluated` and `input_gaps` prevent absence of
 a finding from being mistaken for a completed check.
+
+`matched_product_pairs` identifies the exact observed products that triggered a
+reviewed finding. If an observed product pair falls outside every reviewed
+rule's exact product scope, `not_evaluated` contains
+`REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED`. An excluded-only result reports
+`not_evaluated` with `manual_review_required`; a result containing both an
+approved match and an excluded observed pair reports the corresponding
+`*_with_unevaluated_scope` status and
+`reviewed_action_and_manual_review_required` outcome.
 
 ---
 

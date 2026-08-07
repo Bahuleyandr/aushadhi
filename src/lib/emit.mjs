@@ -19,7 +19,7 @@ const DRUG_COLUMNS = [
 ];
 
 export async function emitArtifact({
-  distRoot, date, rows, conflicts, errors, meta, fdcKeys = new Set(), outputDir,
+  date, rows, conflicts, errors, meta, fdcKeys = new Set(), outputDir,
 }) {
   const stagedDir = outputDir ?? process.env.AUSHADHI_COHORT_DIR;
   if (typeof stagedDir !== 'string' || stagedDir.trim() === '') {

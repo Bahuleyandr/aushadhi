@@ -13,7 +13,7 @@ const PDF_URL = process.env.AUSHADHI_PMBJP_URL
 const ROW_RE = /^\s*(\d+)\s+(\S+)\s{2,}(.+)$/;
 const TRAILING_UNIT_RE = /^(.*\S)\s{2,}(\S.*)$/;
 const FORM_WORDS = /\b(tablets?|capsules?|injections?|inj|syrups?|suspension|oral|solutions?|creams?|ointments?|gels?|drops?|eye|ear|nasal|sprays?|ip|bp|usp|gastro-?resistant|prolonged release|extended release|sustained release|dispersible|chewable|film coated|mouth dissolving|powder|sachets?|respules?|inhalers?|lotions?|shampoos?|soaps?|patch(es)?|granules?|kit|per)\b/gi;
-const STRENGTH_TOKEN = /(\d+(?:\.\d+)?)\s*(mg|mcg|µg|gm|g|ml|iu|%[\w\/]*)\b/i;
+const STRENGTH_TOKEN = /(\d+(?:\.\d+)?)\s*(mg|mcg|µg|gm|g|ml|iu|%[\w/]*)\b/i;
 
 function parsePart(part) {
   const st = part.match(STRENGTH_TOKEN);

@@ -1110,6 +1110,7 @@ export async function streamZipTextEntries(zipPath, {
   const archiveTail = new ArchiveTail(tailCapacity);
   const archiveHash = createHash('sha256');
   let archiveByteCount = 0;
+  // eslint-disable-next-line no-useless-assignment -- null-initialized for symmetry with the sibling handles above; assigned exactly once after the archive is fully hashed
   let archiveSha256 = null;
   let fileHandle = null;
   let input = null;

@@ -154,6 +154,69 @@ test('generateCrossDrugPairs is deterministic, deduplicates pair keys, and does 
   ]);
 });
 
+test('the same product supplied twice never produces a self product-pair or intra-FDC pairs', () => {
+  // Degenerate [X, X] product pair and leaked intra-FDC component pair.
+  assert.deepEqual(generateCrossDrugPairs([
+    product('product:1', ['ingredient:a', 'ingredient:b']),
+    product('product:1', ['ingredient:a', 'ingredient:b']),
+  ]), []);
+
+  // A third, genuinely different product still pairs normally.
+  const mixed = generateCrossDrugPairs([
+    product('product:1', ['ingredient:a', 'ingredient:b']),
+    product('product:1', ['ingredient:a', 'ingredient:b']),
+    product('product:2', ['ingredient:c']),
+  ]);
+  assert.deepEqual(mixed.map((entry) => entry.pair_key), [
+    'ingredient:a|ingredient:c',
+    'ingredient:b|ingredient:c',
+  ]);
+  assert.ok(mixed.every((entry) => entry.product_pairs.every(
+    ([leftId, rightId]) => leftId !== rightId,
+  )));
+
+  // End to end: no wildcard review-candidate false alarm for a
+  // regulator-approved combination entered twice, while the duplicate
+  // entry itself stays visible as therapeutic duplication.
+  const candidateRule = rule({
+    id: 'candidate:a-b',
+    status: 'review_candidate',
+    severity: 'unknown',
+    mechanism: null,
+    management: null,
+  });
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Same FDC', product('product:1', ['ingredient:a', 'ingredient:b'])),
+      resolved('Same FDC again', product('product:1', ['ingredient:a', 'ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [candidateRule] }),
+  });
+
+  assert.deepEqual(result.checked_pairs, []);
+  assert.deepEqual(result.review_candidates, []);
+  assert.deepEqual(result.reviewed_findings, []);
+  assert.equal(result.clinical_interaction_status, 'not_evaluated');
+  assert.equal(result.outcome_code, 'therapeutic_duplication_only');
+  assert.deepEqual(
+    result.duplicate_ingredients.map((entry) => entry.ingredient_id),
+    ['ingredient:a', 'ingredient:b'],
+  );
+  assert.ok(result.not_evaluated.some(
+    (entry) => entry.code === 'NO_CROSS_DRUG_PAIR_EVALUATED',
+  ));
+});
+
+test('the same product id cannot carry conflicting ingredient assertions', () => {
+  assert.throws(
+    () => generateCrossDrugPairs([
+      product('product:1', ['ingredient:a']),
+      product('product:1', ['ingredient:b']),
+    ]),
+    /product:1.*conflicting ingredient assertions/i,
+  );
+});
+
 test('a forged reviewed combination cannot inject a product-level subject', () => {
   const combinationSubjectId = 'combination:co-trimoxazole:rxnorm-10831';
   const combination = {
@@ -336,8 +399,49 @@ test('same ingredient across products is reported as therapeutic duplication, no
   }]);
   assert.ok(!result.checked_pairs.some((entry) => entry.pair_key === 'ingredient:a|ingredient:a'));
   assert.equal(result.clinical_interaction_status, 'no_reviewed_interaction_found');
-  assert.equal(result.outcome_code, 'no_reviewed_finding');
+  assert.equal(result.outcome_code, 'no_reviewed_finding_with_duplication');
   assert.equal(result.checks_performed.therapeutic_duplication.finding_count, 1);
+});
+
+test('a duplication finding stays visible in outcome_code even when cross-drug pairs were checked', () => {
+  // {a} + {a, c}: the a|c pair is checked, yet the duplicated ingredient a
+  // must not be buried behind a plain no_reviewed_finding outcome.
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Mono', product('product:1', ['ingredient:a'])),
+      resolved('FDC', product('product:2', ['ingredient:a', 'ingredient:c'])),
+    ],
+    rulePack: pack(),
+  });
+
+  assert.equal(result.checked_pairs.length, 1);
+  assert.deepEqual(result.duplicate_ingredients, [{
+    ingredient_id: 'ingredient:a',
+    product_ids: ['product:1', 'product:2'],
+  }]);
+  assert.equal(result.outcome_code, 'no_reviewed_finding_with_duplication');
+  assert.equal(result.clinical_interaction_status, 'no_reviewed_interaction_found');
+
+  // Without duplication the plain outcome is unchanged.
+  const clean = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Brand B', product('product:2', ['ingredient:b'])),
+    ],
+    rulePack: pack(),
+  });
+  assert.equal(clean.outcome_code, 'no_reviewed_finding');
+
+  // Duplication never outranks a reviewed finding.
+  const withFinding = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Mono', product('product:1', ['ingredient:a'])),
+      resolved('FDC', product('product:2', ['ingredient:a', 'ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [rule()] }),
+  });
+  assert.equal(withFinding.reviewed_findings.length, 1);
+  assert.equal(withFinding.outcome_code, 'reviewed_action_required');
 });
 
 test('pure therapeutic duplication has a typed outcome without claiming interaction safety', () => {
@@ -426,6 +530,39 @@ test('only fully clinician-reviewed rules expose severity, mechanism, and manage
   const missingEvidence = rule();
   missingEvidence.evidence = [];
   assert.throws(() => validateRulePack(pack({ rules: [missingEvidence] })), /evidence/i);
+});
+
+test('the runtime validator enforces the four-tier severity enum on clinician-reviewed rules', () => {
+  for (const severity of ['minor', 'moderate', 'major', 'contraindicated']) {
+    assert.equal(validateRulePack(pack({ rules: [rule({ severity })] })), true, severity);
+  }
+
+  for (const severity of ['banana', 'unknown', 'severe', 'MAJOR', '']) {
+    assert.throws(
+      () => validateRulePack(pack({ rules: [rule({ severity })] })),
+      /severity/i,
+      `severity ${JSON.stringify(severity)} must be rejected`,
+    );
+  }
+
+  // Fail closed: an invalid severity must be a validation rejection at check
+  // time, never a passthrough onto a pharmacist-facing finding.
+  assert.throws(
+    () => checkResolvedProducts({
+      resolvedInputs: [
+        resolved('Brand A', product('product:1', ['ingredient:a'])),
+        resolved('Brand B', product('product:2', ['ingredient:b'])),
+      ],
+      rulePack: pack({ rules: [rule({ severity: 'banana' })] }),
+    }),
+    /severity is invalid/i,
+  );
+
+  // Review candidates keep their own pinned severity contract.
+  assert.equal(
+    validateRulePack(pack({ rules: [rule({ status: 'review_candidate' })] })),
+    true,
+  );
 });
 
 test('ambiguous products and unmapped ingredients are explicit and coverage uses the safety lattice', () => {
@@ -780,8 +917,113 @@ test('a reviewed rule is restricted to its exact approved product pairs', () => 
   });
   assert.equal(unapproved.checked_pairs.length, 1);
   assert.deepEqual(unapproved.reviewed_findings, []);
-  assert.equal(unapproved.clinical_interaction_status, 'no_reviewed_interaction_found');
-  assert.equal(unapproved.outcome_code, 'no_reviewed_finding');
+  assert.equal(unapproved.clinical_interaction_status, 'not_evaluated');
+  assert.equal(unapproved.outcome_code, 'manual_review_required');
+  const exclusion = unapproved.not_evaluated.find(
+    (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+  );
+  assert.ok(exclusion);
+  assert.equal(exclusion.rule_id, reviewedRule.rule_id);
+  assert.equal(exclusion.pair_key, 'ingredient:a|ingredient:b');
+  assert.deepEqual(exclusion.observed_product_pairs, [['product:1', 'product:3']]);
+});
+
+test('a reviewed match preserves not-evaluated status for every observed product pair outside its scope', () => {
+  const reviewedRule = rule();
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Approved Brand B', product('product:2', ['ingredient:b'])),
+      resolved('Unapproved Brand B', product('product:3', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+
+  assert.equal(result.reviewed_findings.length, 1);
+  assert.deepEqual(
+    result.reviewed_findings[0].matched_product_pairs,
+    [['product:1', 'product:2']],
+  );
+  const exclusion = result.not_evaluated.find(
+    (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+  );
+  assert.ok(exclusion);
+  assert.deepEqual(exclusion.observed_product_pairs, [['product:1', 'product:3']]);
+  assert.equal(
+    result.clinical_interaction_status,
+    'reviewed_interaction_found_with_unevaluated_scope',
+  );
+  assert.equal(result.outcome_code, 'reviewed_action_and_manual_review_required');
+});
+
+test('a product-scope-excluded reviewed rule leaves a typed per-pair not_evaluated entry without clinical text', () => {
+  const reviewedRule = rule();
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Unapproved Brand B', product('product:3', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+
+  const exclusion = result.not_evaluated.find(
+    (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+  );
+  assert.ok(exclusion);
+  assert.deepEqual(exclusion.pair, ['ingredient:a', 'ingredient:b']);
+  assert.match(exclusion.reason, /not evaluated/i);
+  // The exclusion entry must never leak the rule's clinical content.
+  for (const forbidden of ['severity', 'dispense_action', 'mechanism', 'management', 'evidence']) {
+    assert.equal(Object.hasOwn(exclusion, forbidden), false, forbidden);
+  }
+
+  // In-scope matches produce no exclusion entry.
+  const approved = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Brand B', product('product:2', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+  assert.ok(!approved.not_evaluated.some(
+    (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+  ));
+
+  // Unchecked ingredient pairs (no rule pair generated at all) produce no entry.
+  const unrelated = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand C', product('product:4', ['ingredient:c'])),
+      resolved('Brand D', product('product:5', ['ingredient:d'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+  assert.ok(!unrelated.not_evaluated.some(
+    (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+  ));
+});
+
+test('surviving reviewed findings carry the matched subset of product pairs', () => {
+  const reviewedRule = rule({
+    product_pairs: [['product:1', 'product:2'], ['product:4', 'product:5']],
+  });
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Brand B', product('product:2', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+
+  assert.equal(result.reviewed_findings.length, 1);
+  const [finding] = result.reviewed_findings;
+  // The approved scope stays intact; matched_product_pairs identifies which
+  // of the caller's observed product pairs actually triggered the finding,
+  // matching the shape superseded findings already carry.
+  assert.deepEqual(finding.product_pairs, [
+    ['product:1', 'product:2'],
+    ['product:4', 'product:5'],
+  ]);
+  assert.deepEqual(finding.matched_product_pairs, [['product:1', 'product:2']]);
 });
 
 test('a mapped ingredient cannot enter clinical matching without its reviewed presentation subject', () => {

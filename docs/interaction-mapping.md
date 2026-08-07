@@ -191,6 +191,14 @@ oral-tablet assertions. A reviewed ingredient identity without its exact
 reviewed presentation is excluded from clinical pair generation, and a
 different product carrying the same ingredient does not inherit the approval.
 Reviewed mapping completeness does not otherwise promote a clinical rule.
+Each surviving reviewed finding reports only the observed
+`matched_product_pairs` that triggered it. An observed pair outside every
+reviewed rule's exact product scope is emitted as
+`REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED`: excluded-only results use
+`not_evaluated` with `manual_review_required`, while a check containing both an
+approved match and an excluded pair uses
+`reviewed_interaction_found_with_unevaluated_scope` with
+`reviewed_action_and_manual_review_required`.
 
 The compiler separately writes
 `data-static/interaction-promotion-holds.runtime.internal-evaluation.json`.

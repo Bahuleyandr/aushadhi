@@ -541,8 +541,6 @@ async function replaceDirectory(temporary, destination) {
       await fsp.rm(backup, { recursive: true, force: true });
       hadDestination = false;
     }
-  } catch (error) {
-    throw error;
   } finally {
     await fsp.rm(temporary, { recursive: true, force: true }).catch(() => {});
   }
