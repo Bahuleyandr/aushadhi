@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
-// Stages a public (production-open) release of drugs.jsonl behind the
-// fail-closed licensing gate, or verifies a candidate artifact with --check.
+// Stages a production-open catalogue candidate behind the fail-closed source
+// policy gate, or verifies a complete candidate directory with --check.
 //
-//   node src/cli/stage-public-release.mjs --input dist/<gen>/drugs.jsonl --output dist/public-release
-//   node src/cli/stage-public-release.mjs --check <path to drugs.jsonl>
+//   node src/cli/stage-public-release.mjs --input dist/<gen>/drugs.jsonl --output dist/public-release/<candidate-id>
+//   node src/cli/stage-public-release.mjs --check dist/public-release/<candidate-id>
 //
-// Only rows whose every source is cleared for production-open by
+// Only rows whose every source is technically eligible for production-open by
 // data-static/interaction-sources.json are written; everything excluded is
 // tallied per source with a reason in public-release-manifest.json.
-// See docs/PUBLIC_RELEASE_GATE.md.
+// This is not publication or deployment authority. See docs/PUBLIC_RELEASE_GATE.md.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,8 +36,8 @@ function fail(message) {
 }
 
 function parseArgs(argv) {
-  const options = { input: null, output: null, manifest: null, check: null };
-  const takesValue = new Set(['--input', '--output', '--manifest', '--check']);
+  const options = { input: null, output: null, check: null };
+  const takesValue = new Set(['--input', '--output', '--check']);
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     const equals = argument.indexOf('=');
@@ -77,19 +77,30 @@ function requireReadableFile(file, label) {
   if (!stat.isFile()) fail(`${label} ${file} is not a regular file`);
 }
 
-function loadGate(manifestPath) {
-  const resolved = path.resolve(manifestPath);
+function loadGate() {
+  const resolved = path.resolve(DEFAULT_MANIFEST_PATH);
   requireReadableFile(resolved, 'source manifest');
   const manifest = loadSourceManifest(resolved);
   const { cleared, excluded } = classifyPublicReleaseSources(manifest);
   const sha256 = createHash('sha256').update(fs.readFileSync(resolved)).digest('hex');
   return {
     manifestPath: resolved,
+    manifestRelativePath: path.relative(ROOT, resolved).replaceAll(path.sep, '/'),
     policyReviewedAt: manifest.policy_reviewed_at,
     manifestSha256: sha256,
     cleared,
     excluded,
   };
+}
+
+async function hashFile(file) {
+  const hash = createHash('sha256');
+  let bytes = 0;
+  for await (const chunk of fs.createReadStream(file)) {
+    hash.update(chunk);
+    bytes += chunk.length;
+  }
+  return { sha256: hash.digest('hex'), size_bytes: bytes };
 }
 
 // Streams the input line-by-line (never buffers the artifact) and evaluates
@@ -191,38 +202,15 @@ function assertSafeOutputPath(output) {
   }
 }
 
-function assertReplaceableOutput(output) {
-  if (!fs.existsSync(output)) return;
-  const stat = fs.lstatSync(output);
-  if (stat.isSymbolicLink() || !stat.isDirectory()) {
-    fail(`refusing to replace non-directory or symbolic-link output ${output}`);
-  }
-  let existingManifest;
-  try {
-    existingManifest = JSON.parse(fs.readFileSync(path.join(output, RELEASE_MANIFEST_NAME), 'utf8'));
-  } catch {
-    fail(`refusing to replace unrecognized output directory ${output}`);
-  }
-  if (existingManifest?.stage_kind !== STAGE_KIND) {
-    fail(`refusing to replace unrecognized output directory ${output}`);
+function assertOutputAbsent(output) {
+  if (fs.existsSync(output)) {
+    fail(`refusing to replace existing output ${output}; public release stages are immutable`);
   }
 }
 
 function publishStage(staging, output) {
-  assertReplaceableOutput(output);
-  if (!fs.existsSync(output)) {
-    fs.renameSync(staging, output);
-    return;
-  }
-  const backup = `${output}.replaced-${randomUUID()}`;
-  fs.renameSync(output, backup);
-  try {
-    fs.renameSync(staging, output);
-    fs.rmSync(backup, { recursive: true, force: true });
-  } catch (error) {
-    if (!fs.existsSync(output) && fs.existsSync(backup)) fs.renameSync(backup, output);
-    throw error;
-  }
+  assertOutputAbsent(output);
+  fs.renameSync(staging, output);
 }
 
 function sortedObject(map) {
@@ -251,8 +239,10 @@ function releaseManifest(gate, stats, artifact) {
     generated_at_utc: new Date().toISOString(),
     profile: PUBLIC_RELEASE_PROFILE,
     redistributable: true,
+    release_authority: 'none',
+    deployment_authority: 'none',
     source_manifest: {
-      path: gate.manifestPath,
+      path: gate.manifestRelativePath,
       policy_reviewed_at: gate.policyReviewedAt,
       sha256: gate.manifestSha256,
     },
@@ -281,7 +271,7 @@ async function stageRelease(gate, inputPath, output) {
     fail(`refusing to stage over protected path ${resolvedOutput}`);
   }
   assertSafeOutputPath(resolvedOutput);
-  assertReplaceableOutput(resolvedOutput);
+  assertOutputAbsent(resolvedOutput);
 
   fs.mkdirSync(path.dirname(resolvedOutput), { recursive: true });
   const staging = `${resolvedOutput}.staging-${randomUUID()}`;
@@ -305,10 +295,122 @@ async function stageRelease(gate, inputPath, output) {
   }
 }
 
-async function checkRelease(gate, inputPath) {
-  const resolvedInput = path.resolve(inputPath);
-  requireReadableFile(resolvedInput, 'input');
-  const stats = await scanInput(resolvedInput, gate.cleared);
+function requireExactKeys(value, expectedKeys, label) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    fail(`${label} must be an object`);
+  }
+  const actual = Object.keys(value).sort();
+  const expected = [...expectedKeys].sort();
+  if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
+    fail(`${label} has unexpected keys`);
+  }
+}
+
+function requireNonNegativeInteger(value, label) {
+  if (!Number.isSafeInteger(value) || value < 0) fail(`${label} must be a non-negative integer`);
+}
+
+function readReleaseManifest(directory) {
+  const file = path.join(directory, RELEASE_MANIFEST_NAME);
+  requireReadableFile(file, 'release manifest');
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    fail('release manifest is not valid JSON');
+  }
+  requireExactKeys(manifest, [
+    'schema_version', 'stage_kind', 'generated_at_utc', 'profile', 'redistributable',
+    'release_authority', 'deployment_authority', 'source_manifest', 'rows_read',
+    'rows_included', 'rows_excluded', 'included_sources', 'excluded_sources',
+    'artifact_source',
+  ], 'release manifest');
+  requireExactKeys(
+    manifest.source_manifest,
+    ['path', 'policy_reviewed_at', 'sha256'],
+    'release manifest source_manifest',
+  );
+  requireExactKeys(
+    manifest.artifact_source,
+    ['path', 'format', 'record_count', 'size_bytes', 'sha256'],
+    'release manifest artifact_source',
+  );
+  return manifest;
+}
+
+function requireReleaseDirectory(directory) {
+  let stat;
+  try {
+    stat = fs.lstatSync(directory);
+  } catch {
+    fail(`release directory ${directory} does not exist`);
+  }
+  if (stat.isSymbolicLink() || !stat.isDirectory()) {
+    fail(`release directory ${directory} is not a regular directory`);
+  }
+  const expected = new Set(['drugs.jsonl', RELEASE_MANIFEST_NAME]);
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (!expected.has(entry.name)) fail(`unexpected package file ${entry.name}`);
+    if (!entry.isFile() || entry.isSymbolicLink()) {
+      fail(`package entry ${entry.name} is not a regular file`);
+    }
+    expected.delete(entry.name);
+  }
+  if (expected.size > 0) fail(`package is missing ${[...expected].join(', ')}`);
+}
+
+function expectedIncludedSources(gate, stats) {
+  const includedSources = new Map();
+  for (const [sourceId, rows] of stats.includedSourceRows) {
+    includedSources.set(sourceId, { rows, ...gate.cleared.get(sourceId) });
+  }
+  return sortedObject(includedSources);
+}
+
+async function checkRelease(gate, releaseDirectory) {
+  const resolvedDirectory = path.resolve(releaseDirectory);
+  requireReleaseDirectory(resolvedDirectory);
+  const manifest = readReleaseManifest(resolvedDirectory);
+  if (manifest.schema_version !== 1
+    || manifest.stage_kind !== STAGE_KIND
+    || manifest.profile !== PUBLIC_RELEASE_PROFILE
+    || manifest.redistributable !== true
+    || manifest.release_authority !== 'none'
+    || manifest.deployment_authority !== 'none') {
+    fail('release manifest does not declare the required public-release profile');
+  }
+  if (typeof manifest.generated_at_utc !== 'string'
+    || !Number.isFinite(Date.parse(manifest.generated_at_utc))) {
+    fail('release manifest generated_at_utc is invalid');
+  }
+  if (manifest.source_manifest.path !== gate.manifestRelativePath
+    || manifest.source_manifest.policy_reviewed_at !== gate.policyReviewedAt
+    || manifest.source_manifest.sha256 !== gate.manifestSha256) {
+    fail('release manifest is not bound to the committed source policy');
+  }
+  for (const field of ['rows_read', 'rows_included', 'rows_excluded']) {
+    requireNonNegativeInteger(manifest[field], `release manifest ${field}`);
+  }
+  if (manifest.rows_read !== manifest.rows_included + manifest.rows_excluded) {
+    fail('release manifest row totals are inconsistent');
+  }
+  if (manifest.artifact_source.path !== 'drugs.jsonl'
+    || manifest.artifact_source.format !== 'jsonl') {
+    fail('release manifest artifact identity is invalid');
+  }
+  for (const field of ['record_count', 'size_bytes']) {
+    requireNonNegativeInteger(manifest.artifact_source[field], `artifact_source ${field}`);
+  }
+  if (typeof manifest.artifact_source.sha256 !== 'string'
+    || !/^[0-9a-f]{64}$/u.test(manifest.artifact_source.sha256)) {
+    fail('artifact_source sha256 is invalid');
+  }
+
+  const inputPath = path.join(resolvedDirectory, 'drugs.jsonl');
+  const [stats, artifact] = await Promise.all([
+    scanInput(inputPath, gate.cleared),
+    hashFile(inputPath),
+  ]);
   if (stats.rowsRead === 0) {
     fail('candidate artifact contains no rows; an empty public release is never valid');
   }
@@ -325,14 +427,28 @@ async function checkRelease(gate, inputPath) {
     process.exitCode = 1;
     return;
   }
+  if (manifest.rows_included !== stats.rowsRead
+    || manifest.artifact_source.record_count !== stats.rowsRead
+    || manifest.artifact_source.size_bytes !== artifact.size_bytes
+    || manifest.artifact_source.sha256 !== artifact.sha256) {
+    fail('release artifact does not match its manifest');
+  }
+  if (JSON.stringify(manifest.included_sources) !== JSON.stringify(expectedIncludedSources(gate, stats))) {
+    fail('release included_sources do not match artifact provenance');
+  }
+  if (manifest.excluded_sources === null
+    || typeof manifest.excluded_sources !== 'object'
+    || Array.isArray(manifest.excluded_sources)) {
+    fail('release excluded_sources must be an object');
+  }
   process.stdout.write(
-    `public release check passed: ${stats.rowsRead} rows, every source cleared for ${PUBLIC_RELEASE_PROFILE} (${resolvedInput})\n`,
+    `public release package check passed: ${stats.rowsRead} rows, every source cleared for ${PUBLIC_RELEASE_PROFILE} (${resolvedDirectory})\n`,
   );
 }
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const gate = loadGate(options.manifest ?? DEFAULT_MANIFEST_PATH);
+  const gate = loadGate();
   if (options.check !== null) {
     await checkRelease(gate, options.check);
     return;

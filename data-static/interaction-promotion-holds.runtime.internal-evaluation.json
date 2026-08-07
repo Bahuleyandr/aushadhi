@@ -4,7 +4,7 @@
   "rule_pack_id": "aushadhi-internal-interactions",
   "rule_pack_version": "0.5.0",
   "rule_pack_sha256": "0acf96d74b884e1c87b40c95952ef3178020e018801527420ca9926f458f0239",
-  "promotion_hold_manifest_sha256": "ae8077d9c800e2a9b28953b21492f947b37e8f2e4147381ae0d8560a7999bb65",
+  "promotion_hold_manifest_sha256": "0dfc07ec5becf324b22cd649962251d3b3131af47195c2920419c6d289abdf9e",
   "holds_sha256": "256faf2ae557d528b5c94765e4fe8e5f1af731e430b1120a610701f6488b52db",
   "holds": [
     {

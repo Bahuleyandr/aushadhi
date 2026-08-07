@@ -490,7 +490,6 @@
       "allowed_origin_hosts": ["static.pib.gov.in"],
       "allowed_origin_paths": ["/WriteReadData/specificdocs/documents/2026/feb/doc202626781701.pdf"],
       "requires_evidence_payload_validation": true,
-      "notes": "Government/PSU work; no published open licence found (site is a JS app, terms unreachable) so default is all-rights-reserved. Not cleared for redistribution — internal-only pending PMBI permission (see docs/PERMISSION_REQUEST_DRAFTS.md). See docs/LICENSING_REPORT.md.",
       "disabled_reasons": []
     },
     "kaggle-2025": {
@@ -534,7 +533,6 @@
       "read_only_input_zones": {
         "internal-evaluation": ["dist"]
       },
-      "notes": "CDSCO Copyright Policy requires 'due permission' for reproduction (restrictive NIC/opencms variant, not the permissive GIGW template). Validation-only role; not cleared for redistribution pending CDSCO permission (see docs/PERMISSION_REQUEST_DRAFTS.md). Gazette-notified ban lists are separately exempt under Copyright Act s.52(1)(q)(i). See docs/LICENSING_REPORT.md.",
       "disabled_reasons": []
     },
     "onemg-live": {
@@ -559,110 +557,6 @@
       "read_only_input_zones": {
         "internal-evaluation": ["dist"]
       },
-      "disabled_reasons": []
-    },
-    "pharmeasy": {
-      "name": "PharmEasy live product pages",
-      "homepage": "https://pharmeasy.in/",
-      "licence": {
-        "id": "PROPRIETARY-WEB",
-        "class": "restricted",
-        "verification_status": "verified",
-        "verified_at": "2026-08-06",
-        "terms_url": "https://pharmeasy.in/legal/terms-and-conditions"
-      },
-      "enabled": true,
-      "ingestion_forbidden": false,
-      "redistributable": false,
-      "artifact_pack": "internal-restricted",
-      "allowed_profiles": ["internal-evaluation"],
-      "allowed_uses": ["catalogue", "ingredient-index", "product-resolution"],
-      "required_storage_zones": {
-        "internal-evaluation": ["data/interaction/internal-evaluation"]
-      },
-      "read_only_input_zones": {
-        "internal-evaluation": ["dist"]
-      },
-      "notes": "Site terms bar automated access ('no automated means such as data scraper, deep-link, robot') and reproduction/redistribution of content; internal-only, non-redistributable. See docs/LICENSING_REPORT.md.",
-      "disabled_reasons": []
-    },
-    "netmeds": {
-      "name": "Netmeds live product pages",
-      "homepage": "https://www.netmeds.com/",
-      "licence": {
-        "id": "PROPRIETARY-WEB",
-        "class": "restricted",
-        "verification_status": "verified",
-        "verified_at": "2026-08-06",
-        "terms_url": "https://www.netmeds.com/terms-and-conditions"
-      },
-      "enabled": true,
-      "ingestion_forbidden": false,
-      "redistributable": false,
-      "artifact_pack": "internal-restricted",
-      "allowed_profiles": ["internal-evaluation"],
-      "allowed_uses": ["catalogue", "ingredient-index", "product-resolution"],
-      "required_storage_zones": {
-        "internal-evaluation": ["data/interaction/internal-evaluation"]
-      },
-      "read_only_input_zones": {
-        "internal-evaluation": ["dist"]
-      },
-      "notes": "Site terms bar spiders/robots and data mining/extraction; access is a limited revocable licence excluding extraction. Internal-only, non-redistributable. See docs/LICENSING_REPORT.md.",
-      "disabled_reasons": []
-    },
-    "apollo": {
-      "name": "Apollo Pharmacy live product pages",
-      "homepage": "https://www.apollopharmacy.in/",
-      "licence": {
-        "id": "PROPRIETARY-WEB",
-        "class": "restricted",
-        "verification_status": "verified",
-        "verified_at": "2026-08-06",
-        "terms_url": "https://www.apollopharmacy.in/terms"
-      },
-      "enabled": true,
-      "ingestion_forbidden": false,
-      "redistributable": false,
-      "artifact_pack": "internal-restricted",
-      "allowed_profiles": ["internal-evaluation"],
-      "allowed_uses": ["catalogue", "ingredient-index", "product-resolution"],
-      "required_storage_zones": {
-        "internal-evaluation": ["data/interaction/internal-evaluation"]
-      },
-      "read_only_input_zones": {
-        "internal-evaluation": ["dist"]
-      },
-      "notes": "Site terms bar 'any other use ... copy, reproduce, transmit, publish, display, distribute'; an express automated-access clause was not confirmed and must be re-verified. Internal-only, non-redistributable. See docs/LICENSING_REPORT.md.",
-      "disabled_reasons": []
-    },
-    "nppa": {
-      "name": "NPPA NLEM ceiling-price list",
-      "homepage": "https://nppa.gov.in/",
-      "licence": {
-        "id": "INDIA-GAZETTE-MATTER",
-        "class": "open",
-        "verification_status": "verified",
-        "verified_at": "2026-08-06",
-        "terms_url": "https://nppa.gov.in/"
-      },
-      "enabled": true,
-      "ingestion_forbidden": false,
-      "redistributable": true,
-      "artifact_pack": "open-core",
-      "allowed_profiles": ["production-open", "internal-evaluation"],
-      "allowed_uses": ["catalogue", "ingredient-index", "product-resolution"],
-      "required_storage_zones": {
-        "production-open": ["data/interaction/production-open"],
-        "internal-evaluation": ["data/interaction/internal-evaluation"]
-      },
-      "read_only_input_zones": {
-        "production-open": ["dist"],
-        "internal-evaluation": ["dist"]
-      },
-      "rights_scope": "gazette-published-ceiling-price-notifications-reproducible-under-copyright-act-s52-1-q-i",
-      "attribution": "National Pharmaceutical Pricing Authority (NPPA), Government of India",
-      "notes": "NPPA ceiling-price notifications are Official Gazette matter, reproducible and redistributable under Copyright Act 1957 s.52(1)(q)(i) irrespective of website terms. Machine-flagged redistributable under the INDIA-GAZETTE-MATTER licence id on that gazette basis; attribution to NPPA is carried in the attribution field. Non-gazette nppa.gov.in site content (dashboards, analyses) remains outside this clearance. See docs/LICENSING_REPORT.md.",
       "disabled_reasons": []
     },
     "ddinter-2": {

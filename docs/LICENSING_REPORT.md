@@ -455,14 +455,6 @@ via the promotion/re-attestation flow, together with:
 4. Update the catalogue-filter test fixture (replace `apollo` as the canonical unknown
    source).
 
-**Status:** items 1, 3 and 4, and the `pharmeasy`/`netmeds`/`apollo`/`nppa` entries from
-item 2, land together with the public-release licensing gate (see
-`docs/PUBLIC_RELEASE_GATE.md`), which re-binds `source_policy_sha256` and regenerates the
-runtime hold artifact in the same change; `nppa` lands directly flipped to
-`INDIA-GAZETTE-MATTER`/redistributable per §7b. The `atc` manifest entry and the
-decision in (b) on wider internal-evaluation admission of the newly-known restricted
-sources remain open.
-
 ---
 
 ## 8. Appendix — re-verification checklist

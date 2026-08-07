@@ -28,7 +28,6 @@ const LICENCE_ID_CLASSES = new Map([
   ['CC-BY-4.0', new Set(['open'])],
   ['CC-BY-SA-4.0', new Set(['open-sharealike'])],
   ['OGL-3.0', new Set(['open'])],
-  ['INDIA-GAZETTE-MATTER', new Set(['open'])],
   ['SNOMED-CT-AFFILIATE', new Set(['user-supplied'])],
   ['NOT-CLEARED-FOR-REDISTRIBUTION', new Set(['restricted'])],
   ['REUSE-PERMISSION-REQUIRED', new Set(['restricted'])],
