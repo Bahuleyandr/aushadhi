@@ -909,6 +909,83 @@ test('a reviewed rule is restricted to its exact approved product pairs', () => 
   assert.deepEqual(unapproved.reviewed_findings, []);
   assert.equal(unapproved.clinical_interaction_status, 'no_reviewed_interaction_found');
   assert.equal(unapproved.outcome_code, 'no_reviewed_finding');
+  const exclusion = unapproved.not_evaluated.find(
+    (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+  );
+  assert.ok(exclusion);
+  assert.equal(exclusion.rule_id, reviewedRule.rule_id);
+  assert.equal(exclusion.pair_key, 'ingredient:a|ingredient:b');
+  assert.deepEqual(exclusion.observed_product_pairs, [['product:1', 'product:3']]);
+});
+
+test('a product-scope-excluded reviewed rule leaves a typed per-pair not_evaluated entry without clinical text', () => {
+  const reviewedRule = rule();
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Unapproved Brand B', product('product:3', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+
+  const exclusion = result.not_evaluated.find(
+    (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+  );
+  assert.ok(exclusion);
+  assert.deepEqual(exclusion.pair, ['ingredient:a', 'ingredient:b']);
+  assert.match(exclusion.reason, /not evaluated/i);
+  // The exclusion entry must never leak the rule's clinical content.
+  for (const forbidden of ['severity', 'dispense_action', 'mechanism', 'management', 'evidence']) {
+    assert.equal(Object.hasOwn(exclusion, forbidden), false, forbidden);
+  }
+
+  // In-scope matches produce no exclusion entry.
+  const approved = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Brand B', product('product:2', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+  assert.ok(!approved.not_evaluated.some(
+    (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+  ));
+
+  // Unchecked ingredient pairs (no rule pair generated at all) produce no entry.
+  const unrelated = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand C', product('product:4', ['ingredient:c'])),
+      resolved('Brand D', product('product:5', ['ingredient:d'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+  assert.ok(!unrelated.not_evaluated.some(
+    (entry) => entry.code === 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+  ));
+});
+
+test('surviving reviewed findings carry the matched subset of product pairs', () => {
+  const reviewedRule = rule({
+    product_pairs: [['product:1', 'product:2'], ['product:4', 'product:5']],
+  });
+  const result = checkResolvedProducts({
+    resolvedInputs: [
+      resolved('Brand A', product('product:1', ['ingredient:a'])),
+      resolved('Brand B', product('product:2', ['ingredient:b'])),
+    ],
+    rulePack: pack({ rules: [reviewedRule], declared_coverage: 'partial' }),
+  });
+
+  assert.equal(result.reviewed_findings.length, 1);
+  const [finding] = result.reviewed_findings;
+  // The approved scope stays intact; matched_product_pairs identifies which
+  // of the caller's observed product pairs actually triggered the finding,
+  // matching the shape superseded findings already carry.
+  assert.deepEqual(finding.product_pairs, [
+    ['product:1', 'product:2'],
+    ['product:4', 'product:5'],
+  ]);
+  assert.deepEqual(finding.matched_product_pairs, [['product:1', 'product:2']]);
 });
 
 test('a mapped ingredient cannot enter clinical matching without its reviewed presentation subject', () => {

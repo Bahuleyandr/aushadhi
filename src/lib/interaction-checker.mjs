@@ -1158,6 +1158,7 @@ function buildNotEvaluated({
   checkedPairs,
   rulePack,
   technicalHoldMatches,
+  productScopeExclusions,
 }) {
   const entries = unresolvedInputs.map((input, index) => ({
     code: 'INPUT_GAP',
@@ -1173,6 +1174,16 @@ function buildNotEvaluated({
       reason: match.hold.reason,
       detected_at: match.hold.detected_at,
       matched_product_pairs: structuredClone(match.matched_product_pairs),
+    });
+  }
+  for (const exclusion of productScopeExclusions) {
+    entries.push({
+      code: 'REVIEWED_RULE_PRODUCT_SCOPE_EXCLUDED',
+      rule_id: exclusion.rule_id,
+      pair: exclusion.pair,
+      pair_key: exclusion.pair_key,
+      observed_product_pairs: exclusion.observed_product_pairs,
+      reason: 'A reviewed rule exists for this ingredient pair, but the observed product pair is outside its exact approved product scope. Treat this pair as not evaluated, not as reviewed knowledge of absence.',
     });
   }
   if (checkedPairs.length === 0) {
@@ -1337,11 +1348,29 @@ export function checkResolvedProducts({
   }
   const reviewedMatches = [];
   const packCandidates = [];
+  const productScopeExclusions = [];
   for (const value of rulePack.rules) {
     const checkedPair = checkedByKey.get(pairKey(value.pair));
     if (!checkedPair) continue;
     const matched_product_pairs = matchedProductPairs(checkedPair, value);
-    if (matched_product_pairs.length === 0) continue;
+    if (matched_product_pairs.length === 0) {
+      // A reviewed rule exists for this ingredient pair, but none of the
+      // observed product pairs are inside its approved product scope.
+      // Record a typed per-pair exclusion instead of dropping the rule
+      // indistinguishably from "no rule exists": the pair is not
+      // evaluated by this rule, and the pharmacist must be able to see
+      // that reviewed ingredient-level knowledge was declined on exact
+      // product-scope grounds.
+      if (value.review.status === 'clinician_reviewed') {
+        productScopeExclusions.push({
+          rule_id: value.rule_id,
+          pair: [...value.pair],
+          pair_key: checkedPair.pair_key,
+          observed_product_pairs: structuredClone(checkedPair.product_pairs),
+        });
+      }
+      continue;
+    }
     if (value.review.status === 'clinician_reviewed') {
       reviewedMatches.push({
         rule: structuredClone(value),
@@ -1350,8 +1379,12 @@ export function checkResolvedProducts({
     }
     else packCandidates.push(structuredClone(value));
   }
+  productScopeExclusions.sort((left, right) => compareStrings(left.rule_id, right.rule_id));
   const supersession = applyExactProductSupersession(reviewedMatches);
-  const reviewed_findings = supersession.surviving.map(({ rule }) => rule);
+  const reviewed_findings = supersession.surviving.map(({ rule, matched_product_pairs }) => ({
+    ...rule,
+    matched_product_pairs: structuredClone(matched_product_pairs),
+  }));
   const superseded_findings = supersession.superseded;
 
   const suppliedCandidates = reviewCandidates.map((value, index) => ({
@@ -1443,6 +1476,7 @@ export function checkResolvedProducts({
     checkedPairs: checked_pairs,
     rulePack,
     technicalHoldMatches,
+    productScopeExclusions,
   });
   const outcome_code = outcomeFor({
     reviewedFindings: reviewed_findings,
