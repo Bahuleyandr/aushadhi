@@ -1,11 +1,12 @@
 # Permission-request drafts
 
-[**Pre-send note:** the letters below describe the project as non-commercial and state
-that the data is not sold — confirm that characterization holds for all current and
-planned downstream uses before sending.]
+[**Pre-send note:** Aushadhi is currently a private development repository. These drafts
+request permission for possible future uses; they do not claim that a public,
+open-source, or non-commercial release already exists. The owner and qualified counsel
+must approve the exact project description and intended use before anything is sent.]
 
 **Status: DRAFTS ONLY — nothing here has been sent.** Fill the `[YOUR NAME]` /
-`[…]` placeholders, have them reviewed, and confirm the current recipient address on each
+`[…]` placeholders, obtain owner and legal review, and confirm the current recipient address on each
 organisation's official contact page before sending. These accompany
 [`docs/LICENSING_REPORT.md`](LICENSING_REPORT.md).
 
@@ -21,15 +22,15 @@ than guessing an address.
 `https://www.janaushadhi.gov.in/` (PMBI) — also `https://www.pmbi.co.in/`. If a grievance
 or public-information officer address is listed, address it there.
 
-**Subject:** Request for permission to reuse and redistribute the Jan Aushadhi product &
-MRP list in an open, non-commercial drug dataset (with attribution)
+**Subject:** Request for permission to use and potentially redistribute the Jan Aushadhi
+product and MRP list with attribution
 
 ---
 
 Dear Sir/Madam,
 
-I am writing on behalf of **Aushadhi**, a non-commercial, open-source project that builds
-a clean, structured reference dataset of Indian medicines (brand name → generic
+I am writing on behalf of **Aushadhi**, a private development project evaluating a
+structured reference dataset of Indian medicines (brand name → generic
 composition → pack/strength) to help clinicians and health-software developers match and
 validate drug compositions accurately.
 
@@ -44,11 +45,11 @@ from the published product portfolio / MRP list:
 - PMBJP product code, where published
 
 **Scope and intended use:**
-- Purpose: a **non-commercial, open-source** reference dataset; we do not sell the data or
-  any product built on it.
-- Redistribution: the compiled dataset would be published openly (e.g. on a public code
-  repository), with **clear attribution to PMBI / Jan Aushadhi** as the source of these
-  rows and a link back to the official list.
+- Current purpose: private internal validation and evaluation. The current repository and
+  snapshots are not public releases and carry no redistribution authority.
+- Potential redistribution: only if PMBI grants permission and the project owner later
+  authorizes a release, the approved fields may be published with **clear attribution to
+  PMBI / Jan Aushadhi** and a link to the official list.
 - Update cadence: we would refresh from the current official list periodically (roughly
   quarterly, or whenever PMBI publishes an updated portfolio), and note the source
   version/date on each release.
@@ -70,7 +71,7 @@ happy to provide any further details about the project.
 
 Kind regards,
 [YOUR NAME]
-[ROLE / "maintainer, Aushadhi open-source project"]
+[ROLE / "maintainer, Aushadhi"]
 [EMAIL]
 [PROJECT URL]
 
@@ -89,8 +90,8 @@ approved-drug / FDC list contents for validation and potential redistribution
 
 Dear Sir/Madam,
 
-I am writing on behalf of **Aushadhi**, a non-commercial, open-source project that builds
-a structured reference dataset of Indian medicines to help clinicians and health-software
+I am writing on behalf of **Aushadhi**, a private development project evaluating a
+structured reference dataset of Indian medicines to help clinicians and health-software
 developers validate drug compositions and fixed-dose combinations.
 
 We note that CDSCO's Copyright Policy states that the contents of the website "may not be
@@ -106,12 +107,11 @@ respectfully **request permission** in relation to the following CDSCO-published
   products in our dataset correspond to genuinely approved combinations. This is an
   internal correctness check.
 - Potential redistribution: we would also like permission to **redistribute the factual
-  approval information** (composition/strength/approval reference) as part of our open,
-  non-commercial dataset, **with clear attribution to CDSCO** and a link to the source.
-- We understand that material **published in the Official Gazette** (for example,
-  prohibition/ban notifications under Section 26A) is separately reproducible under
-  Section 52(1)(q)(i) of the Copyright Act, 1957; this request concerns CDSCO's compiled
-  website/PDF lists that are not themselves gazette matter.
+  approval information** (composition/strength/approval reference) in a future dataset,
+  if separately approved, **with clear attribution to CDSCO** and a link to the source.
+- We understand that a statutory exception may apply to material proven to have been
+  published in the Official Gazette. This request does not rely on that unreviewed legal
+  position and concerns CDSCO's compiled website/PDF lists.
 - We will reproduce the material accurately, not use it in any misleading or objectionable
   context, and acknowledge CDSCO as the source, consistent with your Copyright Policy.
 
@@ -123,7 +123,7 @@ Thank you for your time and for CDSCO's work in drug safety and regulation.
 
 Kind regards,
 [YOUR NAME]
-[ROLE / "maintainer, Aushadhi open-source project"]
+[ROLE / "maintainer, Aushadhi"]
 [EMAIL]
 [PROJECT URL]
 
@@ -141,7 +141,7 @@ MIT licence?
 
 Hi, and thanks for publishing this dataset — it is genuinely useful.
 
-We use it as an input in an open-source Indian-medicines reference project, and we are
+We use it as an input in a private Indian-medicines reference project, and we are
 doing a licensing review of all our data sources. To use your dataset responsibly we would
 love a bit more clarity on its provenance:
 
