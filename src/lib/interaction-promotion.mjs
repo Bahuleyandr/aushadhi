@@ -22,6 +22,12 @@ import {
   parseDraftPackAttestation,
 } from './interaction-draft-attestation.mjs';
 import { validateDraftRules } from './interaction-draft-validation.mjs';
+import {
+  parseInteractionMemberSets,
+} from './interaction-member-set-validation.mjs';
+import {
+  instantiateExpandedDraftRule,
+} from './interaction-rule-expansion.mjs';
 import { strictPlainDataSnapshot } from './strict-plain-data.mjs';
 
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -164,7 +170,9 @@ function compareStrings(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function parseDraftPack(packBytes) {
+// Exported for the expansion dry-run CLI, which must parse the attested
+// draft pack with exactly the compiler's canonical-JSONL discipline.
+export function parseDraftPack(packBytes) {
   if (!ArrayBuffer.isView(packBytes) || packBytes.byteLength === 0) {
     throw new TypeError('draft pack bytes must be a non-empty Uint8Array');
   }
@@ -341,6 +349,28 @@ function validateScope(value, label, schemaVersion) {
   }
 }
 
+// Compile-time class expansion (owner-approved Option B, 2026-08-07): a
+// promotion entry may target one exact member instantiation of a class-level
+// draft rule. The entry's rule_id is the deterministic expanded id, its
+// draft_rule_sha256 binds the PARENT draft rule's canonical JSONL line, and
+// the expanded pair is re-validated against the digest-pinned member sets at
+// compile time (see src/lib/interaction-rule-expansion.mjs). Every expanded
+// rule still needs its own signed approval naming the expanded rule id.
+function validateExpansion(value, label, ruleId) {
+  requireObject(value, label);
+  requireExactKeys(value, [
+    'parent_rule_id',
+    'object_member',
+    'perpetrator_member',
+  ], label);
+  requireString(value.parent_rule_id, `${label}.parent_rule_id`);
+  requireString(value.object_member, `${label}.object_member`);
+  requireString(value.perpetrator_member, `${label}.perpetrator_member`);
+  if (value.parent_rule_id === ruleId) {
+    throw new TypeError(`${label}.parent_rule_id must differ from the expanded rule_id`);
+  }
+}
+
 function validateSupersession(value, label) {
   requireObject(value, label);
   requireExactKeys(value, [
@@ -374,6 +404,10 @@ function validatePromotion(value, index, schemaVersion, profile) {
     schemaVersion === 2 && Object.hasOwn(value, 'supersession')
   );
   if (hasSupersession) keys.push('supersession');
+  const hasExpansion = (
+    schemaVersion === 2 && Object.hasOwn(value, 'expansion')
+  );
+  if (hasExpansion) keys.push('expansion');
   requireExactKeys(value, keys, label);
   requireString(value.rule_id, `${label}.rule_id`);
   if (!SHA256.test(value.draft_rule_sha256 ?? '')) {
@@ -386,6 +420,23 @@ function validatePromotion(value, index, schemaVersion, profile) {
   );
   if (combinationSides.length > 1) {
     throw new TypeError(`${label}.scope supports at most one combination-bound side`);
+  }
+  if (hasExpansion) {
+    validateExpansion(value.expansion, `${label}.expansion`, value.rule_id);
+    if (hasSupersession) {
+      throw new TypeError(`${label} expansion cannot carry supersession metadata`);
+    }
+    if (combinationSides.length > 0) {
+      throw new TypeError(
+        `${label} expansion supports only exact ingredient-bound sides`,
+      );
+    }
+    if (!value.approval.approval_text.includes(value.rule_id)) {
+      throw new TypeError(
+        `${label} expansion approval text must reference the expanded rule id `
+          + value.rule_id,
+      );
+    }
   }
   if (combinationSides.length === 1 && !hasSupersession) {
     throw new TypeError(`${label} combination-bound promotion requires supersession metadata`);
@@ -858,6 +909,14 @@ export function compileInteractionRuntimeArtifacts({
   const promotionsById = new Map(
     promotionManifest.promotions.map((promotion) => [promotion.rule_id, promotion]),
   );
+  // Class-expansion promotions re-validate their member pair against the
+  // member sets whose digest the draft-pack attestation pins
+  // (assertDraftPackAttestation above verified member_sets_sha256 against
+  // these exact bytes). Parsed lazily: legacy exact promotions never touch
+  // the member sets.
+  const memberSetClasses = promotionManifest.promotions.some(
+    (promotion) => Object.hasOwn(promotion, 'expansion'),
+  ) ? parseInteractionMemberSets(memberSetsBytes).classes : null;
   if (promotionHoldManifest.draft_pack_sha256 !== parsedAttestation.pack_sha256) {
     throw new TypeError('promotion hold manifest draft pack SHA-256 does not match');
   }
@@ -871,7 +930,9 @@ export function compileInteractionRuntimeArtifacts({
     if (!promotion) {
       throw new TypeError(`promotion hold ${hold.rule_id} does not identify a promotion`);
     }
-    const draft = rulesById.get(hold.rule_id);
+    const draft = rulesById.get(
+      promotion.expansion?.parent_rule_id ?? hold.rule_id,
+    );
     const matchingEvidence = draft?.rule.evidence.filter(
       (evidence) => evidence.source_id === hold.evidence_source_id,
     ) ?? [];
@@ -896,14 +957,22 @@ export function compileInteractionRuntimeArtifacts({
     }
     heldRuleIds.add(hold.rule_id);
   }
-  const promotedRuleIds = new Set(
-    promotionManifest.promotions.map((promotion) => promotion.rule_id),
+  // A required drift hold covers the DRAFT rule, so an expansion promotion
+  // resolves to its parent id here: promoting an expanded member of a held
+  // parent without the exact required hold fails closed below (and a hold
+  // keyed to the parent cannot attach to the expanded promotion either, so
+  // held parents cannot be promoted through expansion at all until the
+  // owner resolves the hold).
+  const promotedDraftRuleIds = new Set(
+    promotionManifest.promotions.map((promotion) => (
+      promotion.expansion?.parent_rule_id ?? promotion.rule_id
+    )),
   );
   const holdsByRule = new Map(
     promotionHoldManifest.holds.map((hold) => [hold.rule_id, hold]),
   );
   for (const required of REQUIRED_PROMOTION_HOLDS) {
-    if (!promotedRuleIds.has(required.rule_id)) continue;
+    if (!promotedDraftRuleIds.has(required.rule_id)) continue;
     const actual = holdsByRule.get(required.rule_id);
     if (!actual || Object.keys(required).some((key) => actual[key] !== required[key])) {
       throw new TypeError(
@@ -919,8 +988,15 @@ export function compileInteractionRuntimeArtifacts({
   );
 
   const compiledRules = promotionManifest.promotions.map((promotion) => {
-    const draft = rulesById.get(promotion.rule_id);
-    if (!draft) throw new TypeError(`draft rule ${promotion.rule_id} does not exist`);
+    const { expansion } = promotion;
+    const draftRuleId = expansion?.parent_rule_id ?? promotion.rule_id;
+    const draft = rulesById.get(draftRuleId);
+    if (!draft) throw new TypeError(`draft rule ${draftRuleId} does not exist`);
+    if (expansion && rulesById.has(promotion.rule_id)) {
+      throw new TypeError(
+        `${promotion.rule_id} expansion must not shadow a draft rule with the same rule_id`,
+      );
+    }
     if (sha256(draft.line) !== promotion.draft_rule_sha256) {
       throw new TypeError(`${promotion.rule_id} draft rule SHA-256 does not match`);
     }
@@ -942,9 +1018,25 @@ export function compileInteractionRuntimeArtifacts({
         `${promotion.rule_id} evidence is not eligible for clinician-gated internal promotion`,
       );
     }
+    // An expansion promotion compiles an exact member instantiation of its
+    // class-level parent: the instantiation re-runs every expansion refusal
+    // gate (pinned member sets, evidence naming, reviewed route scope) and
+    // yields an exact-selector rule pinned to the approved scope, which then
+    // flows through the unchanged exact-rule binding below.
+    const rule = expansion
+      ? instantiateExpandedDraftRule({
+        parentRule: draft.rule,
+        memberSetClasses,
+        objectMember: expansion.object_member,
+        perpetratorMember: expansion.perpetrator_member,
+        route: promotion.scope.route,
+        formulation: promotion.scope.formulation,
+        expectedRuleId: promotion.rule_id,
+      })
+      : draft.rule;
     const scope = bindScope({
       promotion,
-      rule: draft.rule,
+      rule,
       profile: promotionManifest.profile,
       ingredientById,
       presentationById,
@@ -971,11 +1063,11 @@ export function compileInteractionRuntimeArtifacts({
         dose_conditions: [],
         population_conditions: [],
       },
-      severity: draft.rule.severity,
-      dispense_action: draft.rule.management.dispense_action,
-      mechanism: draft.rule.mechanism,
-      management: runtimeManagement(draft.rule.management, promotion.approval),
-      evidence: draft.rule.evidence.map(runtimeEvidence),
+      severity: rule.severity,
+      dispense_action: rule.management.dispense_action,
+      mechanism: rule.mechanism,
+      management: runtimeManagement(rule.management, promotion.approval),
+      evidence: rule.evidence.map(runtimeEvidence),
       review: {
         status: promotion.approval.status,
         reviewer_id: promotion.approval.reviewer_id,
