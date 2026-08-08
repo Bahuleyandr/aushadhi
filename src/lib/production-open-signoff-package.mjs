@@ -286,6 +286,9 @@ function validateSubject(subject) {
     'artifact_sha256',
     'source_namespace',
     'source_identity_key',
+    'evidence_capture_path',
+    'evidence_capture_sha256',
+    'source_catalogue_reverification',
   ], 'catalogue_binding');
   assertEqual(subject.catalogue_binding.profile, 'production-open', 'catalogue profile');
   assertEqual(
@@ -296,6 +299,17 @@ function validateSubject(subject) {
   assertHex(subject.catalogue_binding.artifact_sha256, 'catalogue artifact_sha256');
   assertEqual(subject.catalogue_binding.source_namespace, 'github-jr', 'catalogue source_namespace');
   assertEqual(subject.catalogue_binding.source_identity_key, 'source_id', 'catalogue source_identity_key');
+  assertEqual(
+    subject.catalogue_binding.evidence_capture_path,
+    'docs/interaction-review/2026-08-08-warfarin-six-production-open-signoff/product-catalogue-binding-evidence.jsonl',
+    'catalogue evidence_capture_path',
+  );
+  assertHex(subject.catalogue_binding.evidence_capture_sha256, 'catalogue evidence_capture_sha256');
+  assertEqual(
+    subject.catalogue_binding.source_catalogue_reverification,
+    'mandatory_before_signature',
+    'catalogue source_catalogue_reverification',
+  );
   assertKeys(
     subject.rule,
     ['rule_id', 'draft_rule_sha256', 'severity', 'mechanism', 'management'],
@@ -420,32 +434,76 @@ function readJson(filePath) {
   return parseDraftApprovalJson(fs.readFileSync(filePath, 'utf8'), path.basename(filePath));
 }
 
-function assertCatalogueBindings(subjects, packageDir) {
+function assertCatalogueBindings(subjects, packageDir, requireSourceCatalogue) {
   const repositoryRoot = path.resolve(packageDir, '../../..');
-  const summaryPath = path.join(
-    repositoryRoot,
-    'data',
-    'interaction',
-    'production-open',
-    'product-catalogue',
-    'summary.json',
-  );
-  const summary = readJson(summaryPath);
-  assertEqual(summary.profile, 'production-open', 'product catalogue profile');
-  assertDeepEqual(summary.source_policy?.source_ids, ['github-jr'], 'product catalogue sources');
-  assertEqual(summary.source_policy?.redistributable, true, 'product catalogue redistributable policy');
+  const metadata = readJson(path.join(packageDir, 'product-catalogue-binding-evidence.meta.json'));
+  assertKeys(metadata, [
+    'schema_version',
+    'classification',
+    'promotion_authority',
+    'source_catalogue',
+    'capture',
+    'limitations',
+  ], 'catalogue evidence metadata');
+  assertEqual(metadata.schema_version, 1, 'catalogue evidence schema_version');
   assertEqual(
-    summary.output?.artifact_storage_path,
-    'data/interaction/production-open/product-catalogue/drugs.jsonl',
-    'product catalogue output path',
+    metadata.classification,
+    'source_binding_evidence_capture',
+    'catalogue evidence classification',
   );
-  assertHex(summary.output?.artifact_sha256, 'product catalogue output SHA-256');
+  assertEqual(metadata.promotion_authority, 'none', 'catalogue evidence promotion_authority');
+  assertKeys(metadata.source_catalogue, [
+    'profile',
+    'storage_path',
+    'artifact_sha256',
+    'total_rows',
+    'source_namespace',
+    'source_identity_key',
+  ], 'catalogue evidence source_catalogue');
+  assertEqual(metadata.source_catalogue.profile, 'production-open', 'product catalogue profile');
+  assertEqual(
+    metadata.source_catalogue.storage_path,
+    'data/interaction/production-open/product-catalogue/drugs.jsonl',
+    'product catalogue storage path',
+  );
+  assertHex(metadata.source_catalogue.artifact_sha256, 'product catalogue SHA-256');
+  if (!Number.isInteger(metadata.source_catalogue.total_rows)
+      || metadata.source_catalogue.total_rows < 1) {
+    fail('product catalogue total_rows must be a positive integer');
+  }
+  assertEqual(metadata.source_catalogue.source_namespace, 'github-jr', 'product catalogue source');
+  assertEqual(metadata.source_catalogue.source_identity_key, 'source_id', 'product catalogue identity key');
+  assertKeys(metadata.capture, [
+    'storage_path',
+    'artifact_sha256',
+    'row_count',
+    'method',
+    'source_rows',
+  ], 'catalogue evidence capture');
+  assertEqual(
+    metadata.capture.storage_path,
+    'docs/interaction-review/2026-08-08-warfarin-six-production-open-signoff/product-catalogue-binding-evidence.jsonl',
+    'catalogue evidence capture path',
+  );
+  assertHex(metadata.capture.artifact_sha256, 'catalogue evidence capture SHA-256');
+  assertEqual(
+    metadata.capture.method,
+    'byte_exact_complete_jsonl_rows_selected_by_source_identity',
+    'catalogue evidence capture method',
+  );
+  if (typeof metadata.limitations !== 'string'
+      || !metadata.limitations.includes('mandatory immediately before clinician signature')) {
+    fail('catalogue evidence limitations must require source reverification before signature');
+  }
   const expectedBinding = {
-    profile: 'production-open',
-    storage_path: summary.output.artifact_storage_path,
-    artifact_sha256: summary.output.artifact_sha256,
-    source_namespace: 'github-jr',
-    source_identity_key: 'source_id',
+    profile: metadata.source_catalogue.profile,
+    storage_path: metadata.source_catalogue.storage_path,
+    artifact_sha256: metadata.source_catalogue.artifact_sha256,
+    source_namespace: metadata.source_catalogue.source_namespace,
+    source_identity_key: metadata.source_catalogue.source_identity_key,
+    evidence_capture_path: metadata.capture.storage_path,
+    evidence_capture_sha256: metadata.capture.artifact_sha256,
+    source_catalogue_reverification: 'mandatory_before_signature',
   };
   for (const subject of subjects) {
     assertDeepEqual(
@@ -470,7 +528,72 @@ function assertCatalogueBindings(subjects, packageDir) {
     }
   }
 
+  if (!Array.isArray(metadata.capture.source_rows)
+      || metadata.capture.source_rows.length !== metadata.capture.row_count) {
+    fail('catalogue evidence source_rows do not match row_count');
+  }
+  const capturePath = path.join(repositoryRoot, ...expectedBinding.evidence_capture_path.split('/'));
+  const captureBytes = fs.readFileSync(capturePath);
+  assertEqual(
+    createHash('sha256').update(captureBytes).digest('hex'),
+    expectedBinding.evidence_capture_sha256,
+    'catalogue evidence capture SHA-256',
+  );
+  const captureLines = captureBytes.toString('utf8').trimEnd().split(/\r?\n/u);
+  assertEqual(captureLines.length, metadata.capture.row_count, 'catalogue evidence capture row count');
+  const captureLineByCode = new Map();
+  const sourceLineByCode = new Map();
+  for (const [index, sourceRow] of metadata.capture.source_rows.entries()) {
+    assertKeys(sourceRow, ['source_id', 'line_number'], `catalogue evidence source_rows[${index}]`);
+    if (typeof sourceRow.source_id !== 'string' || !/^\d+$/u.test(sourceRow.source_id)) {
+      fail(`catalogue evidence source_rows[${index}].source_id must be numeric`);
+    }
+    if (!Number.isInteger(sourceRow.line_number) || sourceRow.line_number < 1) {
+      fail(`catalogue evidence source_rows[${index}].line_number must be a positive integer`);
+    }
+    if (captureLineByCode.has(sourceRow.source_id)) {
+      fail(`catalogue evidence source identity ${sourceRow.source_id} is duplicated`);
+    }
+    const row = parseDraftApprovalJson(
+      captureLines[index],
+      `${path.basename(capturePath)}:${index + 1}`,
+    );
+    const sources = row.sources?.filter(
+      (source) => source?.source === 'github-jr' && source?.source_id === sourceRow.source_id,
+    ) ?? [];
+    if (sources.length !== 1) {
+      fail(`catalogue evidence source identity ${sourceRow.source_id} is ambiguous`);
+    }
+    const expected = expectedByCode.get(sourceRow.source_id);
+    if (!expected) fail(`catalogue evidence contains unexpected source identity ${sourceRow.source_id}`);
+    assertDeepEqual(
+      productAssertionForRow(row),
+      expected.product_assertion,
+      `catalogue source identity ${sourceRow.source_id} product assertion`,
+    );
+    assertEqual(
+      productIdForRow(row),
+      expected.product_id,
+      `catalogue source identity ${sourceRow.source_id} product_id`,
+    );
+    assertEqual(
+      productAssertionHashForRow(row),
+      expected.product_assertion_sha256,
+      `catalogue source identity ${sourceRow.source_id} assertion hash`,
+    );
+    captureLineByCode.set(sourceRow.source_id, captureLines[index]);
+    sourceLineByCode.set(sourceRow.source_id, sourceRow.line_number);
+  }
+  const missingCapture = [...expectedByCode.keys()].filter((code) => !captureLineByCode.has(code));
+  if (missingCapture.length > 0) {
+    fail(`catalogue evidence source identities are missing: ${missingCapture.join(', ')}`);
+  }
+
   const cataloguePath = path.join(repositoryRoot, ...expectedBinding.storage_path.split('/'));
+  if (!requireSourceCatalogue) return false;
+  if (!fs.existsSync(cataloguePath)) {
+    fail(`source catalogue is required for pre-signature reverification: ${expectedBinding.storage_path}`);
+  }
   const file = fs.openSync(cataloguePath, 'r');
   const hash = createHash('sha256');
   const buffer = Buffer.allocUnsafe(1024 * 1024);
@@ -493,18 +616,8 @@ function assertCatalogueBindings(subjects, packageDir) {
         (source) => source?.source === 'github-jr' && source?.source_id === code,
       ) ?? [];
       if (sourceMatches.length !== 1) fail(`catalogue source identity ${code} is ambiguous`);
-      const expected = expectedByCode.get(code);
-      assertDeepEqual(
-        productAssertionForRow(row),
-        expected.product_assertion,
-        `catalogue source identity ${code} product assertion`,
-      );
-      assertEqual(productIdForRow(row), expected.product_id, `catalogue source identity ${code} product_id`);
-      assertEqual(
-        productAssertionHashForRow(row),
-        expected.product_assertion_sha256,
-        `catalogue source identity ${code} assertion hash`,
-      );
+      assertEqual(rowCount, sourceLineByCode.get(code), `catalogue source identity ${code} line number`);
+      assertEqual(line, captureLineByCode.get(code), `catalogue source identity ${code} captured bytes`);
       found.add(code);
     }
   };
@@ -524,9 +637,10 @@ function assertCatalogueBindings(subjects, packageDir) {
     fs.closeSync(file);
   }
   assertEqual(hash.digest('hex'), expectedBinding.artifact_sha256, 'product catalogue artifact SHA-256');
-  assertEqual(rowCount, summary.total_rows, 'product catalogue row count');
+  assertEqual(rowCount, metadata.source_catalogue.total_rows, 'product catalogue row count');
   const missing = [...expectedByCode.keys()].filter((code) => !found.has(code));
   if (missing.length > 0) fail(`catalogue source identities are missing: ${missing.join(', ')}`);
+  return true;
 }
 
 function assertEvidenceBindings(subjects, packageDir) {
@@ -623,7 +737,11 @@ function validateSigningProfile(packageDir) {
   return profile;
 }
 
-export function validateProductionOpenSignoffPackage({ packageDir, productionRulesPath }) {
+export function validateProductionOpenSignoffPackage({
+  packageDir,
+  productionRulesPath,
+  requireSourceCatalogue = false,
+}) {
   const status = readJson(path.join(packageDir, 'package-status.json'));
   assertKeys(status, [
     'schema_version',
@@ -654,7 +772,7 @@ export function validateProductionOpenSignoffPackage({ packageDir, productionRul
   const foundRules = [...new Set(subjects.map((subject) => subject.rule.rule_id))].sort();
   assertDeepEqual(foundRules, [...REQUIRED_RULES.keys()].sort(), 'approval subject rule set');
   assertEvidenceBindings(subjects, packageDir);
-  assertCatalogueBindings(subjects, packageDir);
+  assertCatalogueBindings(subjects, packageDir, requireSourceCatalogue);
 
   const expectedFiles = new Set([
     'README.md',
@@ -662,6 +780,8 @@ export function validateProductionOpenSignoffPackage({ packageDir, productionRul
     'SIGNING-PROFILE.json',
     'clinician-subas.allowed_signers',
     'package-status.json',
+    'product-catalogue-binding-evidence.jsonl',
+    'product-catalogue-binding-evidence.meta.json',
   ]);
   const productIds = new Set();
   let pairCount = 0;

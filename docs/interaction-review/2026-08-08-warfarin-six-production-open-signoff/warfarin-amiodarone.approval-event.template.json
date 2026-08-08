@@ -2,7 +2,7 @@
   "schema_version": 2,
   "template_only": true,
   "subject_id": "production-open:warfarin__amiodarone:r2",
-  "approval_subject_jcs_sha256": "e04f91fc956bd492a722d64c8dd2e3e6a41255617e114bae371b5655bc36a69c",
+  "approval_subject_jcs_sha256": "7d09dd9e4c16518720ff782659bca39ec60caa49959f00ed97a6c3b6bb367a19",
   "authority": {
     "runtime": "none",
     "publication": "none",
@@ -18,7 +18,7 @@
     "reviewed_at_utc": null,
     "valid_until_utc": null,
     "repository_head": null,
-    "approval_subject_jcs_sha256": "e04f91fc956bd492a722d64c8dd2e3e6a41255617e114bae371b5655bc36a69c",
+    "approval_subject_jcs_sha256": "7d09dd9e4c16518720ff782659bca39ec60caa49959f00ed97a6c3b6bb367a19",
     "approval_statement_sha256": "e509b47cf77d0fe9c869d08c0ef53b7c0487ebb6445791188395bad3d71c0d7e",
     "authentication_method": null,
     "authenticated_event_id": null,

@@ -96,6 +96,9 @@ test('revision 2 closes the clinician-review findings without widening product s
     artifact_sha256: 'b2186efe0c7483a7b10e57f02ec9d555a012bed40d8a26e3ed72c1249a1454e2',
     source_namespace: 'github-jr',
     source_identity_key: 'source_id',
+    evidence_capture_path: 'docs/interaction-review/2026-08-08-warfarin-six-production-open-signoff/product-catalogue-binding-evidence.jsonl',
+    evidence_capture_sha256: 'b329903e8c3b65b6b39868b58e8ddd54678f948657695b33fa707a1c4abad822',
+    source_catalogue_reverification: 'mandatory_before_signature',
   });
   assert.deepEqual(fluconazole.workflow_boundary.checker_trigger_support, [
     'current_or_intended_concurrent_exposure',

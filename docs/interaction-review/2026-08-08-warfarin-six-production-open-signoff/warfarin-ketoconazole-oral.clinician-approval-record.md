@@ -6,7 +6,7 @@ Approval status: **PENDING — no authenticated approval event exists**
 
 Reviewer identity: `clinician:subas`
 
-Approval subject JCS SHA-256: `a768395d2ecd989b451fc8781653de91437e4b187e7cf00dcc177edbf7e032b0`
+Approval subject JCS SHA-256: `1cd31c8f9d658db48bcee9d9ff2ddf98166d126d5b7dfeb1fc468240f743f193`
 
 The canonical authority subject is the adjacent `warfarin-ketoconazole-oral.approval-subject.json`. This Markdown is its human-readable review record. A signature applies only to the exact canonical subject hash above.
 
@@ -27,6 +27,10 @@ Exact product pairs: `3`
 Catalogue artifact: `data/interaction/production-open/product-catalogue/drugs.jsonl`
 
 Catalogue artifact SHA-256: `b2186efe0c7483a7b10e57f02ec9d555a012bed40d8a26e3ed72c1249a1454e2`
+
+Committed source-binding capture: `docs/interaction-review/2026-08-08-warfarin-six-production-open-signoff/product-catalogue-binding-evidence.jsonl`
+
+Source-binding capture SHA-256: `b329903e8c3b65b6b39868b58e8ddd54678f948657695b33fa707a1c4abad822`
 
 | Role | Product | Normalized ingredient | Strength | Route | Formulation | Release profile | Manufacturer | Pack | Source identity | Product ID | Assertion SHA-256 |
 |---|---|---|---|---|---|---|---|---|---|---|---|

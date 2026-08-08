@@ -27,14 +27,8 @@ const SECTION_A_PATH = path.join(
   'A.verified.jsonl',
 );
 const PRODUCTION_RULES_PATH = path.join(ROOT, 'data-static', 'interaction-rules.json');
-const PRODUCT_CATALOGUE_SUMMARY_PATH = path.join(
-  ROOT,
-  'data',
-  'interaction',
-  'production-open',
-  'product-catalogue',
-  'summary.json',
-);
+const CATALOGUE_EVIDENCE_FILE = 'product-catalogue-binding-evidence.jsonl';
+const CATALOGUE_EVIDENCE_META_FILE = 'product-catalogue-binding-evidence.meta.json';
 const AUTHORITY = productionOpenSignoffBoundary.authority;
 const INVALIDATION_CONDITIONS = productionOpenSignoffBoundary.invalidationConditions;
 const RULE_ARGUMENTS = productionOpenSignoffSource.rules
@@ -62,13 +56,19 @@ function loadDraftRules() {
 }
 
 function loadCatalogueBinding() {
-  const summary = JSON.parse(fs.readFileSync(PRODUCT_CATALOGUE_SUMMARY_PATH, 'utf8'));
+  const metadata = JSON.parse(fs.readFileSync(
+    path.join(PACKAGE_DIR, CATALOGUE_EVIDENCE_META_FILE),
+    'utf8',
+  ));
   return {
-    profile: 'production-open',
-    storage_path: summary.output.artifact_storage_path,
-    artifact_sha256: summary.output.artifact_sha256,
-    source_namespace: 'github-jr',
-    source_identity_key: 'source_id',
+    profile: metadata.source_catalogue.profile,
+    storage_path: metadata.source_catalogue.storage_path,
+    artifact_sha256: metadata.source_catalogue.artifact_sha256,
+    source_namespace: metadata.source_catalogue.source_namespace,
+    source_identity_key: metadata.source_catalogue.source_identity_key,
+    evidence_capture_path: metadata.capture.storage_path,
+    evidence_capture_sha256: metadata.capture.artifact_sha256,
+    source_catalogue_reverification: 'mandatory_before_signature',
   };
 }
 
@@ -240,6 +240,10 @@ Catalogue artifact: \`${subject.catalogue_binding.storage_path}\`
 
 Catalogue artifact SHA-256: \`${subject.catalogue_binding.artifact_sha256}\`
 
+Committed source-binding capture: \`${subject.catalogue_binding.evidence_capture_path}\`
+
+Source-binding capture SHA-256: \`${subject.catalogue_binding.evidence_capture_sha256}\`
+
 ${productTable(subject)}
 
 Every pair is explicitly enumerated in the canonical JSON. No ingredient-wide, fuzzy, brand-derived, component-only, suspension, injection, topical, combination, or other unlisted product match is approved.
@@ -315,7 +319,7 @@ This package replaces the six placeholder approval drafts dated 2026-08-07. It c
 |---|---:|---|
 ${rows.join('\n')}
 
-The shared scope uses three exact Warf oral-tablet products and ${productIds.size - 3} exact perpetrator products, for ${productIds.size} unique products and ${pairCount} explicitly enumerated pairs. Product identifiers and assertion hashes are re-derived by the package validator, which also hashes the bound production-open catalogue artifact and proves that every source identity resolves to exactly one matching row. Every product records normalized ingredient, strength, route, formulation, and an explicit release-profile boundary. The selected identities were independently cross-checked against the private June 2026 India Drug Extension; licensed terminology identifiers or descriptions are deliberately not copied into this open package.
+The shared scope uses three exact Warf oral-tablet products and ${productIds.size - 3} exact perpetrator products, for ${productIds.size} unique products and ${pairCount} explicitly enumerated pairs. Product identifiers and assertion hashes are re-derived from a committed 13-row byte-exact source-binding capture. In the signing environment, the pre-signature verifier additionally rehashes the complete bound production-open catalogue and proves that every captured row occurs exactly at its recorded source line. Every product records normalized ingredient, strength, route, formulation, and an explicit release-profile boundary. The selected identities were independently cross-checked against the private June 2026 India Drug Extension; licensed terminology identifiers or descriptions are deliberately not copied into this open package.
 
 This is revision 2. Do not sign or reuse any revision 1 subject hash. Revision 2 excludes the fluconazole dispersible tablet, records evidence-to-product extrapolations, binds exact-product and checker-workflow boundaries, and gives every authenticated approval a non-extendable 180-day validity period.
 
@@ -337,7 +341,7 @@ function checklist() {
 This checklist is mandatory for each of the six subjects.
 
 1. Confirm \`git status --short\` is clean and record \`git rev-parse HEAD\`.
-2. Run \`npm run verify:production-open-signoff\` and require exit 0.
+2. Run \`npm run verify:production-open-signoff -- --verify-source-catalogue\` and require exit 0 with \`source_catalogue_reverified: true\`. The ordinary clean-checkout gate validates the committed capture; this pre-signature form additionally rehashes the complete parent catalogue and proves every captured row is byte-exact at its recorded line.
 3. Immediately before signing, run the exact scoped live evidence gate and require exit 0:
 
    \`npm run verify:interaction-evidence -- --sections=A ${RULE_ARGUMENTS}\`
@@ -403,6 +407,14 @@ function buildFiles() {
   }
   generated.set('README.md', readme(subjectRecords));
   generated.set('SIGN-OFF-CHECKLIST.md', checklist());
+  generated.set(
+    CATALOGUE_EVIDENCE_FILE,
+    fs.readFileSync(path.join(PACKAGE_DIR, CATALOGUE_EVIDENCE_FILE), 'utf8'),
+  );
+  generated.set(
+    CATALOGUE_EVIDENCE_META_FILE,
+    fs.readFileSync(path.join(PACKAGE_DIR, CATALOGUE_EVIDENCE_META_FILE), 'utf8'),
+  );
   generated.set('SIGNING-PROFILE.json', json({
     schema_version: 1,
     profile_id: productionOpenSignoffSource.signingProfile.profileId,
@@ -485,9 +497,11 @@ function applySupersededDrafts(subjectRecords, check) {
   }
 }
 
-const check = process.argv.slice(2).includes('--check');
-if (process.argv.slice(2).some((argument) => argument !== '--check')) {
-  throw new Error('only --check is supported');
+const arguments_ = process.argv.slice(2);
+const check = arguments_.includes('--check');
+const verifySourceCatalogue = arguments_.includes('--verify-source-catalogue');
+if (arguments_.some((argument) => !['--check', '--verify-source-catalogue'].includes(argument))) {
+  throw new Error('only --check and --verify-source-catalogue are supported');
 }
 const { generated, subjectRecords } = buildFiles();
 applyGeneratedFiles(generated, check);
@@ -495,5 +509,9 @@ applySupersededDrafts(subjectRecords, check);
 const result = validateProductionOpenSignoffPackage({
   packageDir: PACKAGE_DIR,
   productionRulesPath: PRODUCTION_RULES_PATH,
+  requireSourceCatalogue: !check || verifySourceCatalogue,
 });
-process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+process.stdout.write(`${JSON.stringify({
+  ...result,
+  source_catalogue_reverified: !check || verifySourceCatalogue,
+}, null, 2)}\n`);

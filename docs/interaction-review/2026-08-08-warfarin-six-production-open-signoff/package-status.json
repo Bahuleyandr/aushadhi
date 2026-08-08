@@ -3,12 +3,12 @@
   "package_status": "clinician_signoff_ready",
   "signing_profile_id": "clinician-subas-ssh-ed25519-v1",
   "subject_hashes": {
-    "warfarin__amiodarone": "e04f91fc956bd492a722d64c8dd2e3e6a41255617e114bae371b5655bc36a69c",
-    "warfarin__clarithromycin_oral": "57b85839df951e2dd365ebd42fc6487dbc333c189e8b7cbca763c37753658490",
-    "warfarin__fluconazole": "5e112007e186dc03078c8a5fca1b29ea763c743dea0b8674ac529b0acb82bc09",
-    "warfarin__ketoconazole_oral": "a768395d2ecd989b451fc8781653de91437e4b187e7cf00dcc177edbf7e032b0",
-    "warfarin__metronidazole": "271a33b8415a70c06697062cfbcfa8d753db72f87c3f067c74dbef817bf570d0",
-    "warfarin__voriconazole": "a076564057edbcf96ef2467d2459dcf883ce6f8d86fda09e374aadedcff12bb4"
+    "warfarin__amiodarone": "7d09dd9e4c16518720ff782659bca39ec60caa49959f00ed97a6c3b6bb367a19",
+    "warfarin__clarithromycin_oral": "138451759519a69975dd4d27d56ea0745d43cdeb322f821cffd984a8f40c3427",
+    "warfarin__fluconazole": "0969a4685bcf2f26b206264df4e1baee16c5f6c2d5378259f096b392b701f8e6",
+    "warfarin__ketoconazole_oral": "1cd31c8f9d658db48bcee9d9ff2ddf98166d126d5b7dfeb1fc468240f743f193",
+    "warfarin__metronidazole": "191f2e13142af1c1a0de3fcd9fcdcb1d8cbc06805a6191fc3640356b34052eb3",
+    "warfarin__voriconazole": "f923218ff498b0079761c88a41a1401fbfc409f253c91644f1a01142d36066e9"
   },
   "signed_event_count": 0,
   "authority": {

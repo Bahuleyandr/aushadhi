@@ -6,7 +6,7 @@ Approval status: **PENDING — no authenticated approval event exists**
 
 Reviewer identity: `clinician:subas`
 
-Approval subject JCS SHA-256: `e04f91fc956bd492a722d64c8dd2e3e6a41255617e114bae371b5655bc36a69c`
+Approval subject JCS SHA-256: `7d09dd9e4c16518720ff782659bca39ec60caa49959f00ed97a6c3b6bb367a19`
 
 The canonical authority subject is the adjacent `warfarin-amiodarone.approval-subject.json`. This Markdown is its human-readable review record. A signature applies only to the exact canonical subject hash above.
 
@@ -27,6 +27,10 @@ Exact product pairs: `6`
 Catalogue artifact: `data/interaction/production-open/product-catalogue/drugs.jsonl`
 
 Catalogue artifact SHA-256: `b2186efe0c7483a7b10e57f02ec9d555a012bed40d8a26e3ed72c1249a1454e2`
+
+Committed source-binding capture: `docs/interaction-review/2026-08-08-warfarin-six-production-open-signoff/product-catalogue-binding-evidence.jsonl`
+
+Source-binding capture SHA-256: `b329903e8c3b65b6b39868b58e8ddd54678f948657695b33fa707a1c4abad822`
 
 | Role | Product | Normalized ingredient | Strength | Route | Formulation | Release profile | Manufacturer | Pack | Source identity | Product ID | Assertion SHA-256 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
