@@ -1,0 +1,260 @@
+{
+  "schema_version": 1,
+  "subject_id": "production-open:warfarin__amiodarone:r1",
+  "subject_status": "pending_clinician_signature",
+  "release_profile": "production-open",
+  "reviewer_id": "clinician:subas",
+  "repository_provenance": {
+    "clinical_content_base": "32726b8a54bc29e50d51021910c856b3a408cdf1",
+    "signature_event_must_record_repository_head": true
+  },
+  "rule": {
+    "rule_id": "warfarin__amiodarone",
+    "draft_rule_sha256": "da731112748d90f672439d290b079f7ee2a90bb00c8b05c67110ec12509f485d",
+    "severity": "major",
+    "mechanism": "Amiodarone potentiates warfarin's anticoagulant response, increasing PT/INR and the risk of serious or fatal bleeding.",
+    "management": {
+      "dispense_action": "confirm_and_monitor",
+      "action_target": null,
+      "do_not_interrupt": [
+        "warfarin",
+        "amiodarone"
+      ],
+      "prescriber_action": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when amiodarone is started, stopped, or changed. Do not independently stop either established medicine or autonomously change the warfarin dose.",
+      "monitoring": "Use prescriber-directed PT/INR monitoring during coadministration and after amiodarone discontinuation.",
+      "patient_counselling": "Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools.",
+      "timing": null,
+      "duration": "The interaction can persist for weeks to months after amiodarone discontinuation.",
+      "exceptions": "The U.S. amiodarone label's numerical warfarin dose-reduction instruction is evidence only and is not an autonomous pharmacy action."
+    }
+  },
+  "clinical_scope": {
+    "route": "oral",
+    "formulation": "tablet",
+    "expected_product_pair_count": 6,
+    "object": {
+      "drug": "warfarin",
+      "rxnorm_rxcui": "11289",
+      "rxnorm_tty": "IN",
+      "products": [
+        {
+          "mapping_id": "presentation:github-jr:241490:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241490"
+          },
+          "product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+          "product_assertion_sha256": "8085504e2d8f147581025560310a71b943a33f792ed8d56dac1f71043326f34c",
+          "product_assertion": {
+            "brand_name": "Warf 1 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "1mg",
+                "strength_value": 1,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:241458:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241458"
+          },
+          "product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+          "product_assertion_sha256": "c1dcadfbfabb21f57e8deface7a90323f15b0e7946fe2265de245f7efdab0469",
+          "product_assertion": {
+            "brand_name": "Warf 2 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "2mg",
+                "strength_value": 2,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:241434:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241434"
+          },
+          "product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+          "product_assertion_sha256": "a8877c57f2158b4c40fa19a69aeab393bb4fb3d0cb9b699a83d70454d0820d26",
+          "product_assertion": {
+            "brand_name": "Warf 5 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "5mg",
+                "strength_value": 5,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        }
+      ]
+    },
+    "perpetrator": {
+      "drug": "amiodarone",
+      "rxnorm_rxcui": "703",
+      "rxnorm_tty": "IN",
+      "products": [
+        {
+          "mapping_id": "presentation:github-jr:215526:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "215526"
+          },
+          "product_id": "sha256:996500ee7b3ed804cedc85d6c91add1f32724927c129113b83dcd1b857c7850d",
+          "product_assertion_sha256": "e714fd7ca1fa36c08dc1c3b4514a6c9d4f222a5e053766ed71e0c728736f91c9",
+          "product_assertion": {
+            "brand_name": "Tachyra 100 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 10 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "amiodarone",
+                "source_field": "molecule",
+                "strength_raw": "100mg",
+                "strength_value": 100,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:215566:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "215566"
+          },
+          "product_id": "sha256:4aa0b05104cde787b3fb864b024224e8827df25a6058c50863aaa25ef7270fff",
+          "product_assertion_sha256": "7e16ec6ba5a9563f9b0d562fba22debd0f7d8b867f2655a4c9faa74cfd2de9d4",
+          "product_assertion": {
+            "brand_name": "Tachyra 200 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 10 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "amiodarone",
+                "source_field": "molecule",
+                "strength_raw": "200mg",
+                "strength_value": 200,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        }
+      ]
+    }
+  },
+  "product_pairs": [
+    {
+      "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+      "perpetrator_product_id": "sha256:996500ee7b3ed804cedc85d6c91add1f32724927c129113b83dcd1b857c7850d"
+    },
+    {
+      "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+      "perpetrator_product_id": "sha256:4aa0b05104cde787b3fb864b024224e8827df25a6058c50863aaa25ef7270fff"
+    },
+    {
+      "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+      "perpetrator_product_id": "sha256:996500ee7b3ed804cedc85d6c91add1f32724927c129113b83dcd1b857c7850d"
+    },
+    {
+      "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+      "perpetrator_product_id": "sha256:4aa0b05104cde787b3fb864b024224e8827df25a6058c50863aaa25ef7270fff"
+    },
+    {
+      "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+      "perpetrator_product_id": "sha256:996500ee7b3ed804cedc85d6c91add1f32724927c129113b83dcd1b857c7850d"
+    },
+    {
+      "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+      "perpetrator_product_id": "sha256:4aa0b05104cde787b3fb864b024224e8827df25a6058c50863aaa25ef7270fff"
+    }
+  ],
+  "evidence_bindings": [
+    {
+      "source_policy_id": "openfda-labels",
+      "document_id": "f49d011f-5ca6-4f75-ba16-2099fe42f5aa",
+      "document_version": "2",
+      "payload_sha256": "efe97f1d109d8a6f98ed8d48f98aa024ea7b69057e50534128aa2d4870ee46be",
+      "jurisdiction": "US"
+    },
+    {
+      "source_policy_id": "openfda-labels",
+      "document_id": "51e98fb6-ba76-497e-95d8-fe895ef0b7ed",
+      "document_version": "7",
+      "payload_sha256": "bcb1e6db5ac6619c0c93ede9f0c689dfd8ffdff4f187067335c243046b5d3e04",
+      "jurisdiction": "US"
+    }
+  ],
+  "source_rights": {
+    "catalogue_source_policy_id": "github-jr",
+    "status": "pending_separate_owner_legal_release_decision",
+    "clinical_signature_clears_source_rights": false
+  },
+  "declared_coverage": "partial",
+  "authority": {
+    "runtime": "none",
+    "publication": "none",
+    "production": "none",
+    "deployment": "none",
+    "clinical_use": "none"
+  },
+  "approval_statement": "I approve the warfarin-amiodarone clinical rule content and exact product scope for production-open review, limited to the five enumerated open-catalogue oral-tablet assertions and 6 exact product pairs (Warf 1 mg, 2 mg, and 5 mg crossed with Tachyra 100 mg and 200 mg), as major severity with confirm-and-monitor management. The alert must require prescriber or anticoagulation-service warfarin dose review and PT/INR monitoring; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling and persistence for weeks to months after amiodarone discontinuation; keep the unsupported Child-Pugh modifier removed; treat the evidence as U.S.-label support rather than an Indian regulatory-label claim; and keep declared coverage partial. This clinical signature does not clear the pending github-jr source-rights gate and grants no runtime, publication, production, deployment, or clinical-use authority. Reviewer ID: clinician:subas",
+  "invalidation_conditions": [
+    "approval subject hash mismatch",
+    "draft rule hash mismatch",
+    "product identity or assertion drift",
+    "source evidence withdrawal or drift",
+    "source-rights gate not cleared",
+    "signature or authorization failure",
+    "compiler or package gate failure"
+  ]
+}

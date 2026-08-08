@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "subject_id": "production-open:warfarin__clarithromycin_oral:r1",
+  "approval_subject_jcs_sha256": "c923a892b79246cb022f47fdbaa78312b6bf0c0985a97cdeb232b0604becee60",
+  "authority": {
+    "runtime": "none",
+    "publication": "none",
+    "production": "none",
+    "deployment": "none",
+    "clinical_use": "none"
+  },
+  "event_body_template": {
+    "event_id": null,
+    "decision": null,
+    "reviewer_id": "clinician:subas",
+    "reviewed_at_utc": null,
+    "repository_head": null,
+    "approval_subject_jcs_sha256": "c923a892b79246cb022f47fdbaa78312b6bf0c0985a97cdeb232b0604becee60",
+    "approval_statement_sha256": "5a8dcad921bc9c38d1542e289572a349f02093e592ac72f71ab10ec2031aa8a7",
+    "authentication_method": null,
+    "authenticated_event_id": null,
+    "supersedes_event_id": null
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "subject_id": "production-open:warfarin__metronidazole:r1",
+  "approval_subject_jcs_sha256": "510b333396b09d12ead2af307494f1e818a8b3c95a066a7ac04fcf20d49665fd",
+  "authority": {
+    "runtime": "none",
+    "publication": "none",
+    "production": "none",
+    "deployment": "none",
+    "clinical_use": "none"
+  },
+  "event_body_template": {
+    "event_id": null,
+    "decision": null,
+    "reviewer_id": "clinician:subas",
+    "reviewed_at_utc": null,
+    "repository_head": null,
+    "approval_subject_jcs_sha256": "510b333396b09d12ead2af307494f1e818a8b3c95a066a7ac04fcf20d49665fd",
+    "approval_statement_sha256": "47c7989d698aaf4e18923af90560880cea31359ed460572f09da46d7bf0ed9a2",
+    "authentication_method": null,
+    "authenticated_event_id": null,
+    "supersedes_event_id": null
+  }
+}

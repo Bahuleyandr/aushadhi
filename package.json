@@ -35,6 +35,8 @@
     "interactions:promote": "node src/cli/build-interaction-runtime-pack.mjs",
     "interactions:promote:check": "node src/cli/build-interaction-runtime-pack.mjs --check",
     "verify:interaction-evidence": "node src/cli/verify-interaction-evidence-provenance.mjs",
+    "build:production-open-signoff": "node src/cli/build-production-open-signoff-package.mjs",
+    "verify:production-open-signoff": "node src/cli/build-production-open-signoff-package.mjs --check",
     "verify:pmbjp-mapping-codes": "node src/cli/verify-pmbjp-mapping-codes.mjs",
     "verify:combination-rxnorm-evidence": "node src/cli/verify-combination-rxnorm-evidence.mjs"
   },

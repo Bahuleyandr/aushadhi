@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "subject_id": "production-open:warfarin__clarithromycin_oral:r1",
+  "subject_status": "pending_clinician_signature",
+  "release_profile": "production-open",
+  "reviewer_id": "clinician:subas",
+  "repository_provenance": {
+    "clinical_content_base": "32726b8a54bc29e50d51021910c856b3a408cdf1",
+    "signature_event_must_record_repository_head": true
+  },
+  "rule": {
+    "rule_id": "warfarin__clarithromycin_oral",
+    "draft_rule_sha256": "33a01de9d7f556241de4be8fd9fcb76def45d51f7fa05c730bb7f2431b163499",
+    "severity": "major",
+    "mechanism": "Clarithromycin inhibits CYP3A and the US clarithromycin label reports postmarketing potentiation of oral anticoagulant effects, so concomitant use can raise anticoagulant effect and bleeding risk. The magnitude and time course in an individual patient are not established by this source.",
+    "management": {
+      "dispense_action": "confirm_and_monitor",
+      "action_target": null,
+      "do_not_interrupt": [
+        "warfarin",
+        "clarithromycin"
+      ],
+      "prescriber_action": "Confirm that the prescriber or anticoagulation service has arranged a PT/INR monitoring plan during concomitant oral clarithromycin use and will decide whether follow-up is needed when the course ends. Do not independently change a dose or stop either medicine.",
+      "monitoring": "Use prescriber-directed PT/INR monitoring during concomitant use; no universal schedule or fixed post-discontinuation interval is asserted.",
+      "patient_counselling": "Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools.",
+      "timing": null,
+      "duration": null,
+      "exceptions": "This review scope is limited to exact reviewed PMBJP oral-tablet assertions. Erythromycin and every other macrolide are excluded; azithromycin is handled by the separate rule warfarin__azithromycin_oral. The H. pylori combipack (PMBJP code 2097) resolves to a distinct catalogue ingredient identity and is excluded. The 500 mg assertion (PMBJP code 380) is excluded pending official tender evidence and immediate-release disambiguation, because RxNorm exposes both an immediate-release and a 24 HR extended-release 500 mg oral tablet concept. Oral suspensions, injections and every other unreviewed or non-tablet presentation are excluded."
+    }
+  },
+  "clinical_scope": {
+    "route": "oral",
+    "formulation": "tablet",
+    "expected_product_pair_count": 3,
+    "object": {
+      "drug": "warfarin",
+      "rxnorm_rxcui": "11289",
+      "rxnorm_tty": "IN",
+      "products": [
+        {
+          "mapping_id": "presentation:github-jr:241490:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241490"
+          },
+          "product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+          "product_assertion_sha256": "8085504e2d8f147581025560310a71b943a33f792ed8d56dac1f71043326f34c",
+          "product_assertion": {
+            "brand_name": "Warf 1 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "1mg",
+                "strength_value": 1,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:241458:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241458"
+          },
+          "product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+          "product_assertion_sha256": "c1dcadfbfabb21f57e8deface7a90323f15b0e7946fe2265de245f7efdab0469",
+          "product_assertion": {
+            "brand_name": "Warf 2 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "2mg",
+                "strength_value": 2,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:241434:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241434"
+          },
+          "product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+          "product_assertion_sha256": "a8877c57f2158b4c40fa19a69aeab393bb4fb3d0cb9b699a83d70454d0820d26",
+          "product_assertion": {
+            "brand_name": "Warf 5 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "5mg",
+                "strength_value": 5,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        }
+      ]
+    },
+    "perpetrator": {
+      "drug": "clarithromycin",
+      "rxnorm_rxcui": "21212",
+      "rxnorm_tty": "IN",
+      "products": [
+        {
+          "mapping_id": "presentation:github-jr:34020:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "34020"
+          },
+          "product_id": "sha256:7946bbb13a9d266e6e49ab1f14ecbeb729c27a460a213abc5d63fd6e4c0e1215",
+          "product_assertion_sha256": "3959539d3d591878278179c26c673333a98d56c7cf64b3d9d447254bd5705994",
+          "product_assertion": {
+            "brand_name": "Claribid 250 Tablet",
+            "manufacturer": "Abbott",
+            "pack_label": "strip of 10 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "clarithromycin",
+                "source_field": "molecule",
+                "strength_raw": "250mg",
+                "strength_value": 250,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        }
+      ]
+    }
+  },
+  "product_pairs": [
+    {
+      "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+      "perpetrator_product_id": "sha256:7946bbb13a9d266e6e49ab1f14ecbeb729c27a460a213abc5d63fd6e4c0e1215"
+    },
+    {
+      "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+      "perpetrator_product_id": "sha256:7946bbb13a9d266e6e49ab1f14ecbeb729c27a460a213abc5d63fd6e4c0e1215"
+    },
+    {
+      "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+      "perpetrator_product_id": "sha256:7946bbb13a9d266e6e49ab1f14ecbeb729c27a460a213abc5d63fd6e4c0e1215"
+    }
+  ],
+  "evidence_bindings": [
+    {
+      "source_policy_id": "openfda-labels",
+      "document_id": "b98b02bb-2609-49a0-b29f-e5911aa0cbc1",
+      "document_version": "23",
+      "payload_sha256": "5268af02e66c314a67f9f9037d996024e4dbddedbdf1e378b964f834eef5dfea",
+      "jurisdiction": "US"
+    }
+  ],
+  "source_rights": {
+    "catalogue_source_policy_id": "github-jr",
+    "status": "pending_separate_owner_legal_release_decision",
+    "clinical_signature_clears_source_rights": false
+  },
+  "declared_coverage": "partial",
+  "authority": {
+    "runtime": "none",
+    "publication": "none",
+    "production": "none",
+    "deployment": "none",
+    "clinical_use": "none"
+  },
+  "approval_statement": "I approve the warfarin-clarithromycin clinical rule content and exact product scope for production-open review, limited to the four enumerated open-catalogue oral-tablet assertions and 3 exact product pairs (Claribid 250 mg crossed with Warf 1 mg, 2 mg, and 5 mg), as major severity with confirm-and-monitor management. The prescriber or anticoagulation service must direct whether warfarin dose adjustment is needed and arrange PT/INR monitoring during concomitant use, with a clinician-directed follow-up decision when the course ends; the pharmacy must not change a dose or stop either medicine independently. Include bleeding-symptom counselling. Exclude 500 mg clarithromycin, erythromycin and other macrolides, combipacks, suspensions, injections, and all unreviewed presentations. Do not invent a universal monitoring schedule or fixed post-discontinuation interval. Treat the evidence as a U.S.-label statement rather than an Indian regulatory claim, and keep declared coverage partial. This clinical signature does not clear the pending github-jr source-rights gate and grants no runtime, publication, production, deployment, or clinical-use authority. Reviewer ID: clinician:subas",
+  "invalidation_conditions": [
+    "approval subject hash mismatch",
+    "draft rule hash mismatch",
+    "product identity or assertion drift",
+    "source evidence withdrawal or drift",
+    "source-rights gate not cleared",
+    "signature or authorization failure",
+    "compiler or package gate failure"
+  ]
+}

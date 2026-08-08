@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "subject_id": "production-open:warfarin__voriconazole:r1",
+  "approval_subject_jcs_sha256": "53d5a45c3c1127f0b9788885e8ef9c8240020ce059a902e4ea25e509c8f409cf",
+  "authority": {
+    "runtime": "none",
+    "publication": "none",
+    "production": "none",
+    "deployment": "none",
+    "clinical_use": "none"
+  },
+  "event_body_template": {
+    "event_id": null,
+    "decision": null,
+    "reviewer_id": "clinician:subas",
+    "reviewed_at_utc": null,
+    "repository_head": null,
+    "approval_subject_jcs_sha256": "53d5a45c3c1127f0b9788885e8ef9c8240020ce059a902e4ea25e509c8f409cf",
+    "approval_statement_sha256": "53aabc01e23ab50197cedc18e7b437f684c251b7ee0fe8a52035e82257f055f1",
+    "authentication_method": null,
+    "authenticated_event_id": null,
+    "supersedes_event_id": null
+  }
+}
