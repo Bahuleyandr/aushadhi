@@ -1,12 +1,19 @@
 {
-  "schema_version": 1,
-  "subject_id": "production-open:warfarin__clarithromycin_oral:r1",
+  "schema_version": 2,
+  "subject_id": "production-open:warfarin__clarithromycin_oral:r2",
   "subject_status": "pending_clinician_signature",
   "release_profile": "production-open",
   "reviewer_id": "clinician:subas",
   "repository_provenance": {
     "clinical_content_base": "32726b8a54bc29e50d51021910c856b3a408cdf1",
     "signature_event_must_record_repository_head": true
+  },
+  "catalogue_binding": {
+    "profile": "production-open",
+    "storage_path": "data/interaction/production-open/product-catalogue/drugs.jsonl",
+    "artifact_sha256": "b2186efe0c7483a7b10e57f02ec9d555a012bed40d8a26e3ed72c1249a1454e2",
+    "source_namespace": "github-jr",
+    "source_identity_key": "source_id"
   },
   "rule": {
     "rule_id": "warfarin__clarithromycin_oral",
@@ -20,12 +27,12 @@
         "warfarin",
         "clarithromycin"
       ],
-      "prescriber_action": "Confirm that the prescriber or anticoagulation service has arranged a PT/INR monitoring plan during concomitant oral clarithromycin use and will decide whether follow-up is needed when the course ends. Do not independently change a dose or stop either medicine.",
-      "monitoring": "Use prescriber-directed PT/INR monitoring during concomitant use; no universal schedule or fixed post-discontinuation interval is asserted.",
+      "prescriber_action": "For current or intended concurrent oral clarithromycin exposure, confirm that the prescriber or anticoagulation service has established the PT/INR plan and will decide whether warfarin dose adjustment is needed. Do not independently change a dose or stop either medicine.",
+      "monitoring": "Use prescriber-directed frequent PT/INR monitoring during concomitant oral clarithromycin use; no universal schedule or fixed post-discontinuation interval is asserted.",
       "patient_counselling": "Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools.",
       "timing": null,
       "duration": null,
-      "exceptions": "This review scope is limited to exact reviewed PMBJP oral-tablet assertions. Erythromycin and every other macrolide are excluded; azithromycin is handled by the separate rule warfarin__azithromycin_oral. The H. pylori combipack (PMBJP code 2097) resolves to a distinct catalogue ingredient identity and is excluded. The 500 mg assertion (PMBJP code 380) is excluded pending official tender evidence and immediate-release disambiguation, because RxNorm exposes both an immediate-release and a 24 HR extended-release 500 mg oral tablet concept. Oral suspensions, injections and every other unreviewed or non-tablet presentation are excluded."
+      "exceptions": "This review scope is limited to the exact enumerated github-jr oral-tablet assertion. Clarithromycin 500 mg, erythromycin and every other macrolide, combipacks, suspensions, injections, and every other unreviewed or non-tablet presentation are excluded. Azithromycin is handled by the separate rule warfarin__azithromycin_oral."
     }
   },
   "clinical_scope": {
@@ -62,7 +69,8 @@
           },
           "presentation": {
             "route": "oral",
-            "formulation": "tablet"
+            "formulation": "tablet",
+            "release_profile": "not_asserted"
           },
           "review_status": "proposed_for_clinician_signature"
         },
@@ -91,7 +99,8 @@
           },
           "presentation": {
             "route": "oral",
-            "formulation": "tablet"
+            "formulation": "tablet",
+            "release_profile": "not_asserted"
           },
           "review_status": "proposed_for_clinician_signature"
         },
@@ -120,7 +129,8 @@
           },
           "presentation": {
             "route": "oral",
-            "formulation": "tablet"
+            "formulation": "tablet",
+            "release_profile": "not_asserted"
           },
           "review_status": "proposed_for_clinician_signature"
         }
@@ -156,7 +166,8 @@
           },
           "presentation": {
             "route": "oral",
-            "formulation": "tablet"
+            "formulation": "tablet",
+            "release_profile": "not_asserted"
           },
           "review_status": "proposed_for_clinician_signature"
         }
@@ -186,12 +197,43 @@
       "jurisdiction": "US"
     }
   ],
+  "evidence_boundary": {
+    "evidence_jurisdiction": "US",
+    "product_catalogue": "github-jr",
+    "product_market": "India",
+    "deployment_jurisdiction": "none",
+    "scope_note": "The U.S. clarithromycin label supports the active-ingredient interaction during concomitant systemic-oral use. It does not establish an automatic course-end trigger, a universal monitoring schedule, or a fixed post-discontinuation interval."
+  },
   "source_rights": {
     "catalogue_source_policy_id": "github-jr",
     "status": "pending_separate_owner_legal_release_decision",
     "clinical_signature_clears_source_rights": false
   },
   "declared_coverage": "partial",
+  "matching_boundary": {
+    "product_matching": "exact_enumerated_pairs_only",
+    "ingredient_wide_matching": false,
+    "fuzzy_matching": false,
+    "brand_derived_presentation": false,
+    "excluded_product_result": "not_evaluated_or_unresolved"
+  },
+  "workflow_boundary": {
+    "checker_trigger_support": [
+      "current_or_intended_concurrent_exposure"
+    ],
+    "unsupported_automatic_triggers": [
+      "discontinuation",
+      "dose_change",
+      "recent_exposure"
+    ],
+    "medication_lifecycle_follow_up_owner": "prescriber_or_anticoagulation_service"
+  },
+  "approval_validity": {
+    "policy_id": "clinical-approval-ttl-180d-v1",
+    "ttl_days": 180,
+    "begins_at": "reviewed_at_utc",
+    "early_invalidation": true
+  },
   "authority": {
     "runtime": "none",
     "publication": "none",
@@ -199,14 +241,17 @@
     "deployment": "none",
     "clinical_use": "none"
   },
-  "approval_statement": "I approve the warfarin-clarithromycin clinical rule content and exact product scope for production-open review, limited to the four enumerated open-catalogue oral-tablet assertions and 3 exact product pairs (Claribid 250 mg crossed with Warf 1 mg, 2 mg, and 5 mg), as major severity with confirm-and-monitor management. The prescriber or anticoagulation service must direct whether warfarin dose adjustment is needed and arrange PT/INR monitoring during concomitant use, with a clinician-directed follow-up decision when the course ends; the pharmacy must not change a dose or stop either medicine independently. Include bleeding-symptom counselling. Exclude 500 mg clarithromycin, erythromycin and other macrolides, combipacks, suspensions, injections, and all unreviewed presentations. Do not invent a universal monitoring schedule or fixed post-discontinuation interval. Treat the evidence as a U.S.-label statement rather than an Indian regulatory claim, and keep declared coverage partial. This clinical signature does not clear the pending github-jr source-rights gate and grants no runtime, publication, production, deployment, or clinical-use authority. Reviewer ID: clinician:subas",
+  "approval_statement": "I approve the warfarin-clarithromycin clinical rule content and exact product scope for production-open review, limited to the four enumerated github-jr oral-tablet assertions and 3 exact product pairs (Claribid 250 mg crossed with Warf 1 mg, 2 mg, and 5 mg), as major severity with confirm-and-monitor management. For current or intended concurrent exposure, the prescriber or anticoagulation service must direct whether warfarin dose adjustment is needed and establish prescriber-directed frequent PT/INR monitoring; the pharmacy must not change a dose or stop either medicine independently. Include bleeding-symptom counselling. Exclude clarithromycin 500 mg, erythromycin and other macrolides, combipacks, suspensions, injections, and all unreviewed presentations. Do not invent a universal monitoring schedule or fixed post-discontinuation interval. Treat the evidence as a U.S.-label statement rather than an Indian regulatory claim, and keep declared coverage partial. The current checker evaluates only current or intended concurrent exposure; it does not automatically detect discontinuation, dose-change, or recent-exposure events, so medication-lifecycle follow-up remains with the prescriber or anticoagulation service outside this checker. This approval expires 180 days after the authenticated reviewed_at_utc timestamp and may invalidate earlier under the listed conditions. This clinical signature does not clear the pending github-jr source-rights gate and grants no runtime, publication, production, deployment, or clinical-use authority. Reviewer ID: clinician:subas",
   "invalidation_conditions": [
+    "180-day approval validity expired",
     "approval subject hash mismatch",
     "draft rule hash mismatch",
     "product identity or assertion drift",
     "source evidence withdrawal or drift",
     "source-rights gate not cleared",
     "signature or authorization failure",
+    "reviewer revocation or superseding rejection",
+    "approval schema, validity policy, workflow boundary, or matching boundary drift",
     "compiler or package gate failure"
   ]
 }

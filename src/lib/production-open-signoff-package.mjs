@@ -6,13 +6,15 @@ import { isDeepStrictEqual } from 'node:util';
 import { parseDraftApprovalJson } from './interaction-approval-draft.mjs';
 import {
   PRODUCT_ASSERTION_NAMESPACE,
+  productAssertionForRow,
+  productAssertionHashForRow,
   productIdForRow,
 } from './product-resolver.mjs';
 
 const REQUIRED_RULES = new Map([
   ['warfarin__amiodarone', ['da731112748d90f672439d290b079f7ee2a90bb00c8b05c67110ec12509f485d', 6]],
   ['warfarin__clarithromycin_oral', ['33a01de9d7f556241de4be8fd9fcb76def45d51f7fa05c730bb7f2431b163499', 3]],
-  ['warfarin__fluconazole', ['088bd06e472723bce36527b67d1c2b0d7c24694842c5929c25c1c4e693952f84', 12]],
+  ['warfarin__fluconazole', ['088bd06e472723bce36527b67d1c2b0d7c24694842c5929c25c1c4e693952f84', 9]],
   ['warfarin__ketoconazole_oral', ['1657195ba626a2337c8b390679e64f32006c26fd758948560a4faf97875d8a3e', 3]],
   ['warfarin__metronidazole', ['2f6e13a141107149c32c82df764a0710a423265e5600b35155ece4d53222df3f', 6]],
   ['warfarin__voriconazole', ['b8e0d94d6a94d2a765ff8690d9a9b4bff66c333747eeb2cc0bb57e2c95997cf8', 3]],
@@ -31,12 +33,17 @@ const SUBJECT_KEYS = [
   'release_profile',
   'reviewer_id',
   'repository_provenance',
+  'catalogue_binding',
   'rule',
   'clinical_scope',
   'product_pairs',
   'evidence_bindings',
+  'evidence_boundary',
   'source_rights',
   'declared_coverage',
+  'matching_boundary',
+  'workflow_boundary',
+  'approval_validity',
   'authority',
   'approval_statement',
   'invalidation_conditions',
@@ -59,10 +66,12 @@ const TEMPLATE_KEYS = [
   'event_body_template',
 ];
 const EVENT_BODY_KEYS = [
+  'schema_version',
   'event_id',
   'decision',
   'reviewer_id',
   'reviewed_at_utc',
+  'valid_until_utc',
   'repository_head',
   'approval_subject_jcs_sha256',
   'approval_statement_sha256',
@@ -71,14 +80,39 @@ const EVENT_BODY_KEYS = [
   'supersedes_event_id',
 ];
 const INVALIDATION_CONDITIONS = [
+  '180-day approval validity expired',
   'approval subject hash mismatch',
   'draft rule hash mismatch',
   'product identity or assertion drift',
   'source evidence withdrawal or drift',
   'source-rights gate not cleared',
   'signature or authorization failure',
+  'reviewer revocation or superseding rejection',
+  'approval schema, validity policy, workflow boundary, or matching boundary drift',
   'compiler or package gate failure',
 ];
+const APPROVAL_VALIDITY = Object.freeze({
+  policy_id: 'clinical-approval-ttl-180d-v1',
+  ttl_days: 180,
+  begins_at: 'reviewed_at_utc',
+  early_invalidation: true,
+});
+const WORKFLOW_BOUNDARY = Object.freeze({
+  checker_trigger_support: Object.freeze(['current_or_intended_concurrent_exposure']),
+  unsupported_automatic_triggers: Object.freeze([
+    'discontinuation',
+    'dose_change',
+    'recent_exposure',
+  ]),
+  medication_lifecycle_follow_up_owner: 'prescriber_or_anticoagulation_service',
+});
+const MATCHING_BOUNDARY = Object.freeze({
+  product_matching: 'exact_enumerated_pairs_only',
+  ingredient_wide_matching: false,
+  fuzzy_matching: false,
+  brand_derived_presentation: false,
+  excluded_product_result: 'not_evaluated_or_unresolved',
+});
 
 function fail(message) {
   throw new TypeError(`production-open sign-off package: ${message}`);
@@ -186,7 +220,11 @@ export function approvalStatementSha256(statement) {
 function validateProduct(product, drug) {
   assertKeys(product, PRODUCT_KEYS, `${drug} product`);
   assertEqual(product.review_status, 'proposed_for_clinician_signature', `${drug} review_status`);
-  assertDeepEqual(product.presentation, { route: 'oral', formulation: 'tablet' }, `${drug} presentation`);
+  assertDeepEqual(product.presentation, {
+    route: 'oral',
+    formulation: 'tablet',
+    release_profile: 'not_asserted',
+  }, `${drug} presentation`);
   assertKeys(product.source_identity, ['namespace', 'code'], `${drug} source_identity`);
   assertEqual(product.source_identity.namespace, 'presentation:github-jr', `${drug} source namespace`);
   if (!/^\d+$/u.test(product.source_identity.code)) fail(`${drug} source code must be numeric`);
@@ -223,11 +261,11 @@ function expectedPairs(objectProducts, perpetratorProducts) {
 
 function validateSubject(subject) {
   assertKeys(subject, SUBJECT_KEYS, 'approval subject');
-  assertEqual(subject.schema_version, 1, 'schema_version');
+  assertEqual(subject.schema_version, 2, 'schema_version');
   const required = REQUIRED_RULES.get(subject.rule?.rule_id);
   if (!required) fail(`unexpected rule_id ${subject.rule?.rule_id}`);
   const [draftHash, expectedPairCount] = required;
-  assertEqual(subject.subject_id, `production-open:${subject.rule.rule_id}:r1`, 'subject_id');
+  assertEqual(subject.subject_id, `production-open:${subject.rule.rule_id}:r2`, 'subject_id');
   assertEqual(subject.subject_status, 'pending_clinician_signature', 'subject_status');
   assertEqual(subject.release_profile, 'production-open', 'release_profile');
   assertEqual(subject.reviewer_id, 'clinician:subas', 'reviewer_id');
@@ -242,6 +280,22 @@ function validateSubject(subject) {
     true,
     'signature-event repository binding',
   );
+  assertKeys(subject.catalogue_binding, [
+    'profile',
+    'storage_path',
+    'artifact_sha256',
+    'source_namespace',
+    'source_identity_key',
+  ], 'catalogue_binding');
+  assertEqual(subject.catalogue_binding.profile, 'production-open', 'catalogue profile');
+  assertEqual(
+    subject.catalogue_binding.storage_path,
+    'data/interaction/production-open/product-catalogue/drugs.jsonl',
+    'catalogue storage_path',
+  );
+  assertHex(subject.catalogue_binding.artifact_sha256, 'catalogue artifact_sha256');
+  assertEqual(subject.catalogue_binding.source_namespace, 'github-jr', 'catalogue source_namespace');
+  assertEqual(subject.catalogue_binding.source_identity_key, 'source_id', 'catalogue source_identity_key');
   assertKeys(
     subject.rule,
     ['rule_id', 'draft_rule_sha256', 'severity', 'mechanism', 'management'],
@@ -290,12 +344,30 @@ function validateSubject(subject) {
     assertEqual(evidence.jurisdiction, 'US', 'evidence jurisdiction');
     assertHex(evidence.payload_sha256, 'evidence payload_sha256');
   }
+  assertKeys(subject.evidence_boundary, [
+    'evidence_jurisdiction',
+    'product_catalogue',
+    'product_market',
+    'deployment_jurisdiction',
+    'scope_note',
+  ], 'evidence_boundary');
+  assertEqual(subject.evidence_boundary.evidence_jurisdiction, 'US', 'evidence_jurisdiction');
+  assertEqual(subject.evidence_boundary.product_catalogue, 'github-jr', 'product_catalogue');
+  assertEqual(subject.evidence_boundary.product_market, 'India', 'product_market');
+  assertEqual(subject.evidence_boundary.deployment_jurisdiction, 'none', 'deployment_jurisdiction');
+  if (typeof subject.evidence_boundary.scope_note !== 'string'
+      || subject.evidence_boundary.scope_note.trim() === '') {
+    fail('evidence_boundary.scope_note must be a non-empty string');
+  }
   assertDeepEqual(subject.source_rights, {
     catalogue_source_policy_id: 'github-jr',
     status: 'pending_separate_owner_legal_release_decision',
     clinical_signature_clears_source_rights: false,
   }, 'source_rights');
   assertEqual(subject.declared_coverage, 'partial', 'declared_coverage');
+  assertDeepEqual(subject.matching_boundary, MATCHING_BOUNDARY, 'matching_boundary');
+  assertDeepEqual(subject.workflow_boundary, WORKFLOW_BOUNDARY, 'workflow_boundary');
+  assertDeepEqual(subject.approval_validity, APPROVAL_VALIDITY, 'approval_validity');
   assertDeepEqual(subject.authority, NONE_AUTHORITY, 'authority');
   if (subject.approval_statement.includes('<') || subject.approval_statement.includes('AWAITING')) {
     fail('approval_statement contains a placeholder');
@@ -305,6 +377,12 @@ function validateSubject(subject) {
   }
   if (!subject.approval_statement.includes(String(expectedPairCount))) {
     fail('approval_statement does not state the exact pair count');
+  }
+  if (!subject.approval_statement.includes('expires 180 days')) {
+    fail('approval_statement does not state the approval validity');
+  }
+  if (!subject.approval_statement.includes('current or intended concurrent exposure')) {
+    fail('approval_statement does not state the checker workflow boundary');
   }
   assertDeepEqual(subject.invalidation_conditions, INVALIDATION_CONDITIONS, 'invalidation_conditions');
   return subject;
@@ -316,17 +394,19 @@ export function validateProductionOpenApprovalSubject(subject) {
 
 function validateTemplate(template, subject, subjectHash) {
   assertKeys(template, TEMPLATE_KEYS, 'approval-event template');
-  assertEqual(template.schema_version, 1, 'template schema_version');
+  assertEqual(template.schema_version, 2, 'template schema_version');
   assertEqual(template.template_only, true, 'template_only');
   assertEqual(template.subject_id, subject.subject_id, 'template subject_id');
   assertEqual(template.approval_subject_jcs_sha256, subjectHash, 'template subject hash');
   assertDeepEqual(template.authority, NONE_AUTHORITY, 'template authority');
   assertKeys(template.event_body_template, EVENT_BODY_KEYS, 'event_body_template');
   assertDeepEqual(template.event_body_template, {
+    schema_version: 2,
     event_id: null,
     decision: null,
     reviewer_id: 'clinician:subas',
     reviewed_at_utc: null,
+    valid_until_utc: null,
     repository_head: null,
     approval_subject_jcs_sha256: subjectHash,
     approval_statement_sha256: approvalStatementSha256(subject.approval_statement),
@@ -338,6 +418,115 @@ function validateTemplate(template, subject, subjectHash) {
 
 function readJson(filePath) {
   return parseDraftApprovalJson(fs.readFileSync(filePath, 'utf8'), path.basename(filePath));
+}
+
+function assertCatalogueBindings(subjects, packageDir) {
+  const repositoryRoot = path.resolve(packageDir, '../../..');
+  const summaryPath = path.join(
+    repositoryRoot,
+    'data',
+    'interaction',
+    'production-open',
+    'product-catalogue',
+    'summary.json',
+  );
+  const summary = readJson(summaryPath);
+  assertEqual(summary.profile, 'production-open', 'product catalogue profile');
+  assertDeepEqual(summary.source_policy?.source_ids, ['github-jr'], 'product catalogue sources');
+  assertEqual(summary.source_policy?.redistributable, true, 'product catalogue redistributable policy');
+  assertEqual(
+    summary.output?.artifact_storage_path,
+    'data/interaction/production-open/product-catalogue/drugs.jsonl',
+    'product catalogue output path',
+  );
+  assertHex(summary.output?.artifact_sha256, 'product catalogue output SHA-256');
+  const expectedBinding = {
+    profile: 'production-open',
+    storage_path: summary.output.artifact_storage_path,
+    artifact_sha256: summary.output.artifact_sha256,
+    source_namespace: 'github-jr',
+    source_identity_key: 'source_id',
+  };
+  for (const subject of subjects) {
+    assertDeepEqual(
+      subject.catalogue_binding,
+      expectedBinding,
+      `${subject.rule.rule_id} catalogue_binding`,
+    );
+  }
+
+  const expectedByCode = new Map();
+  for (const subject of subjects) {
+    for (const side of [subject.clinical_scope.object, subject.clinical_scope.perpetrator]) {
+      for (const product of side.products) {
+        const code = product.source_identity.code;
+        const existing = expectedByCode.get(code);
+        if (existing) {
+          assertDeepEqual(existing, product, `catalogue source identity ${code}`);
+        } else {
+          expectedByCode.set(code, product);
+        }
+      }
+    }
+  }
+
+  const cataloguePath = path.join(repositoryRoot, ...expectedBinding.storage_path.split('/'));
+  const file = fs.openSync(cataloguePath, 'r');
+  const hash = createHash('sha256');
+  const buffer = Buffer.allocUnsafe(1024 * 1024);
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const found = new Set();
+  let carry = '';
+  let rowCount = 0;
+  const inspectLine = (rawLine) => {
+    const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
+    if (line === '') return;
+    rowCount += 1;
+    const matches = [...line.matchAll(/"source"\s*:\s*"github-jr"\s*,\s*"source_id"\s*:\s*"(\d+)"/gu)]
+      .map((match) => match[1])
+      .filter((code) => expectedByCode.has(code));
+    if (matches.length === 0) return;
+    const row = parseDraftApprovalJson(line, `${path.basename(cataloguePath)}:${rowCount}`);
+    for (const code of new Set(matches)) {
+      if (found.has(code)) fail(`catalogue source identity ${code} is claimed by several rows`);
+      const sourceMatches = row.sources?.filter(
+        (source) => source?.source === 'github-jr' && source?.source_id === code,
+      ) ?? [];
+      if (sourceMatches.length !== 1) fail(`catalogue source identity ${code} is ambiguous`);
+      const expected = expectedByCode.get(code);
+      assertDeepEqual(
+        productAssertionForRow(row),
+        expected.product_assertion,
+        `catalogue source identity ${code} product assertion`,
+      );
+      assertEqual(productIdForRow(row), expected.product_id, `catalogue source identity ${code} product_id`);
+      assertEqual(
+        productAssertionHashForRow(row),
+        expected.product_assertion_sha256,
+        `catalogue source identity ${code} assertion hash`,
+      );
+      found.add(code);
+    }
+  };
+  try {
+    for (;;) {
+      const bytesRead = fs.readSync(file, buffer, 0, buffer.length, null);
+      if (bytesRead === 0) break;
+      const chunk = buffer.subarray(0, bytesRead);
+      hash.update(chunk);
+      const lines = `${carry}${decoder.decode(chunk, { stream: true })}`.split('\n');
+      carry = lines.pop();
+      for (const line of lines) inspectLine(line);
+    }
+    carry += decoder.decode();
+    inspectLine(carry);
+  } finally {
+    fs.closeSync(file);
+  }
+  assertEqual(hash.digest('hex'), expectedBinding.artifact_sha256, 'product catalogue artifact SHA-256');
+  assertEqual(rowCount, summary.total_rows, 'product catalogue row count');
+  const missing = [...expectedByCode.keys()].filter((code) => !found.has(code));
+  if (missing.length > 0) fail(`catalogue source identities are missing: ${missing.join(', ')}`);
 }
 
 function assertEvidenceBindings(subjects, packageDir) {
@@ -445,7 +634,7 @@ export function validateProductionOpenSignoffPackage({ packageDir, productionRul
     'authority',
     'required_before_promotion',
   ], 'package-status');
-  assertEqual(status.schema_version, 1, 'package-status schema_version');
+  assertEqual(status.schema_version, 2, 'package-status schema_version');
   assertEqual(status.package_status, 'clinician_signoff_ready', 'package_status');
   const signingProfile = validateSigningProfile(packageDir);
   assertEqual(status.signing_profile_id, signingProfile.profile_id, 'package signing_profile_id');
@@ -465,6 +654,7 @@ export function validateProductionOpenSignoffPackage({ packageDir, productionRul
   const foundRules = [...new Set(subjects.map((subject) => subject.rule.rule_id))].sort();
   assertDeepEqual(foundRules, [...REQUIRED_RULES.keys()].sort(), 'approval subject rule set');
   assertEvidenceBindings(subjects, packageDir);
+  assertCatalogueBindings(subjects, packageDir);
 
   const expectedFiles = new Set([
     'README.md',
@@ -525,5 +715,8 @@ export function validateProductionOpenSignoffPackage({ packageDir, productionRul
 export const productionOpenSignoffBoundary = Object.freeze({
   requiredRuleIds: Object.freeze([...REQUIRED_RULES.keys()]),
   invalidationConditions: Object.freeze([...INVALIDATION_CONDITIONS]),
+  approvalValidity: APPROVAL_VALIDITY,
+  workflowBoundary: WORKFLOW_BOUNDARY,
+  matchingBoundary: MATCHING_BOUNDARY,
   authority: NONE_AUTHORITY,
 });

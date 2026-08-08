@@ -3,15 +3,21 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { canonicalizeApprovalSubject } from './production-open-signoff-package.mjs';
+import {
+  canonicalizeApprovalSubject,
+  productionOpenSignoffBoundary,
+} from './production-open-signoff-package.mjs';
 
 export const APPROVAL_SIGNATURE_NAMESPACE = 'aushadhi-approval-event';
 const AUTHENTICATION_METHOD = 'ssh-ed25519-detached';
+const APPROVAL_TTL_DAYS = productionOpenSignoffBoundary.approvalValidity.ttl_days;
 const EVENT_KEYS = [
+  'schema_version',
   'event_id',
   'decision',
   'reviewer_id',
   'reviewed_at_utc',
+  'valid_until_utc',
   'repository_head',
   'approval_subject_jcs_sha256',
   'approval_statement_sha256',
@@ -58,6 +64,12 @@ function assertTimestamp(value) {
   }
 }
 
+function validUntilFor(reviewedAtUtc) {
+  const value = new Date(Date.parse(reviewedAtUtc));
+  value.setUTCDate(value.getUTCDate() + APPROVAL_TTL_DAYS);
+  return value.toISOString().replace('.000Z', 'Z');
+}
+
 function ruleSlug(ruleId) {
   if (typeof ruleId !== 'string' || !/^[a-z0-9]+(?:__[a-z0-9_]+)$/u.test(ruleId)) {
     fail('rule_id is invalid');
@@ -80,6 +92,7 @@ function publicKeyIdentity(value) {
 
 export function validateProductionOpenApprovalEvent(event) {
   assertExactKeys(event, EVENT_KEYS, 'event');
+  if (event.schema_version !== 2) fail('schema_version must be 2');
   if (typeof event.event_id !== 'string'
       || !/^approval-[a-z0-9-]+-\d{8}T\d{6}Z$/u.test(event.event_id)) {
     fail('event_id is invalid');
@@ -89,6 +102,9 @@ export function validateProductionOpenApprovalEvent(event) {
   }
   if (event.reviewer_id !== 'clinician:subas') fail('reviewer_id must be clinician:subas');
   assertTimestamp(event.reviewed_at_utc);
+  if (event.valid_until_utc !== validUntilFor(event.reviewed_at_utc)) {
+    fail('valid_until_utc must be exactly 180 days after reviewed_at_utc');
+  }
   assertRepositoryHead(event.repository_head);
   assertSha256(event.approval_subject_jcs_sha256, 'approval_subject_jcs_sha256');
   assertSha256(event.approval_statement_sha256, 'approval_statement_sha256');
@@ -118,11 +134,13 @@ export function buildProductionOpenApprovalEvent({
   if (template.event_id !== null
       || template.decision !== null
       || template.reviewed_at_utc !== null
+      || template.valid_until_utc !== null
       || template.repository_head !== null
       || template.authentication_method !== null
       || template.authenticated_event_id !== null) {
     fail('event template has already been populated');
   }
+  if (template.schema_version !== 2) fail('template schema_version must be 2');
   if (template.reviewer_id !== 'clinician:subas') fail('template reviewer_id must be clinician:subas');
   assertSha256(template.approval_subject_jcs_sha256, 'template approval_subject_jcs_sha256');
   assertSha256(template.approval_statement_sha256, 'template approval_statement_sha256');
@@ -133,10 +151,12 @@ export function buildProductionOpenApprovalEvent({
   assertRepositoryHead(repositoryHead);
   const eventId = `approval-${ruleSlug(ruleId)}-${compactTimestamp(reviewedAtUtc)}`;
   return validateProductionOpenApprovalEvent({
+    schema_version: 2,
     event_id: eventId,
     decision,
     reviewer_id: template.reviewer_id,
     reviewed_at_utc: reviewedAtUtc,
+    valid_until_utc: validUntilFor(reviewedAtUtc),
     repository_head: repositoryHead,
     approval_subject_jcs_sha256: template.approval_subject_jcs_sha256,
     approval_statement_sha256: template.approval_statement_sha256,

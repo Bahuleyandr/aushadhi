@@ -1,12 +1,19 @@
 {
-  "schema_version": 1,
-  "subject_id": "production-open:warfarin__fluconazole:r1",
+  "schema_version": 2,
+  "subject_id": "production-open:warfarin__fluconazole:r2",
   "subject_status": "pending_clinician_signature",
   "release_profile": "production-open",
   "reviewer_id": "clinician:subas",
   "repository_provenance": {
     "clinical_content_base": "32726b8a54bc29e50d51021910c856b3a408cdf1",
     "signature_event_must_record_repository_head": true
+  },
+  "catalogue_binding": {
+    "profile": "production-open",
+    "storage_path": "data/interaction/production-open/product-catalogue/drugs.jsonl",
+    "artifact_sha256": "b2186efe0c7483a7b10e57f02ec9d555a012bed40d8a26e3ed72c1249a1454e2",
+    "source_namespace": "github-jr",
+    "source_identity_key": "source_id"
   },
   "rule": {
     "rule_id": "warfarin__fluconazole",
@@ -20,18 +27,18 @@
         "warfarin",
         "fluconazole"
       ],
-      "prescriber_action": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when oral fluconazole is started or stopped. Do not independently stop either medicine or autonomously change the warfarin dose.",
-      "monitoring": "Use prescriber-directed PT/INR monitoring during coadministration and after fluconazole discontinuation.",
+      "prescriber_action": "For current or intended concurrent oral fluconazole exposure, confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and established the PT/INR plan. Do not independently stop either medicine or autonomously change the warfarin dose.",
+      "monitoring": "Use prescriber-directed PT/INR monitoring during coadministration. Follow-up after discontinuation is clinician-managed outside the current checker.",
       "patient_counselling": "Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools.",
       "timing": null,
       "duration": "The enzyme-inhibiting effect of fluconazole can persist for 4 to 5 days after discontinuation; the labels do not prescribe a universal PT/INR schedule for that interval.",
-      "exceptions": "This review scope is limited to exact oral-tablet product assertions. Intravenous fluconazole may be source-relevant but is outside the proposed product scope. The labels do not establish a single-dose exception."
+      "exceptions": "This review scope is limited to the exact conventional oral-tablet product assertions. Faze 50 mg Tablet DT and every other dispersible, intravenous, or unreviewed presentation are excluded. The labels do not establish a single-dose exception."
     }
   },
   "clinical_scope": {
     "route": "oral",
     "formulation": "tablet",
-    "expected_product_pair_count": 12,
+    "expected_product_pair_count": 9,
     "object": {
       "drug": "warfarin",
       "rxnorm_rxcui": "11289",
@@ -62,7 +69,8 @@
           },
           "presentation": {
             "route": "oral",
-            "formulation": "tablet"
+            "formulation": "tablet",
+            "release_profile": "not_asserted"
           },
           "review_status": "proposed_for_clinician_signature"
         },
@@ -91,7 +99,8 @@
           },
           "presentation": {
             "route": "oral",
-            "formulation": "tablet"
+            "formulation": "tablet",
+            "release_profile": "not_asserted"
           },
           "review_status": "proposed_for_clinician_signature"
         },
@@ -120,7 +129,8 @@
           },
           "presentation": {
             "route": "oral",
-            "formulation": "tablet"
+            "formulation": "tablet",
+            "release_profile": "not_asserted"
           },
           "review_status": "proposed_for_clinician_signature"
         }
@@ -131,35 +141,6 @@
       "rxnorm_rxcui": "4450",
       "rxnorm_tty": "IN",
       "products": [
-        {
-          "mapping_id": "presentation:github-jr:85808:oral-tablet",
-          "source_identity": {
-            "namespace": "presentation:github-jr",
-            "code": "85808"
-          },
-          "product_id": "sha256:2477c63ab7660346267abca33ba26fc4c72957e856fed56c7696193e4f5c6a31",
-          "product_assertion_sha256": "e1128e2da73efefb283a21628393ee8802736bfc3af6ba5b1df363be6619eae7",
-          "product_assertion": {
-            "brand_name": "Faze 50mg Tablet DT",
-            "manufacturer": "Megha Healthcare Pvt Ltd",
-            "pack_label": "strip of 10 tablet dt",
-            "form_raw": null,
-            "ingredients": [
-              {
-                "observed_name": "fluconazole",
-                "source_field": "molecule",
-                "strength_raw": "50mg",
-                "strength_value": 50,
-                "strength_unit": "mg"
-              }
-            ]
-          },
-          "presentation": {
-            "route": "oral",
-            "formulation": "tablet"
-          },
-          "review_status": "proposed_for_clinician_signature"
-        },
         {
           "mapping_id": "presentation:github-jr:84732:oral-tablet",
           "source_identity": {
@@ -185,7 +166,8 @@
           },
           "presentation": {
             "route": "oral",
-            "formulation": "tablet"
+            "formulation": "tablet",
+            "release_profile": "not_asserted"
           },
           "review_status": "proposed_for_clinician_signature"
         },
@@ -214,7 +196,8 @@
           },
           "presentation": {
             "route": "oral",
-            "formulation": "tablet"
+            "formulation": "tablet",
+            "release_profile": "not_asserted"
           },
           "review_status": "proposed_for_clinician_signature"
         },
@@ -243,7 +226,8 @@
           },
           "presentation": {
             "route": "oral",
-            "formulation": "tablet"
+            "formulation": "tablet",
+            "release_profile": "not_asserted"
           },
           "review_status": "proposed_for_clinician_signature"
         }
@@ -253,10 +237,6 @@
   "product_pairs": [
     {
       "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
-      "perpetrator_product_id": "sha256:2477c63ab7660346267abca33ba26fc4c72957e856fed56c7696193e4f5c6a31"
-    },
-    {
-      "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
       "perpetrator_product_id": "sha256:7443b4093ef29b4b6f621780c7cd43be46506e5632b6d0ae28fc03fc5bdeae98"
     },
     {
@@ -269,10 +249,6 @@
     },
     {
       "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
-      "perpetrator_product_id": "sha256:2477c63ab7660346267abca33ba26fc4c72957e856fed56c7696193e4f5c6a31"
-    },
-    {
-      "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
       "perpetrator_product_id": "sha256:7443b4093ef29b4b6f621780c7cd43be46506e5632b6d0ae28fc03fc5bdeae98"
     },
     {
@@ -282,10 +258,6 @@
     {
       "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
       "perpetrator_product_id": "sha256:33820ca70d3fb5c81f60242e3f1c9263400827af9056e394a917e7473046c81a"
-    },
-    {
-      "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
-      "perpetrator_product_id": "sha256:2477c63ab7660346267abca33ba26fc4c72957e856fed56c7696193e4f5c6a31"
     },
     {
       "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
@@ -316,12 +288,43 @@
       "jurisdiction": "US"
     }
   ],
+  "evidence_boundary": {
+    "evidence_jurisdiction": "US",
+    "product_catalogue": "github-jr",
+    "product_market": "India",
+    "deployment_jurisdiction": "none",
+    "scope_note": "The evidence supports the fluconazole active-ingredient interaction and systemic-oral exposure. Direct product-form alignment is limited here to the enumerated 150 mg, 200 mg, and 400 mg tablets; the 50 mg dispersible tablet is excluded rather than inferred to share the same formulation."
+  },
   "source_rights": {
     "catalogue_source_policy_id": "github-jr",
     "status": "pending_separate_owner_legal_release_decision",
     "clinical_signature_clears_source_rights": false
   },
   "declared_coverage": "partial",
+  "matching_boundary": {
+    "product_matching": "exact_enumerated_pairs_only",
+    "ingredient_wide_matching": false,
+    "fuzzy_matching": false,
+    "brand_derived_presentation": false,
+    "excluded_product_result": "not_evaluated_or_unresolved"
+  },
+  "workflow_boundary": {
+    "checker_trigger_support": [
+      "current_or_intended_concurrent_exposure"
+    ],
+    "unsupported_automatic_triggers": [
+      "discontinuation",
+      "dose_change",
+      "recent_exposure"
+    ],
+    "medication_lifecycle_follow_up_owner": "prescriber_or_anticoagulation_service"
+  },
+  "approval_validity": {
+    "policy_id": "clinical-approval-ttl-180d-v1",
+    "ttl_days": 180,
+    "begins_at": "reviewed_at_utc",
+    "early_invalidation": true
+  },
   "authority": {
     "runtime": "none",
     "publication": "none",
@@ -329,14 +332,17 @@
     "deployment": "none",
     "clinical_use": "none"
   },
-  "approval_statement": "I approve the warfarin-fluconazole clinical rule content and exact product scope for production-open review, limited to the seven enumerated open-catalogue oral-tablet assertions and 12 exact product pairs (Faze 50 mg dispersible, 150 mg, 200 mg, and 400 mg crossed with Warf 1 mg, 2 mg, and 5 mg), as major severity with confirm-and-monitor management. The alert must require prescriber or anticoagulation-service warfarin dose review and PT/INR monitoring when fluconazole is started or stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling and state that enzyme inhibition can persist 4 to 5 days after discontinuation without inventing a universal PT/INR schedule or a single-dose exception. Keep the unsupported Child-Pugh modifier removed, treat the evidence as U.S.-label support rather than an Indian regulatory-label claim, and keep declared coverage partial. This clinical signature does not clear the pending github-jr source-rights gate and grants no runtime, publication, production, deployment, or clinical-use authority. Reviewer ID: clinician:subas",
+  "approval_statement": "I approve the warfarin-fluconazole clinical rule content and exact product scope for production-open review, limited to the six enumerated open-catalogue conventional oral-tablet assertions and 9 exact product pairs (Faze 150 mg, 200 mg, and 400 mg crossed with Warf 1 mg, 2 mg, and 5 mg), as major severity with confirm-and-monitor management. For current or intended concurrent exposure, the alert must require prescriber or anticoagulation-service warfarin dose review and PT/INR monitoring; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling. Exclude Faze 50 mg Tablet DT and every other dispersible or unreviewed presentation. State that enzyme inhibition can persist 4 to 5 days after discontinuation, while leaving follow-up to the responsible clinician outside the current checker and without inventing a universal PT/INR schedule or single-dose exception. Keep the unsupported Child-Pugh modifier removed, treat the evidence as U.S.-label support rather than an Indian regulatory-label claim, and keep declared coverage partial. The current checker evaluates only current or intended concurrent exposure; it does not automatically detect discontinuation, dose-change, or recent-exposure events, so medication-lifecycle follow-up remains with the prescriber or anticoagulation service outside this checker. This approval expires 180 days after the authenticated reviewed_at_utc timestamp and may invalidate earlier under the listed conditions. This clinical signature does not clear the pending github-jr source-rights gate and grants no runtime, publication, production, deployment, or clinical-use authority. Reviewer ID: clinician:subas",
   "invalidation_conditions": [
+    "180-day approval validity expired",
     "approval subject hash mismatch",
     "draft rule hash mismatch",
     "product identity or assertion drift",
     "source evidence withdrawal or drift",
     "source-rights gate not cleared",
     "signature or authorization failure",
+    "reviewer revocation or superseding rejection",
+    "approval schema, validity policy, workflow boundary, or matching boundary drift",
     "compiler or package gate failure"
   ]
 }

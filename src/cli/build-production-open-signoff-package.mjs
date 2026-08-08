@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import {
   approvalStatementSha256,
   approvalSubjectSha256,
+  productionOpenSignoffBoundary,
   validateProductionOpenSignoffPackage,
 } from '../lib/production-open-signoff-package.mjs';
 import { productionOpenSignoffSource } from '../lib/production-open-signoff-source.mjs';
@@ -26,22 +27,16 @@ const SECTION_A_PATH = path.join(
   'A.verified.jsonl',
 );
 const PRODUCTION_RULES_PATH = path.join(ROOT, 'data-static', 'interaction-rules.json');
-const AUTHORITY = Object.freeze({
-  runtime: 'none',
-  publication: 'none',
-  production: 'none',
-  deployment: 'none',
-  clinical_use: 'none',
-});
-const INVALIDATION_CONDITIONS = [
-  'approval subject hash mismatch',
-  'draft rule hash mismatch',
-  'product identity or assertion drift',
-  'source evidence withdrawal or drift',
-  'source-rights gate not cleared',
-  'signature or authorization failure',
-  'compiler or package gate failure',
-];
+const PRODUCT_CATALOGUE_SUMMARY_PATH = path.join(
+  ROOT,
+  'data',
+  'interaction',
+  'production-open',
+  'product-catalogue',
+  'summary.json',
+);
+const AUTHORITY = productionOpenSignoffBoundary.authority;
+const INVALIDATION_CONDITIONS = productionOpenSignoffBoundary.invalidationConditions;
 const RULE_ARGUMENTS = productionOpenSignoffSource.rules
   .map(({ ruleId }) => `--rule-id=${ruleId}`)
   .join(' ');
@@ -66,6 +61,17 @@ function loadDraftRules() {
   );
 }
 
+function loadCatalogueBinding() {
+  const summary = JSON.parse(fs.readFileSync(PRODUCT_CATALOGUE_SUMMARY_PATH, 'utf8'));
+  return {
+    profile: 'production-open',
+    storage_path: summary.output.artifact_storage_path,
+    artifact_sha256: summary.output.artifact_sha256,
+    source_namespace: 'github-jr',
+    source_identity_key: 'source_id',
+  };
+}
+
 function evidenceBindings(rule) {
   return rule.evidence.map((evidence) => ({
     source_policy_id: evidence.source_policy_id,
@@ -85,13 +91,13 @@ function exactPairs(objectProducts, perpetratorProducts) {
   ));
 }
 
-function buildSubject(source, draftRule) {
+function buildSubject(source, draftRule, catalogueBinding) {
   const objectProducts = productionOpenSignoffSource.products.warfarin;
   const perpetratorProducts = productionOpenSignoffSource.products[source.perpetrator];
   const productPairs = exactPairs(objectProducts, perpetratorProducts);
   return {
-    schema_version: 1,
-    subject_id: `production-open:${source.ruleId}:r1`,
+    schema_version: 2,
+    subject_id: `production-open:${source.ruleId}:r2`,
     subject_status: 'pending_clinician_signature',
     release_profile: 'production-open',
     reviewer_id: productionOpenSignoffSource.reviewerId,
@@ -99,12 +105,16 @@ function buildSubject(source, draftRule) {
       clinical_content_base: productionOpenSignoffSource.clinicalContentBase,
       signature_event_must_record_repository_head: true,
     },
+    catalogue_binding: catalogueBinding,
     rule: {
       rule_id: source.ruleId,
       draft_rule_sha256: source.draftRuleSha256,
       severity: draftRule.severity,
       mechanism: draftRule.mechanism,
-      management: draftRule.management,
+      management: {
+        ...draftRule.management,
+        ...source.managementOverrides,
+      },
     },
     clinical_scope: {
       route: 'oral',
@@ -125,12 +135,22 @@ function buildSubject(source, draftRule) {
     },
     product_pairs: productPairs,
     evidence_bindings: evidenceBindings(draftRule),
+    evidence_boundary: {
+      evidence_jurisdiction: 'US',
+      product_catalogue: 'github-jr',
+      product_market: 'India',
+      deployment_jurisdiction: 'none',
+      scope_note: source.evidenceBoundaryNote,
+    },
     source_rights: {
       catalogue_source_policy_id: 'github-jr',
       status: 'pending_separate_owner_legal_release_decision',
       clinical_signature_clears_source_rights: false,
     },
     declared_coverage: 'partial',
+    matching_boundary: productionOpenSignoffBoundary.matchingBoundary,
+    workflow_boundary: productionOpenSignoffBoundary.workflowBoundary,
+    approval_validity: productionOpenSignoffBoundary.approvalValidity,
     authority: AUTHORITY,
     approval_statement: source.approvalStatement,
     invalidation_conditions: INVALIDATION_CONDITIONS,
@@ -139,16 +159,18 @@ function buildSubject(source, draftRule) {
 
 function buildTemplate(subject, subjectHash) {
   return {
-    schema_version: 1,
+    schema_version: 2,
     template_only: true,
     subject_id: subject.subject_id,
     approval_subject_jcs_sha256: subjectHash,
     authority: AUTHORITY,
     event_body_template: {
+      schema_version: 2,
       event_id: null,
       decision: null,
       reviewer_id: productionOpenSignoffSource.reviewerId,
       reviewed_at_utc: null,
+      valid_until_utc: null,
       repository_head: null,
       approval_subject_jcs_sha256: subjectHash,
       approval_statement_sha256: approvalStatementSha256(subject.approval_statement),
@@ -161,15 +183,16 @@ function buildTemplate(subject, subjectHash) {
 
 function productTable(subject) {
   const rows = [
-    '| Role | Product | Manufacturer | Pack | Source identity | Product ID | Assertion SHA-256 |',
-    '|---|---|---|---|---|---|---|',
+    '| Role | Product | Normalized ingredient | Strength | Route | Formulation | Release profile | Manufacturer | Pack | Source identity | Product ID | Assertion SHA-256 |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   for (const [role, side] of [
     ['Object', subject.clinical_scope.object],
     ['Perpetrator', subject.clinical_scope.perpetrator],
   ]) {
     for (const product of side.products) {
-      rows.push(`| ${role} | ${product.product_assertion.brand_name} | ${product.product_assertion.manufacturer} | ${product.product_assertion.pack_label} | \`${product.source_identity.namespace}:${product.source_identity.code}\` | \`${product.product_id}\` | \`${product.product_assertion_sha256}\` |`);
+      const ingredient = product.product_assertion.ingredients[0];
+      rows.push(`| ${role} | ${product.product_assertion.brand_name} | ${ingredient.observed_name} | ${ingredient.strength_value} ${ingredient.strength_unit} | ${product.presentation.route} | ${product.presentation.formulation} | ${product.presentation.release_profile.replaceAll('_', ' ')} | ${product.product_assertion.manufacturer} | ${product.product_assertion.pack_label} | \`${product.source_identity.namespace}:${product.source_identity.code}\` | \`${product.product_id}\` | \`${product.product_assertion_sha256}\` |`);
     }
   }
   return rows.join('\n');
@@ -213,9 +236,15 @@ Exact product assertions: \`${subject.clinical_scope.object.products.length + su
 
 Exact product pairs: \`${subject.product_pairs.length}\`
 
+Catalogue artifact: \`${subject.catalogue_binding.storage_path}\`
+
+Catalogue artifact SHA-256: \`${subject.catalogue_binding.artifact_sha256}\`
+
 ${productTable(subject)}
 
 Every pair is explicitly enumerated in the canonical JSON. No ingredient-wide, fuzzy, brand-derived, component-only, suspension, injection, topical, combination, or other unlisted product match is approved.
+
+Excluded, missing, ambiguous, stale, drifted, or otherwise unlisted products remain \`${subject.matching_boundary.excluded_product_result}\`; they must never be rendered as safe or no interaction.
 
 ## Clinical content
 
@@ -237,7 +266,23 @@ ${subject.rule.management.duration ? `Duration boundary: ${subject.rule.manageme
 
 ${evidenceTable(subject)}
 
+Evidence jurisdiction: \`${subject.evidence_boundary.evidence_jurisdiction}\`
+
+Product catalogue: \`${subject.evidence_boundary.product_catalogue}\`
+
+Product market: \`${subject.evidence_boundary.product_market}\`
+
+Deployment jurisdiction: \`${subject.evidence_boundary.deployment_jurisdiction}\`
+
+Scope note: ${subject.evidence_boundary.scope_note}
+
 The evidence jurisdiction is the United States. It is not an Indian regulatory-label claim. Run the rule-scoped live verification command in the sign-off checklist immediately before signing; drift in a cited document blocks that subject.
+
+## Workflow and validity boundary
+
+The current checker supports only current or intended concurrent exposure. It does not automatically detect discontinuation, dose change, or recent exposure. Medication-lifecycle follow-up remains with the prescriber or anticoagulation service outside this checker.
+
+An authenticated approval expires exactly ${subject.approval_validity.ttl_days} days after its \`${subject.approval_validity.begins_at}\` timestamp and may invalidate earlier under the canonical conditions. Expiry requires a new reviewed subject and authenticated approval event; it never extends automatically.
 
 ## Authority boundary
 
@@ -253,6 +298,13 @@ function readme(subjects) {
   const rows = subjects.map(({ subject, hash }) => (
     `| \`${subject.rule.rule_id}\` | ${subject.product_pairs.length} | \`${hash}\` |`
   ));
+  const productIds = new Set();
+  for (const { subject } of subjects) {
+    for (const side of [subject.clinical_scope.object, subject.clinical_scope.perpetrator]) {
+      for (const product of side.products) productIds.add(product.product_id);
+    }
+  }
+  const pairCount = subjects.reduce((total, { subject }) => total + subject.product_pairs.length, 0);
   return `# Six warfarin production-open clinician sign-off subjects
 
 Status: **CLINICIAN SIGN-OFF READY — NOT SIGNED**
@@ -263,7 +315,9 @@ This package replaces the six placeholder approval drafts dated 2026-08-07. It c
 |---|---:|---|
 ${rows.join('\n')}
 
-The shared scope uses three exact Warf oral-tablet products and 11 exact perpetrator products, for 14 unique products and 33 explicitly enumerated pairs. Product identifiers and assertion hashes are re-derived by the package validator. The selected brand, ingredient, strength, route, formulation, and supplier identities were independently cross-checked against the private June 2026 India Drug Extension; licensed terminology identifiers or descriptions are deliberately not copied into this open package.
+The shared scope uses three exact Warf oral-tablet products and ${productIds.size - 3} exact perpetrator products, for ${productIds.size} unique products and ${pairCount} explicitly enumerated pairs. Product identifiers and assertion hashes are re-derived by the package validator, which also hashes the bound production-open catalogue artifact and proves that every source identity resolves to exactly one matching row. Every product records normalized ingredient, strength, route, formulation, and an explicit release-profile boundary. The selected identities were independently cross-checked against the private June 2026 India Drug Extension; licensed terminology identifiers or descriptions are deliberately not copied into this open package.
+
+This is revision 2. Do not sign or reuse any revision 1 subject hash. Revision 2 excludes the fluconazole dispersible tablet, records evidence-to-product extrapolations, binds exact-product and checker-workflow boundaries, and gives every authenticated approval a non-extendable 180-day validity period.
 
 ## Important separation of decisions
 
@@ -289,14 +343,18 @@ This checklist is mandatory for each of the six subjects.
    \`npm run verify:interaction-evidence -- --sections=A ${RULE_ARGUMENTS}\`
 
 4. Confirm \`data-static/interaction-rules.json\` still contains zero rules.
-5. Review the clinician record and adjacent canonical JSON; confirm the displayed JCS SHA-256 equals \`package-status.json\`.
-6. Record the exact approval statement without editing or shortening it.
-7. Record the decision with the pinned clinician SSH key (substitute the exact rule ID):
+5. Review the clinician record and adjacent canonical JSON; confirm the displayed JCS SHA-256 equals \`package-status.json\` and the catalogue artifact hash matches the canonical binding.
+6. Confirm the subject is schema revision 2, its identifier ends in \`:r2\`, and no revision 1 hash is being signed or reused.
+7. Confirm every product's normalized ingredient, strength, route, formulation, and release profile, including the explicit exclusion of Faze 50 mg Tablet DT.
+8. Confirm the subject evaluates only current or intended concurrent exposure. The checker does not automatically detect discontinuation, dose change, or recent exposure; follow-up remains with the prescriber or anticoagulation service.
+9. Confirm the approval event will expire exactly 180 days after \`reviewed_at_utc\` and may invalidate earlier under the canonical conditions.
+10. Record the exact approval statement without editing or shortening it.
+11. Record the decision with the pinned clinician SSH key (substitute the exact rule ID):
 
    \`npm run approvals:record-production-open -- --rule-id=warfarin__amiodarone --decision=APPROVED --key-path=C:\\Users\\subas\\.ssh\\id_ed25519\`
 
-8. Run \`npm run verify:production-open-approval-events\` and require the new event and detached signature to pass.
-9. Commit and push both new files from \`approval-events/\`. Do not mutate a template or an earlier event. A correction requires \`--supersedes-event-id=<prior-event-id>\` and a new signed event.
+12. Run \`npm run verify:production-open-approval-events\` and require the new event and detached signature to pass with zero expired subjects.
+13. Commit and push both new files from \`approval-events/\`. Do not mutate a template or an earlier event. A correction requires \`--supersedes-event-id=<prior-event-id>\` and a new signed event.
 
 ## Still required after all signatures and before promotion
 
@@ -327,13 +385,14 @@ function sha256(content) {
 
 function buildFiles() {
   const draftRules = loadDraftRules();
+  const catalogueBinding = loadCatalogueBinding();
   const generated = new Map();
   const subjectRecords = [];
   const subjectHashes = {};
   for (const source of productionOpenSignoffSource.rules) {
     const draftRule = draftRules.get(source.ruleId);
     if (!draftRule) throw new Error(`missing Section A draft rule ${source.ruleId}`);
-    const subject = buildSubject(source, draftRule);
+    const subject = buildSubject(source, draftRule, catalogueBinding);
     const subjectHash = approvalSubjectSha256(subject);
     const slug = slugForRule(source.ruleId);
     subjectRecords.push({ subject, hash: subjectHash });
@@ -361,7 +420,7 @@ function buildFiles() {
     `${productionOpenSignoffSource.reviewerId} ${productionOpenSignoffSource.signingProfile.publicKey}\n`,
   );
   generated.set('package-status.json', json({
-    schema_version: 1,
+    schema_version: 2,
     package_status: 'clinician_signoff_ready',
     signing_profile_id: productionOpenSignoffSource.signingProfile.profileId,
     subject_hashes: subjectHashes,
