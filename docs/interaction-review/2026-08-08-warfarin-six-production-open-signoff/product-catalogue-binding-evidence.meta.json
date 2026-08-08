@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "classification": "source_binding_evidence_capture",
+  "promotion_authority": "none",
+  "source_catalogue": {
+    "profile": "production-open",
+    "storage_path": "data/interaction/production-open/product-catalogue/drugs.jsonl",
+    "artifact_sha256": "b2186efe0c7483a7b10e57f02ec9d555a012bed40d8a26e3ed72c1249a1454e2",
+    "total_rows": 253768,
+    "source_namespace": "github-jr",
+    "source_identity_key": "source_id"
+  },
+  "capture": {
+    "storage_path": "docs/interaction-review/2026-08-08-warfarin-six-production-open-signoff/product-catalogue-binding-evidence.jsonl",
+    "artifact_sha256": "b329903e8c3b65b6b39868b58e8ddd54678f948657695b33fa707a1c4abad822",
+    "row_count": 13,
+    "method": "byte_exact_complete_jsonl_rows_selected_by_source_identity",
+    "source_rows": [
+      { "source_id": "34020", "line_number": 33980 },
+      { "source_id": "84039", "line_number": 83953 },
+      { "source_id": "84136", "line_number": 84050 },
+      { "source_id": "84732", "line_number": 84646 },
+      { "source_id": "84894", "line_number": 84808 },
+      { "source_id": "85708", "line_number": 85622 },
+      { "source_id": "115796", "line_number": 115690 },
+      { "source_id": "215526", "line_number": 215362 },
+      { "source_id": "215566", "line_number": 215402 },
+      { "source_id": "233405", "line_number": 233223 },
+      { "source_id": "241434", "line_number": 241246 },
+      { "source_id": "241458", "line_number": 241270 },
+      { "source_id": "241490", "line_number": 241301 }
+    ]
+  },
+  "limitations": "The committed capture permits clean-checkout verification of the exact source rows and package bindings. Reverification against the complete parent catalogue artifact is mandatory immediately before clinician signature."
+}

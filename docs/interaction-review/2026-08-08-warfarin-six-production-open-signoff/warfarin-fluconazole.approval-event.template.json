@@ -2,7 +2,7 @@
   "schema_version": 2,
   "template_only": true,
   "subject_id": "production-open:warfarin__fluconazole:r2",
-  "approval_subject_jcs_sha256": "5e112007e186dc03078c8a5fca1b29ea763c743dea0b8674ac529b0acb82bc09",
+  "approval_subject_jcs_sha256": "0969a4685bcf2f26b206264df4e1baee16c5f6c2d5378259f096b392b701f8e6",
   "authority": {
     "runtime": "none",
     "publication": "none",
@@ -18,7 +18,7 @@
     "reviewed_at_utc": null,
     "valid_until_utc": null,
     "repository_head": null,
-    "approval_subject_jcs_sha256": "5e112007e186dc03078c8a5fca1b29ea763c743dea0b8674ac529b0acb82bc09",
+    "approval_subject_jcs_sha256": "0969a4685bcf2f26b206264df4e1baee16c5f6c2d5378259f096b392b701f8e6",
     "approval_statement_sha256": "3660b3dbc897a1fc885dc3c504f2ff7688c0342aee6d5ab2f5e1bce1f31f8c43",
     "authentication_method": null,
     "authenticated_event_id": null,

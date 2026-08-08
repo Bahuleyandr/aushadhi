@@ -6,7 +6,7 @@ Approval status: **PENDING — no authenticated approval event exists**
 
 Reviewer identity: `clinician:subas`
 
-Approval subject JCS SHA-256: `5e112007e186dc03078c8a5fca1b29ea763c743dea0b8674ac529b0acb82bc09`
+Approval subject JCS SHA-256: `0969a4685bcf2f26b206264df4e1baee16c5f6c2d5378259f096b392b701f8e6`
 
 The canonical authority subject is the adjacent `warfarin-fluconazole.approval-subject.json`. This Markdown is its human-readable review record. A signature applies only to the exact canonical subject hash above.
 
@@ -27,6 +27,10 @@ Exact product pairs: `9`
 Catalogue artifact: `data/interaction/production-open/product-catalogue/drugs.jsonl`
 
 Catalogue artifact SHA-256: `b2186efe0c7483a7b10e57f02ec9d555a012bed40d8a26e3ed72c1249a1454e2`
+
+Committed source-binding capture: `docs/interaction-review/2026-08-08-warfarin-six-production-open-signoff/product-catalogue-binding-evidence.jsonl`
+
+Source-binding capture SHA-256: `b329903e8c3b65b6b39868b58e8ddd54678f948657695b33fa707a1c4abad822`
 
 | Role | Product | Normalized ingredient | Strength | Route | Formulation | Release profile | Manufacturer | Pack | Source identity | Product ID | Assertion SHA-256 |
 |---|---|---|---|---|---|---|---|---|---|---|---|

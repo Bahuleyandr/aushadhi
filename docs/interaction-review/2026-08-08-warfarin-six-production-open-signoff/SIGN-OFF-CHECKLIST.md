@@ -3,7 +3,7 @@
 This checklist is mandatory for each of the six subjects.
 
 1. Confirm `git status --short` is clean and record `git rev-parse HEAD`.
-2. Run `npm run verify:production-open-signoff` and require exit 0.
+2. Run `npm run verify:production-open-signoff -- --verify-source-catalogue` and require exit 0 with `source_catalogue_reverified: true`. The ordinary clean-checkout gate validates the committed capture; this pre-signature form additionally rehashes the complete parent catalogue and proves every captured row is byte-exact at its recorded line.
 3. Immediately before signing, run the exact scoped live evidence gate and require exit 0:
 
    `npm run verify:interaction-evidence -- --sections=A --rule-id=warfarin__amiodarone --rule-id=warfarin__clarithromycin_oral --rule-id=warfarin__fluconazole --rule-id=warfarin__ketoconazole_oral --rule-id=warfarin__metronidazole --rule-id=warfarin__voriconazole`

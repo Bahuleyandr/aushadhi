@@ -6,14 +6,14 @@ This package replaces the six placeholder approval drafts dated 2026-08-07. It c
 
 | Rule | Exact pairs | Approval subject JCS SHA-256 |
 |---|---:|---|
-| `warfarin__amiodarone` | 6 | `e04f91fc956bd492a722d64c8dd2e3e6a41255617e114bae371b5655bc36a69c` |
-| `warfarin__clarithromycin_oral` | 3 | `57b85839df951e2dd365ebd42fc6487dbc333c189e8b7cbca763c37753658490` |
-| `warfarin__fluconazole` | 9 | `5e112007e186dc03078c8a5fca1b29ea763c743dea0b8674ac529b0acb82bc09` |
-| `warfarin__ketoconazole_oral` | 3 | `a768395d2ecd989b451fc8781653de91437e4b187e7cf00dcc177edbf7e032b0` |
-| `warfarin__metronidazole` | 6 | `271a33b8415a70c06697062cfbcfa8d753db72f87c3f067c74dbef817bf570d0` |
-| `warfarin__voriconazole` | 3 | `a076564057edbcf96ef2467d2459dcf883ce6f8d86fda09e374aadedcff12bb4` |
+| `warfarin__amiodarone` | 6 | `7d09dd9e4c16518720ff782659bca39ec60caa49959f00ed97a6c3b6bb367a19` |
+| `warfarin__clarithromycin_oral` | 3 | `138451759519a69975dd4d27d56ea0745d43cdeb322f821cffd984a8f40c3427` |
+| `warfarin__fluconazole` | 9 | `0969a4685bcf2f26b206264df4e1baee16c5f6c2d5378259f096b392b701f8e6` |
+| `warfarin__ketoconazole_oral` | 3 | `1cd31c8f9d658db48bcee9d9ff2ddf98166d126d5b7dfeb1fc468240f743f193` |
+| `warfarin__metronidazole` | 6 | `191f2e13142af1c1a0de3fcd9fcdcb1d8cbc06805a6191fc3640356b34052eb3` |
+| `warfarin__voriconazole` | 3 | `f923218ff498b0079761c88a41a1401fbfc409f253c91644f1a01142d36066e9` |
 
-The shared scope uses three exact Warf oral-tablet products and 10 exact perpetrator products, for 13 unique products and 30 explicitly enumerated pairs. Product identifiers and assertion hashes are re-derived by the package validator, which also hashes the bound production-open catalogue artifact and proves that every source identity resolves to exactly one matching row. Every product records normalized ingredient, strength, route, formulation, and an explicit release-profile boundary. The selected identities were independently cross-checked against the private June 2026 India Drug Extension; licensed terminology identifiers or descriptions are deliberately not copied into this open package.
+The shared scope uses three exact Warf oral-tablet products and 10 exact perpetrator products, for 13 unique products and 30 explicitly enumerated pairs. Product identifiers and assertion hashes are re-derived from a committed 13-row byte-exact source-binding capture. In the signing environment, the pre-signature verifier additionally rehashes the complete bound production-open catalogue and proves that every captured row occurs exactly at its recorded source line. Every product records normalized ingredient, strength, route, formulation, and an explicit release-profile boundary. The selected identities were independently cross-checked against the private June 2026 India Drug Extension; licensed terminology identifiers or descriptions are deliberately not copied into this open package.
 
 This is revision 2. Do not sign or reuse any revision 1 subject hash. Revision 2 excludes the fluconazole dispersible tablet, records evidence-to-product extrapolations, binds exact-product and checker-workflow boundaries, and gives every authenticated approval a non-extendable 180-day validity period.
 
