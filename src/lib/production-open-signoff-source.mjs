@@ -198,6 +198,12 @@ const commonAuthorityBoundary = 'This clinical signature does not clear the pend
 export const productionOpenSignoffSource = Object.freeze({
   clinicalContentBase: '32726b8a54bc29e50d51021910c856b3a408cdf1',
   reviewerId: 'clinician:subas',
+  signingProfile: Object.freeze({
+    profileId: 'clinician-subas-ssh-ed25519-v1',
+    namespace: 'aushadhi-approval-event',
+    publicKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN3ByvKJbe9kOsdzEmZsISWx+K0m4DrH9fkq6/duXcaL BahuleyanS@pm.me',
+    fingerprint: 'SHA256:Dd4MRT//f4mjmLgJ6QQifVvTdEk7G5NkAr7lV8naR68',
+  }),
   rxnorm: Object.freeze({
     warfarin: '11289',
     amiodarone: '703',

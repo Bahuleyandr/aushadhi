@@ -257,7 +257,7 @@ function readme(subjects) {
 
 Status: **CLINICIAN SIGN-OFF READY — NOT SIGNED**
 
-This package replaces the six placeholder approval drafts dated 2026-08-07. It contains six exact, hash-bound clinical subjects and six template-only approval-event schemas. It creates no approval or runtime authority by itself.
+This package replaces the six placeholder approval drafts dated 2026-08-07. It contains six exact, hash-bound clinical subjects, six template-only approval-event schemas, and a pinned SSH signing profile for \`clinician:subas\`. It creates no approval or runtime authority by itself.
 
 | Rule | Exact pairs | Approval subject JCS SHA-256 |
 |---|---:|---|
@@ -270,6 +270,8 @@ The shared scope uses three exact Warf oral-tablet products and 11 exact perpetr
 A clinician signature approves only the clinical content and exact proposed product scope in that subject. It does not authorize runtime loading, publication, production, deployment, or clinical use. The \`github-jr\` catalogue source-rights decision remains separate and unresolved, so even six valid signatures cannot release the package publicly.
 
 The \`clinical_content_base\` field records the inherited rule/evidence baseline. The immutable approval event must separately record the exact repository HEAD reviewed at signature time; this avoids misrepresenting the baseline commit as the signed implementation commit.
+
+The repository records an authenticated decision with \`npm run approvals:record-production-open\`. That command signs the canonical event with the pinned clinician SSH key, verifies the detached signature before writing, and creates new files exclusively under \`approval-events/\`; it never mutates a template or an earlier event.
 
 Follow [SIGN-OFF-CHECKLIST.md](SIGN-OFF-CHECKLIST.md) exactly. Do not modify a canonical subject after review; any material change creates a new revision and requires a new signature.
 `;
@@ -289,9 +291,12 @@ This checklist is mandatory for each of the six subjects.
 4. Confirm \`data-static/interaction-rules.json\` still contains zero rules.
 5. Review the clinician record and adjacent canonical JSON; confirm the displayed JCS SHA-256 equals \`package-status.json\`.
 6. Record the exact approval statement without editing or shortening it.
-7. Create a new immutable approval event from the adjacent template. Do not mutate the template.
-8. Populate the decision, UTC time, reviewed repository HEAD, authentication method, and authenticated event ID through the authorized clinician workflow.
-9. Preserve the completed event append-only. A correction requires a later superseding event.
+7. Record the decision with the pinned clinician SSH key (substitute the exact rule ID):
+
+   \`npm run approvals:record-production-open -- --rule-id=warfarin__amiodarone --decision=APPROVED --key-path=C:\\Users\\subas\\.ssh\\id_ed25519\`
+
+8. Run \`npm run verify:production-open-approval-events\` and require the new event and detached signature to pass.
+9. Commit and push both new files from \`approval-events/\`. Do not mutate a template or an earlier event. A correction requires \`--supersedes-event-id=<prior-event-id>\` and a new signed event.
 
 ## Still required after all signatures and before promotion
 
@@ -339,9 +344,26 @@ function buildFiles() {
   }
   generated.set('README.md', readme(subjectRecords));
   generated.set('SIGN-OFF-CHECKLIST.md', checklist());
+  generated.set('SIGNING-PROFILE.json', json({
+    schema_version: 1,
+    profile_id: productionOpenSignoffSource.signingProfile.profileId,
+    profile_status: 'pinned_for_clinician_signoff',
+    reviewer_id: productionOpenSignoffSource.reviewerId,
+    algorithm: 'ssh-ed25519',
+    namespace: productionOpenSignoffSource.signingProfile.namespace,
+    public_key: productionOpenSignoffSource.signingProfile.publicKey,
+    public_key_fingerprint: productionOpenSignoffSource.signingProfile.fingerprint,
+    allowed_signers_file: 'clinician-subas.allowed_signers',
+    authority_scope: 'authenticate an approval or rejection event for an already hash-bound clinical subject; grants no runtime, publication, production, deployment, or clinical-use authority',
+  }));
+  generated.set(
+    'clinician-subas.allowed_signers',
+    `${productionOpenSignoffSource.reviewerId} ${productionOpenSignoffSource.signingProfile.publicKey}\n`,
+  );
   generated.set('package-status.json', json({
     schema_version: 1,
     package_status: 'clinician_signoff_ready',
+    signing_profile_id: productionOpenSignoffSource.signingProfile.profileId,
     subject_hashes: subjectHashes,
     signed_event_count: 0,
     authority: AUTHORITY,
@@ -377,6 +399,7 @@ function applyGeneratedFiles(generated, check) {
   const expectedNames = new Set(generated.keys());
   if (fs.existsSync(PACKAGE_DIR)) {
     for (const fileName of fs.readdirSync(PACKAGE_DIR)) {
+      if (fileName === 'approval-events') continue;
       if (!expectedNames.has(fileName)) mismatches.push(fileName);
     }
   }

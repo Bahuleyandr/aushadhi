@@ -2,7 +2,7 @@
 
 Status: **CLINICIAN SIGN-OFF READY — NOT SIGNED**
 
-This package replaces the six placeholder approval drafts dated 2026-08-07. It contains six exact, hash-bound clinical subjects and six template-only approval-event schemas. It creates no approval or runtime authority by itself.
+This package replaces the six placeholder approval drafts dated 2026-08-07. It contains six exact, hash-bound clinical subjects, six template-only approval-event schemas, and a pinned SSH signing profile for `clinician:subas`. It creates no approval or runtime authority by itself.
 
 | Rule | Exact pairs | Approval subject JCS SHA-256 |
 |---|---:|---|
@@ -20,5 +20,7 @@ The shared scope uses three exact Warf oral-tablet products and 11 exact perpetr
 A clinician signature approves only the clinical content and exact proposed product scope in that subject. It does not authorize runtime loading, publication, production, deployment, or clinical use. The `github-jr` catalogue source-rights decision remains separate and unresolved, so even six valid signatures cannot release the package publicly.
 
 The `clinical_content_base` field records the inherited rule/evidence baseline. The immutable approval event must separately record the exact repository HEAD reviewed at signature time; this avoids misrepresenting the baseline commit as the signed implementation commit.
+
+The repository records an authenticated decision with `npm run approvals:record-production-open`. That command signs the canonical event with the pinned clinician SSH key, verifies the detached signature before writing, and creates new files exclusively under `approval-events/`; it never mutates a template or an earlier event.
 
 Follow [SIGN-OFF-CHECKLIST.md](SIGN-OFF-CHECKLIST.md) exactly. Do not modify a canonical subject after review; any material change creates a new revision and requires a new signature.

@@ -37,6 +37,8 @@
     "verify:interaction-evidence": "node src/cli/verify-interaction-evidence-provenance.mjs",
     "build:production-open-signoff": "node src/cli/build-production-open-signoff-package.mjs",
     "verify:production-open-signoff": "node src/cli/build-production-open-signoff-package.mjs --check",
+    "approvals:record-production-open": "node src/cli/record-production-open-approval.mjs",
+    "verify:production-open-approval-events": "node src/cli/verify-production-open-approval-events.mjs",
     "verify:pmbjp-mapping-codes": "node src/cli/verify-pmbjp-mapping-codes.mjs",
     "verify:combination-rxnorm-evidence": "node src/cli/verify-combination-rxnorm-evidence.mjs"
   },

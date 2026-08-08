@@ -384,11 +384,62 @@ function assertHashManifest(packageDir, expectedFiles) {
   }
 }
 
+function validateSigningProfile(packageDir) {
+  const profile = readJson(path.join(packageDir, 'SIGNING-PROFILE.json'));
+  assertKeys(profile, [
+    'schema_version',
+    'profile_id',
+    'profile_status',
+    'reviewer_id',
+    'algorithm',
+    'namespace',
+    'public_key',
+    'public_key_fingerprint',
+    'allowed_signers_file',
+    'authority_scope',
+  ], 'signing profile');
+  assertEqual(profile.schema_version, 1, 'signing profile schema_version');
+  assertEqual(profile.profile_id, 'clinician-subas-ssh-ed25519-v1', 'signing profile_id');
+  assertEqual(profile.profile_status, 'pinned_for_clinician_signoff', 'signing profile_status');
+  assertEqual(profile.reviewer_id, 'clinician:subas', 'signing profile reviewer_id');
+  assertEqual(profile.algorithm, 'ssh-ed25519', 'signing profile algorithm');
+  assertEqual(profile.namespace, 'aushadhi-approval-event', 'signing profile namespace');
+  assertEqual(profile.allowed_signers_file, 'clinician-subas.allowed_signers', 'allowed signers file');
+  if (typeof profile.authority_scope !== 'string'
+      || !profile.authority_scope.includes('grants no runtime, publication, production, deployment, or clinical-use authority')) {
+    fail('signing profile authority_scope is not fail-closed');
+  }
+  const fields = profile.public_key.trim().split(/\s+/u);
+  if (fields.length < 2 || fields[0] !== 'ssh-ed25519') {
+    fail('signing profile public_key is not ssh-ed25519');
+  }
+  const fingerprint = createHash('sha256')
+    .update(Buffer.from(fields[1], 'base64'))
+    .digest('base64')
+    .replace(/=+$/u, '');
+  assertEqual(
+    profile.public_key_fingerprint,
+    `SHA256:${fingerprint}`,
+    'signing profile public_key_fingerprint',
+  );
+  const allowedSigners = fs.readFileSync(
+    path.join(packageDir, profile.allowed_signers_file),
+    'utf8',
+  );
+  assertEqual(
+    allowedSigners,
+    `${profile.reviewer_id} ${profile.public_key}\n`,
+    'allowed signers content',
+  );
+  return profile;
+}
+
 export function validateProductionOpenSignoffPackage({ packageDir, productionRulesPath }) {
   const status = readJson(path.join(packageDir, 'package-status.json'));
   assertKeys(status, [
     'schema_version',
     'package_status',
+    'signing_profile_id',
     'subject_hashes',
     'signed_event_count',
     'authority',
@@ -396,6 +447,8 @@ export function validateProductionOpenSignoffPackage({ packageDir, productionRul
   ], 'package-status');
   assertEqual(status.schema_version, 1, 'package-status schema_version');
   assertEqual(status.package_status, 'clinician_signoff_ready', 'package_status');
+  const signingProfile = validateSigningProfile(packageDir);
+  assertEqual(status.signing_profile_id, signingProfile.profile_id, 'package signing_profile_id');
   assertEqual(status.signed_event_count, 0, 'signed_event_count');
   assertDeepEqual(status.authority, NONE_AUTHORITY, 'package-status authority');
   if (!Array.isArray(status.required_before_promotion)
@@ -413,7 +466,13 @@ export function validateProductionOpenSignoffPackage({ packageDir, productionRul
   assertDeepEqual(foundRules, [...REQUIRED_RULES.keys()].sort(), 'approval subject rule set');
   assertEvidenceBindings(subjects, packageDir);
 
-  const expectedFiles = new Set(['README.md', 'SIGN-OFF-CHECKLIST.md', 'package-status.json']);
+  const expectedFiles = new Set([
+    'README.md',
+    'SIGN-OFF-CHECKLIST.md',
+    'SIGNING-PROFILE.json',
+    'clinician-subas.allowed_signers',
+    'package-status.json',
+  ]);
   const productIds = new Set();
   let pairCount = 0;
   for (const [index, subject] of subjects.entries()) {
