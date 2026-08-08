@@ -9,14 +9,18 @@ This checklist is mandatory for each of the six subjects.
    `npm run verify:interaction-evidence -- --sections=A --rule-id=warfarin__amiodarone --rule-id=warfarin__clarithromycin_oral --rule-id=warfarin__fluconazole --rule-id=warfarin__ketoconazole_oral --rule-id=warfarin__metronidazole --rule-id=warfarin__voriconazole`
 
 4. Confirm `data-static/interaction-rules.json` still contains zero rules.
-5. Review the clinician record and adjacent canonical JSON; confirm the displayed JCS SHA-256 equals `package-status.json`.
-6. Record the exact approval statement without editing or shortening it.
-7. Record the decision with the pinned clinician SSH key (substitute the exact rule ID):
+5. Review the clinician record and adjacent canonical JSON; confirm the displayed JCS SHA-256 equals `package-status.json` and the catalogue artifact hash matches the canonical binding.
+6. Confirm the subject is schema revision 2, its identifier ends in `:r2`, and no revision 1 hash is being signed or reused.
+7. Confirm every product's normalized ingredient, strength, route, formulation, and release profile, including the explicit exclusion of Faze 50 mg Tablet DT.
+8. Confirm the subject evaluates only current or intended concurrent exposure. The checker does not automatically detect discontinuation, dose change, or recent exposure; follow-up remains with the prescriber or anticoagulation service.
+9. Confirm the approval event will expire exactly 180 days after `reviewed_at_utc` and may invalidate earlier under the canonical conditions.
+10. Record the exact approval statement without editing or shortening it.
+11. Record the decision with the pinned clinician SSH key (substitute the exact rule ID):
 
    `npm run approvals:record-production-open -- --rule-id=warfarin__amiodarone --decision=APPROVED --key-path=C:\Users\subas\.ssh\id_ed25519`
 
-8. Run `npm run verify:production-open-approval-events` and require the new event and detached signature to pass.
-9. Commit and push both new files from `approval-events/`. Do not mutate a template or an earlier event. A correction requires `--supersedes-event-id=<prior-event-id>` and a new signed event.
+12. Run `npm run verify:production-open-approval-events` and require the new event and detached signature to pass with zero expired subjects.
+13. Commit and push both new files from `approval-events/`. Do not mutate a template or an earlier event. A correction requires `--supersedes-event-id=<prior-event-id>` and a new signed event.
 
 ## Still required after all signatures and before promotion
 

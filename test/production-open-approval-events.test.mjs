@@ -8,6 +8,7 @@ import test from 'node:test';
 import {
   buildProductionOpenApprovalEvent,
   signProductionOpenApprovalEvent,
+  validateProductionOpenApprovalEvent,
   verifyProductionOpenApprovalEventSignature,
   writeProductionOpenApprovalEvent,
 } from '../src/lib/production-open-approval-events.mjs';
@@ -26,10 +27,12 @@ function makeSigningFixture() {
 }
 
 const template = {
+  schema_version: 2,
   event_id: null,
   decision: null,
   reviewer_id: 'clinician:subas',
   reviewed_at_utc: null,
+  valid_until_utc: null,
   repository_head: null,
   approval_subject_jcs_sha256: '1'.repeat(64),
   approval_statement_sha256: '2'.repeat(64),
@@ -48,6 +51,7 @@ test('an exact approval event can be signed and verified with the pinned SSH ide
     repositoryHead: 'a'.repeat(40),
   });
   assert.equal(event.event_id, 'approval-warfarin-amiodarone-20260808T123456Z');
+  assert.equal(event.valid_until_utc, '2027-02-04T12:34:56Z');
   assert.equal(event.authentication_method, 'ssh-ed25519-detached');
   assert.equal(event.authenticated_event_id, event.event_id);
 
@@ -98,6 +102,23 @@ test('event construction rejects ambiguous decisions, timestamps, and repository
   assert.throws(
     () => buildProductionOpenApprovalEvent({ ...base, repositoryHead: 'main' }),
     /repository_head must be a full Git commit ID/u,
+  );
+});
+
+test('approval-event validity is exactly 180 days and cannot be extended', () => {
+  const event = buildProductionOpenApprovalEvent({
+    template,
+    ruleId: 'warfarin__amiodarone',
+    decision: 'APPROVED',
+    reviewedAtUtc: '2026-08-08T12:34:56Z',
+    repositoryHead: 'a'.repeat(40),
+  });
+  assert.throws(
+    () => validateProductionOpenApprovalEvent({
+      ...event,
+      valid_until_utc: '2027-08-08T12:34:56Z',
+    }),
+    /valid_until_utc must be exactly 180 days after reviewed_at_utc/u,
   );
 });
 

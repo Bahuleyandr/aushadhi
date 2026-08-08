@@ -90,6 +90,7 @@ try {
 
   let approved = 0;
   let rejected = 0;
+  let expired = 0;
   for (const [ruleId, events] of byRule) {
     events.sort((left, right) => left.reviewed_at_utc.localeCompare(right.reviewed_at_utc));
     for (let index = 0; index < events.length; index += 1) {
@@ -99,7 +100,9 @@ try {
       }
     }
     const latest = events.at(-1);
-    if (latest.decision === 'APPROVED') approved += 1;
+    if (latest.decision === 'APPROVED' && Date.parse(latest.valid_until_utc) <= Date.now()) {
+      expired += 1;
+    } else if (latest.decision === 'APPROVED') approved += 1;
     else rejected += 1;
   }
   process.stdout.write(`${JSON.stringify({
@@ -107,7 +110,8 @@ try {
     authenticated_event_count: eventFiles.length,
     approved_subject_count: approved,
     rejected_subject_count: rejected,
-    pending_subject_count: subjectByHash.size - approved - rejected,
+    expired_subject_count: expired,
+    pending_subject_count: subjectByHash.size - approved - rejected - expired,
   }, null, 2)}\n`);
 } catch (error) {
   process.stderr.write(`${error.message}\n`);
