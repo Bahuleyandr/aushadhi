@@ -59,7 +59,18 @@ into its set of exact instantiation candidates:
    both assert the attestation before expanding. Refused:
    - class not in the pinned sets (`unknown_member_set`);
    - strength that does not pin exactly one existing bucket
-     (`ambiguous_member_set_strength` / `unknown_member_set`);
+     (`ambiguous_member_set_strength` / `unknown_member_set`). A strength
+     qualifier recorded as an absent field, `null`, or a deliberately-empty
+     array `[]` all record the same fact — "no strength qualifier" — as
+     everywhere else the draft schema is read (draft validation accepts all
+     three shapes; the runtime engine, coverage collector, and mapping
+     backlog all normalize `[]` to every pinned bucket; the attested pack
+     records both `[]` and `null`). Expansion reads the three shapes
+     identically but stays stricter than those readers: no qualifier binds
+     only when the pinned class defines exactly one bucket, refusing
+     otherwise; any other shape (non-array, blank/non-string entries,
+     multiple entries) refuses as malformed rather than being conflated
+     with the deliberately-empty case;
    - a rule-embedded roster member absent from the pinned bucket
      (`member_not_in_pinned_member_set`) — this is a hard error, never a
      silent drop;

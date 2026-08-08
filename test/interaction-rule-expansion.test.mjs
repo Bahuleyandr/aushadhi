@@ -142,6 +142,131 @@ test('a multi-valued strength array refuses instead of unioning buckets', () => 
   assert.match(report.refusals[0].message, /must pin exactly one strength bucket/u);
 });
 
+test('a deliberately-empty strength array binds exactly like an absent field', () => {
+  // Draft rows record "no strength qualifier" as an absent field, null, or
+  // an empty array interchangeably (the attested pack uses both [] and
+  // null). All three shapes must produce byte-identical expansion reports.
+  const absent = classRule();
+  delete absent.perpetrator.strength;
+  const nulled = classRule();
+  nulled.perpetrator.strength = null;
+  const empty = classRule();
+  empty.perpetrator.strength = [];
+
+  const absentReport = expand(absent);
+  assert.equal(absentReport.expandable, true);
+  assert.deepEqual(absentReport.refusals, []);
+  assert.deepEqual(
+    absentReport.expansions.map((entry) => entry.expanded_rule_id),
+    [
+      'victimol__test_inhibitor::victimol__alphacillin',
+      'victimol__test_inhibitor::victimol__betacillin',
+      'victimol__test_inhibitor::victimol__gammacillin',
+    ],
+  );
+  assert.equal(
+    JSON.stringify(expand(nulled), null, 2),
+    JSON.stringify(absentReport, null, 2),
+  );
+  assert.equal(
+    JSON.stringify(expand(empty), null, 2),
+    JSON.stringify(absentReport, null, 2),
+  );
+});
+
+test('an empty strength array on a multi-bucket class still refuses as ambiguous', () => {
+  // Empty-array normalization must never widen: with several pinned
+  // buckets, "no strength qualifier" cannot pick one, and it must not fan
+  // out across buckets either.
+  const rule = classRule();
+  rule.perpetrator = { class: 'multi_bucket_inhibitor', strength: [], route: ['systemic'] };
+  const report = expand(rule);
+  assert.equal(report.expandable, false);
+  assert.deepEqual(report.expansions, []);
+  assert.equal(report.refusals.length, 1);
+  assert.equal(report.refusals[0].reason, 'ambiguous_member_set_strength');
+  assert.match(report.refusals[0].message, /declares no strength/u);
+  assert.match(report.refusals[0].message, /2 strength buckets \(moderate, strong\)/u);
+});
+
+test('a populated strength array still pins exactly its own bucket', () => {
+  // A genuine single-bucket pin is untouched by the empty-array
+  // normalization: it binds that bucket's roster and no other.
+  const strong = classRule();
+  strong.perpetrator = {
+    class: 'multi_bucket_inhibitor', strength: ['strong'], route: ['systemic'],
+  };
+  const strongReport = expand(strong);
+  assert.deepEqual(strongReport.refusals, []);
+  assert.deepEqual(
+    strongReport.expansions.map((entry) => entry.perpetrator_member),
+    ['alphacillin'],
+  );
+
+  // Pinning the other bucket selects the other roster — and its member
+  // still faces the evidence-naming gate, proving no gate after strength
+  // resolution is skipped.
+  const moderate = classRule();
+  moderate.perpetrator = {
+    class: 'multi_bucket_inhibitor', strength: ['moderate'], route: ['systemic'],
+  };
+  const moderateReport = expand(moderate);
+  assert.deepEqual(moderateReport.expansions, []);
+  assert.equal(moderateReport.refusals.length, 1);
+  assert.equal(moderateReport.refusals[0].reason, 'evidence_does_not_name_member');
+  assert.equal(moderateReport.refusals[0].member, 'deltacillin');
+});
+
+test('malformed strength values are never conflated with an empty array', () => {
+  // Every shape that is not (absent | null | [] | [single nonblank
+  // string]) refuses. In particular a blank entry is malformed data, not a
+  // deliberately-empty qualifier.
+  const malformed = [
+    'strong', // non-array
+    { bucket: 'strong' }, // non-array object
+    [''], // blank entry
+    ['   '], // whitespace-only entry
+    [42], // non-string entry
+    [null], // null entry
+    [['strong']], // nested array entry
+    ['strong', 'moderate'], // multi-valued (also covered above)
+  ];
+  for (const strength of malformed) {
+    const rule = classRule();
+    rule.perpetrator.strength = strength;
+    const report = expand(rule);
+    assert.equal(report.expandable, false, JSON.stringify(strength));
+    assert.deepEqual(report.expansions, []);
+    assert.equal(report.refusals.length, 1, JSON.stringify(strength));
+    assert.equal(
+      report.refusals[0].reason,
+      'ambiguous_member_set_strength',
+      JSON.stringify(strength),
+    );
+    assert.match(report.refusals[0].message, /must pin exactly one strength bucket/u);
+  }
+});
+
+test('instantiation accepts an empty-strength parent through the same gates', () => {
+  const parent = classRule();
+  parent.perpetrator.strength = [];
+  const instantiated = instantiateExpandedDraftRule({
+    parentRule: parent,
+    memberSetClasses: MEMBER_SET_CLASSES,
+    objectMember: 'victimol',
+    perpetratorMember: 'alphacillin',
+    route: 'oral',
+    formulation: 'tablet',
+  });
+  assert.equal(
+    instantiated.rule_id,
+    'victimol__test_inhibitor::victimol__alphacillin',
+  );
+  assert.deepEqual(instantiated.perpetrator, {
+    drug: 'alphacillin', route: ['oral'], formulation: ['tablet'],
+  });
+});
+
 test('a roster member absent from the pinned member set is a hard error, not a drop', () => {
   const rule = classRule();
   rule.perpetrator.members = ['alphacillin', 'betacillin', 'gammacillin', 'roguecillin'];
