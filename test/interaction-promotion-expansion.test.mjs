@@ -676,3 +676,72 @@ test('the dry-run report is deterministic and byte-stable', () => {
   assert.equal(first, second);
   assert.match(first, /"authority": "none — dry-run report only/u);
 });
+
+// ── Full-pack blast-radius expectation ─────────────────────────────────────
+//
+// Runs the expansion dry run over EVERY rule in the attested pack and pins
+// the exact totals plus the complete refusal-reason histogram. Any change to
+// expansion normalization (or to the pack/member sets) that shifts even one
+// candidate or refusal anywhere in the pack fails this test, so the full
+// blast radius of such a change must be read, disclosed, and re-pinned here
+// — it can never again ride in on a narrow scoped dry run.
+//
+// Verified full-pack delta of the strength:[] normalization (PR #15), base
+// 32726b8 → this revision: 20 rules change behaviorally, 166 → 185
+// expansions (19 new candidates across 10 rules, including warfarin,
+// dabigatran, clopidogrel, and enoxaparin pairs), 1589 → 1736 refusals;
+// every removed refusal was an ambiguous_member_set_strength entry.
+// Candidates counted here have NO authority: each still requires reviewed
+// mappings and a signed approved_rule_id approval before promotion.
+
+test('the full-pack dry run matches the pinned expansion blast radius', () => {
+  const packPath = path.join(
+    ROOT, 'docs/interaction-review/batch-01-v2/batch-01-v2.jsonl',
+  );
+  const allRuleIds = fs.readFileSync(packPath, 'utf8')
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .map((line) => JSON.parse(line).rule_id);
+  assert.equal(allRuleIds.length, new Set(allRuleIds).size);
+
+  const report = expandDraftRulesDryRun({
+    packPath,
+    memberSetsPath: path.join(ROOT, 'data-static/interaction-member-sets.json'),
+    attestationPath: path.join(
+      ROOT, 'docs/interaction-review/batch-01-v2/batch-01-v2.provenance.json',
+    ),
+    ruleIds: allRuleIds,
+  });
+
+  assert.deepEqual(report.totals, {
+    rules: 199,
+    expansions: 185,
+    refusals: 1736,
+  });
+
+  const reasonCounts = {};
+  for (const rule of report.rules) {
+    for (const refusal of rule.refusals) {
+      reasonCounts[refusal.reason] = (reasonCounts[refusal.reason] ?? 0) + 1;
+    }
+  }
+  assert.deepEqual(reasonCounts, {
+    ambiguous_member_set_strength: 8,
+    empty_roster_after_exceptions: 7,
+    evidence_does_not_name_member: 1313,
+    member_exception_not_in_pinned_member_set: 4,
+    member_identity_not_canonical: 2,
+    member_not_in_pinned_member_set: 55,
+    missing_route_data: 5,
+    pinned_member_unaccounted: 304,
+    self_pair: 9,
+    unknown_member_set: 23,
+    unsupported_selector: 6,
+  });
+
+  const expandedIds = report.rules.flatMap(
+    (rule) => rule.expansions.map((entry) => entry.expanded_rule_id),
+  );
+  assert.equal(expandedIds.length, 185);
+  assert.equal(new Set(expandedIds).size, 185);
+});
