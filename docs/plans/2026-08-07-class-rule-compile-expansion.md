@@ -143,7 +143,8 @@ compiles of expansion manifests serialize identically, so the
 
 - **Every expanded rule needs its own signed approval.** The promotion
   manifest entry for an expanded rule id carries a full approval object;
-  the approval text must reference the expanded exact rule id (enforced),
+  `approval.approved_rule_id` must exactly equal the expanded rule id, and
+  the approval text must name that id as a complete identifier (both enforced),
   must satisfy the existing profile rules (production-open approvals need
   `authorized_profile: "production-open"` and profile-naming text per
   `d1127ae`), and `source_versions` must equal the parent rule's exact

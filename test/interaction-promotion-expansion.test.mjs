@@ -103,6 +103,7 @@ function warfarinExpansionInputs() {
     },
     approval: {
       ...structuredClone(legacy.approval),
+      approved_rule_id: expandedRuleId,
       approval_text: `${legacy.approval.approval_text} This approval covers `
         + `the expanded exact rule ${expandedRuleId}.`,
     },
@@ -241,6 +242,7 @@ function classExpansionInputs() {
       status: 'clinician_reviewed',
       reviewer_id: 'clinician:test',
       reviewed_at: '2026-08-07',
+      approved_rule_id: expandedRuleId,
       approval_text: `I approve the expanded exact rule ${expandedRuleId} `
         + '(simvastatin with verapamil, oral tablets) for internal '
         + 'evaluation, as major severity with confirm-and-monitor '
@@ -319,6 +321,7 @@ function refusalInputs(parentRuleId, expansion, sourceVersions) {
       status: 'clinician_reviewed',
       reviewer_id: 'clinician:test',
       reviewed_at: '2026-08-07',
+      approved_rule_id: expandedRuleId,
       approval_text: `I approve the expanded exact rule ${expandedRuleId} `
         + 'for internal evaluation.',
       source_versions: sourceVersions,
@@ -411,6 +414,7 @@ test('an expansion of a drift-held parent rule cannot bypass the required promot
         },
         approval: {
           ...legacyAzithromycin.approval,
+          approved_rule_id: expandedRuleId,
           approval_text: `${legacyAzithromycin.approval.approval_text} This `
             + `approval covers the expanded exact rule ${expandedRuleId}.`,
         },
@@ -468,6 +472,7 @@ test('an expansion sibling of a promoted-and-held parent rule is hard-refused', 
     },
     approval: {
       ...structuredClone(legacy.approval),
+      approved_rule_id: expandedRuleId,
       approval_text: `${legacy.approval.approval_text} This approval covers `
         + `the expanded exact rule ${expandedRuleId}.`,
     },
@@ -513,12 +518,35 @@ test('an expansion approval must reference the expanded rule id', () => {
   );
 });
 
+test('an expansion approval must not satisfy a shorter sibling by prefix', () => {
+  const source = warfarinExpansionInputs();
+  const promotion = source.promotionManifest.promotions.at(-1);
+  promotion.approval.approval_text = `I approve the expanded exact rule ${
+    promotion.rule_id
+  }_extra only.`;
+  assert.throws(
+    () => validatePromotionManifest(source.promotionManifest),
+    /expansion approval text must reference the expanded rule id/u,
+  );
+});
+
+test('an expansion approval subject must exactly equal the expanded rule id', () => {
+  const source = warfarinExpansionInputs();
+  const promotion = source.promotionManifest.promotions.at(-1);
+  promotion.approval.approved_rule_id = `${promotion.rule_id}_extra`;
+  assert.throws(
+    () => validatePromotionManifest(source.promotionManifest),
+    /approved_rule_id must exactly match expanded rule_id/u,
+  );
+});
+
 test('an expansion must not shadow a draft rule that already exists in the pack', () => {
   const source = warfarinExpansionInputs();
   const promotion = source.promotionManifest.promotions.at(-1);
   // Repoint the expanded id at a real (unpromoted) pack rule id while
   // keeping the expansion block: the compiler must refuse the shadowing.
   promotion.rule_id = 'simvastatin__gemfibrozil';
+  promotion.approval.approved_rule_id = promotion.rule_id;
   promotion.approval.approval_text = `${promotion.approval.approval_text} `
     + 'This approval covers the expanded exact rule simvastatin__gemfibrozil.';
   assert.throws(

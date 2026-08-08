@@ -346,12 +346,13 @@ function resolveClassRoster({ rule, role, selector, memberSetClasses, refusals }
     return null;
   };
 
-  const embedded = nonEmptyStringArray(selector.members);
-  if (embedded === null) {
+  if (!Object.hasOwn(selector, 'members')) {
     return refuseEmptyRoster(
       [...pinned].filter((member) => !exceptions.has(member)),
     );
   }
+  const embedded = nonEmptyStringArray(selector.members);
+  if (embedded === null) return refuseEmptyRoster([]);
 
   const roster = [];
   const accounted = new Set(exceptions);

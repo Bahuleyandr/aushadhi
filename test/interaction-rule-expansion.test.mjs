@@ -188,6 +188,30 @@ test('member exceptions narrow the pinned roster and must exist in it', () => {
   assert.equal(refusal.reason, 'member_exception_not_in_pinned_member_set');
 });
 
+test('an explicit empty roster refuses instead of inheriting the pinned members', () => {
+  const rule = classRule();
+  rule.perpetrator.members = [];
+  const report = expand(rule);
+  assert.equal(report.expandable, false);
+  assert.deepEqual(report.expansions, []);
+  assert.deepEqual(
+    report.refusals.map((entry) => entry.reason),
+    ['empty_roster_after_exceptions'],
+  );
+});
+
+test('a malformed explicit roster also refuses instead of inheriting pinned members', () => {
+  const rule = classRule();
+  rule.perpetrator.members = ['alphacillin', ''];
+  const report = expand(rule);
+  assert.equal(report.expandable, false);
+  assert.deepEqual(report.expansions, []);
+  assert.deepEqual(
+    report.refusals.map((entry) => entry.reason),
+    ['empty_roster_after_exceptions'],
+  );
+});
+
 test('exceptions that empty the roster refuse explicitly instead of yielding a silent non-expansion', () => {
   // PR #14 Finding 2: pre-fix, a side whose member_exceptions removed every
   // pinned member reported expandable:false with ZERO refusals — nothing

@@ -232,7 +232,7 @@ function validateOutputPack(value) {
   requireString(value.declared_coverage, 'promotion manifest output_pack.declared_coverage');
 }
 
-function validateApproval(value, label, profile) {
+function validateApproval(value, label, profile, approvedRuleId = null) {
   requireObject(value, label);
   if (profile === 'production-open'
       && value.authorized_profile !== 'production-open') {
@@ -247,6 +247,7 @@ function validateApproval(value, label, profile) {
     'approval_text',
     'source_versions',
   ];
+  if (approvedRuleId !== null) keys.push('approved_rule_id');
   if (profile === 'production-open') keys.push('authorized_profile');
   requireExactKeys(value, keys, label);
   if (value.status !== 'clinician_reviewed') {
@@ -256,6 +257,14 @@ function validateApproval(value, label, profile) {
   requireIsoDate(value.reviewed_at, `${label}.reviewed_at`);
   requireString(value.approval_text, `${label}.approval_text`);
   requireStringArray(value.source_versions, `${label}.source_versions`, { minItems: 1 });
+  if (approvedRuleId !== null) {
+    requireString(value.approved_rule_id, `${label}.approved_rule_id`);
+    if (value.approved_rule_id !== approvedRuleId) {
+      throw new TypeError(
+        `${label}.approved_rule_id must exactly match expanded rule_id ${approvedRuleId}`,
+      );
+    }
+  }
   if (profile === 'production-open') {
     if (/\binternal evaluation only\b|\bkeep production-open disabled\b/iu.test(
       value.approval_text,
@@ -270,6 +279,10 @@ function validateApproval(value, label, profile) {
       );
     }
   }
+}
+
+function approvalTextNamesExactRuleId(approvalText, ruleId) {
+  return (approvalText.match(/[a-z0-9_:-]+/giu) ?? []).includes(ruleId);
 }
 
 function validateDraftRole(value, label) {
@@ -413,7 +426,12 @@ function validatePromotion(value, index, schemaVersion, profile) {
   if (!SHA256.test(value.draft_rule_sha256 ?? '')) {
     throw new TypeError(`${label}.draft_rule_sha256 must be a lowercase SHA-256`);
   }
-  validateApproval(value.approval, `${label}.approval`, profile);
+  validateApproval(
+    value.approval,
+    `${label}.approval`,
+    profile,
+    hasExpansion ? value.rule_id : null,
+  );
   validateScope(value.scope, `${label}.scope`, schemaVersion);
   const combinationSides = value.scope.sides.filter(
     (side) => side.binding_kind === COMBINATION_BINDING_KIND,
@@ -431,7 +449,7 @@ function validatePromotion(value, index, schemaVersion, profile) {
         `${label} expansion supports only exact ingredient-bound sides`,
       );
     }
-    if (!value.approval.approval_text.includes(value.rule_id)) {
+    if (!approvalTextNamesExactRuleId(value.approval.approval_text, value.rule_id)) {
       throw new TypeError(
         `${label} expansion approval text must reference the expanded rule id `
           + value.rule_id,
