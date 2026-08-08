@@ -59,7 +59,53 @@ into its set of exact instantiation candidates:
    both assert the attestation before expanding. Refused:
    - class not in the pinned sets (`unknown_member_set`);
    - strength that does not pin exactly one existing bucket
-     (`ambiguous_member_set_strength` / `unknown_member_set`);
+     (`ambiguous_member_set_strength` / `unknown_member_set`). A strength
+     qualifier recorded as an absent field, `null`, or a deliberately-empty
+     array `[]` all record the same fact — "no strength qualifier" — as
+     everywhere else the draft schema is read (draft validation accepts all
+     three shapes; the runtime engine, coverage collector, and mapping
+     backlog all normalize `[]` to every pinned bucket; the attested pack
+     records both `[]` and `null`). Expansion reads the three shapes
+     identically but stays stricter than those readers: no qualifier binds
+     only when the pinned class defines exactly one bucket, refusing
+     otherwise; any other shape (non-array, blank/non-string entries,
+     multiple entries) refuses as malformed rather than being conflated
+     with the deliberately-empty case.
+
+     **Full-pack blast radius of this normalization** (verified by full
+     199-rule dry runs on base `32726b8` and the fix, diffing the complete
+     expansion/refusal sets): **20 rules change behaviorally**, not just
+     the three the fix was scoped to. Totals move **166 → 185 expansions**
+     and **1589 → 1736 refusals**; every removed refusal is exactly an
+     `ambiguous_member_set_strength` entry (22 removed), and every added
+     refusal is a substantive downstream gate firing on its own merits.
+     The **19 new expansion candidates** span 10 rules:
+     `warfarin__fluoroquinolone` (warfarin×ciprofloxacin),
+     `warfarin__ssri_snri` (warfarin×sertraline),
+     `dabigatran_nvaf__no_dose_adjustment_pgp_inhibitor` (dabigatran ×
+     amiodarone/clarithromycin/quinidine/verapamil),
+     `dabigatran_nvaf__dronedarone_or_ketoconazole` (dabigatran ×
+     dronedarone/ketoconazole), `clopidogrel__cyp2c19_inhibiting_ppi`
+     (clopidogrel × omeprazole/esomeprazole),
+     `heparin_lmwh__nsaid_or_antiplatelet_bleeding` (enoxaparin×ketorolac),
+     `potassium_chloride_solid_oral__gi_transit_slowing` (potassium
+     chloride × atropine/oxybutynin), `sulfonylurea__fluconazole`
+     (glipizide/glyburide/tolbutamide × fluconazole),
+     `sulfonylurea__gemfibrozil` (glyburide×gemfibrozil), and
+     `thiopurine__allopurinol` (azathioprine/mercaptopurine ×
+     allopurinol). Each new member was re-verified as verbatim-named by its
+     rule's cited evidence under the word-boundary naming gate, and every
+     candidate remains owner-gated: reviewed mappings plus a signed
+     `approved_rule_id` approval are still required before promotion. Ten
+     further rules progress past the strength gate into new refusals only
+     (e.g. `warfarin__nsaid_systemic`, `dextromethorphan__ssri_snri`,
+     `sulfonylurea__miconazole_candidate` — the last now correctly refusing
+     `empty_roster_after_exceptions`); one more rule
+     (`simvastatin_lovastatin__hiv_pi_cobicistat`, multi-bucket, still
+     refused) changes only its refusal message wording. The exact totals
+     and refusal-reason histogram are pinned by the full-pack expectation
+     test in `test/interaction-promotion-expansion.test.mjs`, so any future
+     normalization change surfaces its whole blast radius in CI;
    - a rule-embedded roster member absent from the pinned bucket
      (`member_not_in_pinned_member_set`) — this is a hard error, never a
      silent drop;

@@ -259,7 +259,19 @@ function resolveClassRoster({ rule, role, selector, memberSetClasses, refusals }
     return null;
   }
   let bucketName;
-  if (selector.strength === undefined || selector.strength === null) {
+  // An absent field, `null`, and a deliberately-empty array all record the
+  // same reviewed fact — no strength qualifier — matching every other
+  // reader of the draft schema: the draft validator accepts all three
+  // shapes, and the runtime engine (`classMembers`), the coverage
+  // collector, and the mapping backlog each normalize `strength: []` to
+  // "all pinned buckets". Expansion reads the fact the same way but stays
+  // stricter on ambiguity than those readers: with no qualifier it binds
+  // ONLY when the pinned class defines exactly one strength bucket, and
+  // refuses otherwise — it never unions buckets on the author's behalf.
+  const noStrengthQualifier = selector.strength === undefined
+    || selector.strength === null
+    || (Array.isArray(selector.strength) && selector.strength.length === 0);
+  if (noStrengthQualifier) {
     const bucketNames = Object.keys(strengthBuckets);
     if (bucketNames.length !== 1) {
       refusal(
@@ -272,7 +284,8 @@ function resolveClassRoster({ rule, role, selector, memberSetClasses, refusals }
     }
     [bucketName] = bucketNames;
   } else if (Array.isArray(selector.strength) && selector.strength.length === 1
-      && typeof selector.strength[0] === 'string') {
+      && typeof selector.strength[0] === 'string'
+      && selector.strength[0].trim() !== '') {
     [bucketName] = selector.strength;
   } else {
     refusal(
