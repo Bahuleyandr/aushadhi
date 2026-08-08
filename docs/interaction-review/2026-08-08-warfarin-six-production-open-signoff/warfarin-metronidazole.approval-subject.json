@@ -1,0 +1,260 @@
+{
+  "schema_version": 1,
+  "subject_id": "production-open:warfarin__metronidazole:r1",
+  "subject_status": "pending_clinician_signature",
+  "release_profile": "production-open",
+  "reviewer_id": "clinician:subas",
+  "repository_provenance": {
+    "clinical_content_base": "32726b8a54bc29e50d51021910c856b3a408cdf1",
+    "signature_event_must_record_repository_head": true
+  },
+  "rule": {
+    "rule_id": "warfarin__metronidazole",
+    "draft_rule_sha256": "2f6e13a141107149c32c82df764a0710a423265e5600b35155ece4d53222df3f",
+    "severity": "major",
+    "mechanism": "Metronidazole can potentiate warfarin anticoagulant effect and prolong prothrombin time; the current warfarin label also lists metronidazole as a CYP2C9 inhibitor.",
+    "management": {
+      "dispense_action": "confirm_and_monitor",
+      "action_target": null,
+      "do_not_interrupt": [
+        "warfarin",
+        "metronidazole"
+      ],
+      "prescriber_action": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when oral metronidazole is started or stopped. Do not independently stop either medicine or autonomously change the warfarin dose.",
+      "monitoring": "Use prescriber-directed PT/INR monitoring during coadministration and when the interacting medicine is started or stopped.",
+      "patient_counselling": "Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools.",
+      "timing": null,
+      "duration": null,
+      "exceptions": "This review scope is limited to exact oral-tablet product assertions. Tinidazole, topical metronidazole, and metronidazole combination suspensions are outside the proposed scope."
+    }
+  },
+  "clinical_scope": {
+    "route": "oral",
+    "formulation": "tablet",
+    "expected_product_pair_count": 6,
+    "object": {
+      "drug": "warfarin",
+      "rxnorm_rxcui": "11289",
+      "rxnorm_tty": "IN",
+      "products": [
+        {
+          "mapping_id": "presentation:github-jr:241490:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241490"
+          },
+          "product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+          "product_assertion_sha256": "8085504e2d8f147581025560310a71b943a33f792ed8d56dac1f71043326f34c",
+          "product_assertion": {
+            "brand_name": "Warf 1 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "1mg",
+                "strength_value": 1,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:241458:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241458"
+          },
+          "product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+          "product_assertion_sha256": "c1dcadfbfabb21f57e8deface7a90323f15b0e7946fe2265de245f7efdab0469",
+          "product_assertion": {
+            "brand_name": "Warf 2 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "2mg",
+                "strength_value": 2,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:241434:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241434"
+          },
+          "product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+          "product_assertion_sha256": "a8877c57f2158b4c40fa19a69aeab393bb4fb3d0cb9b699a83d70454d0820d26",
+          "product_assertion": {
+            "brand_name": "Warf 5 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "5mg",
+                "strength_value": 5,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        }
+      ]
+    },
+    "perpetrator": {
+      "drug": "metronidazole",
+      "rxnorm_rxcui": "6922",
+      "rxnorm_tty": "IN",
+      "products": [
+        {
+          "mapping_id": "presentation:github-jr:84136:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "84136"
+          },
+          "product_id": "sha256:de1e08a2d44ccaa84c91a694d3c6b3cc87de519b06023855b6a20ff3b0618735",
+          "product_assertion_sha256": "834194c3b239c39f41c7f82ccc540bce874a07e0936595acb1f5f3d95daefdce",
+          "product_assertion": {
+            "brand_name": "Flagyl 200 Tablet",
+            "manufacturer": "Abbott",
+            "pack_label": "strip of 15 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "metronidazole",
+                "source_field": "molecule",
+                "strength_raw": "200mg",
+                "strength_value": 200,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:84039:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "84039"
+          },
+          "product_id": "sha256:471be4a70c9c0f503d78816031b1b8c4e71c0fe15a28d320dbc8375e557ee259",
+          "product_assertion_sha256": "43877d54c0d5d5838bdc9154ac9e7e8cd9ed1f210aa0a8900be218e6cc2ff1f9",
+          "product_assertion": {
+            "brand_name": "Flagyl 400 Tablet",
+            "manufacturer": "Abbott",
+            "pack_label": "strip of 15 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "metronidazole",
+                "source_field": "molecule",
+                "strength_raw": "400mg",
+                "strength_value": 400,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        }
+      ]
+    }
+  },
+  "product_pairs": [
+    {
+      "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+      "perpetrator_product_id": "sha256:de1e08a2d44ccaa84c91a694d3c6b3cc87de519b06023855b6a20ff3b0618735"
+    },
+    {
+      "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+      "perpetrator_product_id": "sha256:471be4a70c9c0f503d78816031b1b8c4e71c0fe15a28d320dbc8375e557ee259"
+    },
+    {
+      "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+      "perpetrator_product_id": "sha256:de1e08a2d44ccaa84c91a694d3c6b3cc87de519b06023855b6a20ff3b0618735"
+    },
+    {
+      "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+      "perpetrator_product_id": "sha256:471be4a70c9c0f503d78816031b1b8c4e71c0fe15a28d320dbc8375e557ee259"
+    },
+    {
+      "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+      "perpetrator_product_id": "sha256:de1e08a2d44ccaa84c91a694d3c6b3cc87de519b06023855b6a20ff3b0618735"
+    },
+    {
+      "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+      "perpetrator_product_id": "sha256:471be4a70c9c0f503d78816031b1b8c4e71c0fe15a28d320dbc8375e557ee259"
+    }
+  ],
+  "evidence_bindings": [
+    {
+      "source_policy_id": "openfda-labels",
+      "document_id": "a2883ca1-5a9a-4259-9d80-46ab67274384",
+      "document_version": "25",
+      "payload_sha256": "4baf60bc4b057156c7bd085554287e2c69e557fce0d266d35980ec69b9926417",
+      "jurisdiction": "US"
+    },
+    {
+      "source_policy_id": "openfda-labels",
+      "document_id": "51e98fb6-ba76-497e-95d8-fe895ef0b7ed",
+      "document_version": "7",
+      "payload_sha256": "bcb1e6db5ac6619c0c93ede9f0c689dfd8ffdff4f187067335c243046b5d3e04",
+      "jurisdiction": "US"
+    }
+  ],
+  "source_rights": {
+    "catalogue_source_policy_id": "github-jr",
+    "status": "pending_separate_owner_legal_release_decision",
+    "clinical_signature_clears_source_rights": false
+  },
+  "declared_coverage": "partial",
+  "authority": {
+    "runtime": "none",
+    "publication": "none",
+    "production": "none",
+    "deployment": "none",
+    "clinical_use": "none"
+  },
+  "approval_statement": "I approve the warfarin-metronidazole clinical rule content and exact product scope for production-open review, limited to the five enumerated open-catalogue oral-tablet assertions and 6 exact product pairs (Flagyl 200 mg and 400 mg crossed with Warf 1 mg, 2 mg, and 5 mg), as major severity with confirm-and-monitor management. The alert must require prescriber or anticoagulation-service warfarin dose review and PT/INR monitoring when oral metronidazole is started or stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling; exclude tinidazole, topical metronidazole, combination suspensions, and every other unreviewed presentation; keep the unsupported Child-Pugh modifier removed; and do not invent a universal PT/INR schedule or fixed post-discontinuation interval. Treat the evidence as U.S.-label support rather than an Indian regulatory-label claim, and keep declared coverage partial. This clinical signature does not clear the pending github-jr source-rights gate and grants no runtime, publication, production, deployment, or clinical-use authority. Reviewer ID: clinician:subas",
+  "invalidation_conditions": [
+    "approval subject hash mismatch",
+    "draft rule hash mismatch",
+    "product identity or assertion drift",
+    "source evidence withdrawal or drift",
+    "source-rights gate not cleared",
+    "signature or authorization failure",
+    "compiler or package gate failure"
+  ]
+}

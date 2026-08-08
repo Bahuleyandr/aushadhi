@@ -1,0 +1,342 @@
+{
+  "schema_version": 1,
+  "subject_id": "production-open:warfarin__fluconazole:r1",
+  "subject_status": "pending_clinician_signature",
+  "release_profile": "production-open",
+  "reviewer_id": "clinician:subas",
+  "repository_provenance": {
+    "clinical_content_base": "32726b8a54bc29e50d51021910c856b3a408cdf1",
+    "signature_event_must_record_repository_head": true
+  },
+  "rule": {
+    "rule_id": "warfarin__fluconazole",
+    "draft_rule_sha256": "088bd06e472723bce36527b67d1c2b0d7c24694842c5929c25c1c4e693952f84",
+    "severity": "major",
+    "mechanism": "Fluconazole inhibits CYP2C9 and CYP3A4 and can increase warfarin anticoagulant effect, PT/INR, and bleeding risk.",
+    "management": {
+      "dispense_action": "confirm_and_monitor",
+      "action_target": null,
+      "do_not_interrupt": [
+        "warfarin",
+        "fluconazole"
+      ],
+      "prescriber_action": "Confirm that the prescriber or anticoagulation service has reviewed the warfarin dose and arranged PT/INR monitoring when oral fluconazole is started or stopped. Do not independently stop either medicine or autonomously change the warfarin dose.",
+      "monitoring": "Use prescriber-directed PT/INR monitoring during coadministration and after fluconazole discontinuation.",
+      "patient_counselling": "Counsel the patient to seek urgent clinical advice for unusual bleeding or bruising, prolonged bleeding, blood in urine, or red or tarry-black stools.",
+      "timing": null,
+      "duration": "The enzyme-inhibiting effect of fluconazole can persist for 4 to 5 days after discontinuation; the labels do not prescribe a universal PT/INR schedule for that interval.",
+      "exceptions": "This review scope is limited to exact oral-tablet product assertions. Intravenous fluconazole may be source-relevant but is outside the proposed product scope. The labels do not establish a single-dose exception."
+    }
+  },
+  "clinical_scope": {
+    "route": "oral",
+    "formulation": "tablet",
+    "expected_product_pair_count": 12,
+    "object": {
+      "drug": "warfarin",
+      "rxnorm_rxcui": "11289",
+      "rxnorm_tty": "IN",
+      "products": [
+        {
+          "mapping_id": "presentation:github-jr:241490:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241490"
+          },
+          "product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+          "product_assertion_sha256": "8085504e2d8f147581025560310a71b943a33f792ed8d56dac1f71043326f34c",
+          "product_assertion": {
+            "brand_name": "Warf 1 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "1mg",
+                "strength_value": 1,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:241458:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241458"
+          },
+          "product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+          "product_assertion_sha256": "c1dcadfbfabb21f57e8deface7a90323f15b0e7946fe2265de245f7efdab0469",
+          "product_assertion": {
+            "brand_name": "Warf 2 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "2mg",
+                "strength_value": 2,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:241434:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "241434"
+          },
+          "product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+          "product_assertion_sha256": "a8877c57f2158b4c40fa19a69aeab393bb4fb3d0cb9b699a83d70454d0820d26",
+          "product_assertion": {
+            "brand_name": "Warf 5 Tablet",
+            "manufacturer": "Cipla Ltd",
+            "pack_label": "strip of 30 tablets",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "warfarin",
+                "source_field": "molecule",
+                "strength_raw": "5mg",
+                "strength_value": 5,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        }
+      ]
+    },
+    "perpetrator": {
+      "drug": "fluconazole",
+      "rxnorm_rxcui": "4450",
+      "rxnorm_tty": "IN",
+      "products": [
+        {
+          "mapping_id": "presentation:github-jr:85808:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "85808"
+          },
+          "product_id": "sha256:2477c63ab7660346267abca33ba26fc4c72957e856fed56c7696193e4f5c6a31",
+          "product_assertion_sha256": "e1128e2da73efefb283a21628393ee8802736bfc3af6ba5b1df363be6619eae7",
+          "product_assertion": {
+            "brand_name": "Faze 50mg Tablet DT",
+            "manufacturer": "Megha Healthcare Pvt Ltd",
+            "pack_label": "strip of 10 tablet dt",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "fluconazole",
+                "source_field": "molecule",
+                "strength_raw": "50mg",
+                "strength_value": 50,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:84732:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "84732"
+          },
+          "product_id": "sha256:7443b4093ef29b4b6f621780c7cd43be46506e5632b6d0ae28fc03fc5bdeae98",
+          "product_assertion_sha256": "9f186a8cad46b5dc934f3d9c54dacefcbab5d7e58bf623a2c3484090512e12dc",
+          "product_assertion": {
+            "brand_name": "Faze 150 Tablet",
+            "manufacturer": "Megha Healthcare Pvt Ltd",
+            "pack_label": "strip of 1 Tablet",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "fluconazole",
+                "source_field": "molecule",
+                "strength_raw": "150mg",
+                "strength_value": 150,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:84894:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "84894"
+          },
+          "product_id": "sha256:9a1c4698258e377490593db50e2abecaee7c9f29a4b9645500b182cc336dc9ae",
+          "product_assertion_sha256": "0bf426a31998bb880ab162a5c46dc9d5e78af61df615c341ce859f271e7443f1",
+          "product_assertion": {
+            "brand_name": "Faze 200mg Tablet",
+            "manufacturer": "Megha Healthcare Pvt Ltd",
+            "pack_label": "strip of 1 Tablet",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "fluconazole",
+                "source_field": "molecule",
+                "strength_raw": "200mg",
+                "strength_value": 200,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        },
+        {
+          "mapping_id": "presentation:github-jr:85708:oral-tablet",
+          "source_identity": {
+            "namespace": "presentation:github-jr",
+            "code": "85708"
+          },
+          "product_id": "sha256:33820ca70d3fb5c81f60242e3f1c9263400827af9056e394a917e7473046c81a",
+          "product_assertion_sha256": "56e8f6931e21ff4b7644916225f54fd54a33fd7590ab9bd4e74a89dcd8367356",
+          "product_assertion": {
+            "brand_name": "Faze 400mg Tablet",
+            "manufacturer": "Megha Healthcare Pvt Ltd",
+            "pack_label": "strip of 1 Tablet",
+            "form_raw": null,
+            "ingredients": [
+              {
+                "observed_name": "fluconazole",
+                "source_field": "molecule",
+                "strength_raw": "400mg",
+                "strength_value": 400,
+                "strength_unit": "mg"
+              }
+            ]
+          },
+          "presentation": {
+            "route": "oral",
+            "formulation": "tablet"
+          },
+          "review_status": "proposed_for_clinician_signature"
+        }
+      ]
+    }
+  },
+  "product_pairs": [
+    {
+      "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+      "perpetrator_product_id": "sha256:2477c63ab7660346267abca33ba26fc4c72957e856fed56c7696193e4f5c6a31"
+    },
+    {
+      "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+      "perpetrator_product_id": "sha256:7443b4093ef29b4b6f621780c7cd43be46506e5632b6d0ae28fc03fc5bdeae98"
+    },
+    {
+      "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+      "perpetrator_product_id": "sha256:9a1c4698258e377490593db50e2abecaee7c9f29a4b9645500b182cc336dc9ae"
+    },
+    {
+      "object_product_id": "sha256:75ff289ed3f39da43c77f97e8ff24ebc8f36636bad7879c25bad180cca8bd3e5",
+      "perpetrator_product_id": "sha256:33820ca70d3fb5c81f60242e3f1c9263400827af9056e394a917e7473046c81a"
+    },
+    {
+      "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+      "perpetrator_product_id": "sha256:2477c63ab7660346267abca33ba26fc4c72957e856fed56c7696193e4f5c6a31"
+    },
+    {
+      "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+      "perpetrator_product_id": "sha256:7443b4093ef29b4b6f621780c7cd43be46506e5632b6d0ae28fc03fc5bdeae98"
+    },
+    {
+      "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+      "perpetrator_product_id": "sha256:9a1c4698258e377490593db50e2abecaee7c9f29a4b9645500b182cc336dc9ae"
+    },
+    {
+      "object_product_id": "sha256:2c013c09d6880da492e3faefa06db996f9fc7bf9920751009b261f95c9ad3445",
+      "perpetrator_product_id": "sha256:33820ca70d3fb5c81f60242e3f1c9263400827af9056e394a917e7473046c81a"
+    },
+    {
+      "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+      "perpetrator_product_id": "sha256:2477c63ab7660346267abca33ba26fc4c72957e856fed56c7696193e4f5c6a31"
+    },
+    {
+      "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+      "perpetrator_product_id": "sha256:7443b4093ef29b4b6f621780c7cd43be46506e5632b6d0ae28fc03fc5bdeae98"
+    },
+    {
+      "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+      "perpetrator_product_id": "sha256:9a1c4698258e377490593db50e2abecaee7c9f29a4b9645500b182cc336dc9ae"
+    },
+    {
+      "object_product_id": "sha256:47bd772d5427882a321df9cc9f1cb5187c4b7e5476ea8cd6b4267bdc5f9d2c61",
+      "perpetrator_product_id": "sha256:33820ca70d3fb5c81f60242e3f1c9263400827af9056e394a917e7473046c81a"
+    }
+  ],
+  "evidence_bindings": [
+    {
+      "source_policy_id": "openfda-labels",
+      "document_id": "f694c617-3383-416c-91b6-b94fda371204",
+      "document_version": "57",
+      "payload_sha256": "ff8cbc0726257ccfd11021bb489b0cf0bb417351b66ab35dcb6fb44a4290690c",
+      "jurisdiction": "US"
+    },
+    {
+      "source_policy_id": "openfda-labels",
+      "document_id": "51e98fb6-ba76-497e-95d8-fe895ef0b7ed",
+      "document_version": "7",
+      "payload_sha256": "bcb1e6db5ac6619c0c93ede9f0c689dfd8ffdff4f187067335c243046b5d3e04",
+      "jurisdiction": "US"
+    }
+  ],
+  "source_rights": {
+    "catalogue_source_policy_id": "github-jr",
+    "status": "pending_separate_owner_legal_release_decision",
+    "clinical_signature_clears_source_rights": false
+  },
+  "declared_coverage": "partial",
+  "authority": {
+    "runtime": "none",
+    "publication": "none",
+    "production": "none",
+    "deployment": "none",
+    "clinical_use": "none"
+  },
+  "approval_statement": "I approve the warfarin-fluconazole clinical rule content and exact product scope for production-open review, limited to the seven enumerated open-catalogue oral-tablet assertions and 12 exact product pairs (Faze 50 mg dispersible, 150 mg, 200 mg, and 400 mg crossed with Warf 1 mg, 2 mg, and 5 mg), as major severity with confirm-and-monitor management. The alert must require prescriber or anticoagulation-service warfarin dose review and PT/INR monitoring when fluconazole is started or stopped; it must not direct the pharmacy to change a dose or stop either medicine independently. Include bleeding-symptom counselling and state that enzyme inhibition can persist 4 to 5 days after discontinuation without inventing a universal PT/INR schedule or a single-dose exception. Keep the unsupported Child-Pugh modifier removed, treat the evidence as U.S.-label support rather than an Indian regulatory-label claim, and keep declared coverage partial. This clinical signature does not clear the pending github-jr source-rights gate and grants no runtime, publication, production, deployment, or clinical-use authority. Reviewer ID: clinician:subas",
+  "invalidation_conditions": [
+    "approval subject hash mismatch",
+    "draft rule hash mismatch",
+    "product identity or assertion drift",
+    "source evidence withdrawal or drift",
+    "source-rights gate not cleared",
+    "signature or authorization failure",
+    "compiler or package gate failure"
+  ]
+}

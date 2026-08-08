@@ -3,6 +3,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { verifyInteractionEvidenceRecords } from '../lib/interaction-evidence-live-verifier.mjs';
+import {
+  filterInteractionEvidenceRecords,
+  parseInteractionEvidenceSelectionArgs,
+} from '../lib/interaction-evidence-selection.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const SECTION_ROOT = path.join(
@@ -12,27 +16,6 @@ const SECTION_ROOT = path.join(
   'batch-01-v2',
   'sections',
 );
-const ALL_SECTIONS = [...'ABCDEFGHIJ'];
-
-function selectedSections(argv) {
-  const argument = argv.find((value) => value.startsWith('--sections='));
-  if (!argument) return ALL_SECTIONS;
-  const sections = [
-    ...new Set(
-      argument
-        .slice('--sections='.length)
-        .toUpperCase()
-        .split(/[^A-J]+/u)
-        .flatMap((value) => [...value])
-        .filter(Boolean),
-    ),
-  ];
-  if (sections.length === 0 || sections.some((section) => !ALL_SECTIONS.includes(section))) {
-    throw new Error('--sections must select one or more letters from A through J');
-  }
-  return sections;
-}
-
 function loadRecords(sections) {
   return sections.flatMap((section) => {
     const storagePath =
@@ -52,8 +35,8 @@ function loadRecords(sections) {
 }
 
 try {
-  const sections = selectedSections(process.argv.slice(2));
-  const records = loadRecords(sections);
+  const { sections, ruleIds } = parseInteractionEvidenceSelectionArgs(process.argv.slice(2));
+  const records = filterInteractionEvidenceRecords(loadRecords(sections), ruleIds);
   const summary = await verifyInteractionEvidenceRecords({
     records,
     concurrency: process.env.AUSHADHI_EVIDENCE_VERIFY_CONCURRENCY,
@@ -61,6 +44,7 @@ try {
   });
   process.stdout.write(`${JSON.stringify({
     sections,
+    rule_ids: ruleIds,
     ...summary,
   }, null, 2)}\n`);
 } catch (error) {

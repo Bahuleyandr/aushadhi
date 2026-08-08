@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "template_only": true,
+  "subject_id": "production-open:warfarin__ketoconazole_oral:r1",
+  "approval_subject_jcs_sha256": "4d6db2035d5f6d1eca4d5a81c4118c826e590b88a4603f11cffa39b842e3a82f",
+  "authority": {
+    "runtime": "none",
+    "publication": "none",
+    "production": "none",
+    "deployment": "none",
+    "clinical_use": "none"
+  },
+  "event_body_template": {
+    "event_id": null,
+    "decision": null,
+    "reviewer_id": "clinician:subas",
+    "reviewed_at_utc": null,
+    "repository_head": null,
+    "approval_subject_jcs_sha256": "4d6db2035d5f6d1eca4d5a81c4118c826e590b88a4603f11cffa39b842e3a82f",
+    "approval_statement_sha256": "362dba3d51affd10b8d43feafb26984989d6d19d7c328b82636c6d5484314c1b",
+    "authentication_method": null,
+    "authenticated_event_id": null,
+    "supersedes_event_id": null
+  }
+}
