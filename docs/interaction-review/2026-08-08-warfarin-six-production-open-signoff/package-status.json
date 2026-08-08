@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "package_status": "clinician_signoff_ready",
+  "signing_profile_id": "clinician-subas-ssh-ed25519-v1",
   "subject_hashes": {
     "warfarin__amiodarone": "a8a2cd70061088590c6f5e1abb0d9c61d83ef5b166318534fcfdfef3a2b48c4d",
     "warfarin__clarithromycin_oral": "c923a892b79246cb022f47fdbaa78312b6bf0c0985a97cdeb232b0604becee60",

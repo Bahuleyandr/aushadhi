@@ -11,9 +11,12 @@ This checklist is mandatory for each of the six subjects.
 4. Confirm `data-static/interaction-rules.json` still contains zero rules.
 5. Review the clinician record and adjacent canonical JSON; confirm the displayed JCS SHA-256 equals `package-status.json`.
 6. Record the exact approval statement without editing or shortening it.
-7. Create a new immutable approval event from the adjacent template. Do not mutate the template.
-8. Populate the decision, UTC time, reviewed repository HEAD, authentication method, and authenticated event ID through the authorized clinician workflow.
-9. Preserve the completed event append-only. A correction requires a later superseding event.
+7. Record the decision with the pinned clinician SSH key (substitute the exact rule ID):
+
+   `npm run approvals:record-production-open -- --rule-id=warfarin__amiodarone --decision=APPROVED --key-path=C:\Users\subas\.ssh\id_ed25519`
+
+8. Run `npm run verify:production-open-approval-events` and require the new event and detached signature to pass.
+9. Commit and push both new files from `approval-events/`. Do not mutate a template or an earlier event. A correction requires `--supersedes-event-id=<prior-event-id>` and a new signed event.
 
 ## Still required after all signatures and before promotion
 

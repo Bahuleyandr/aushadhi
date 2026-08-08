@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "profile_id": "clinician-subas-ssh-ed25519-v1",
+  "profile_status": "pinned_for_clinician_signoff",
+  "reviewer_id": "clinician:subas",
+  "algorithm": "ssh-ed25519",
+  "namespace": "aushadhi-approval-event",
+  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN3ByvKJbe9kOsdzEmZsISWx+K0m4DrH9fkq6/duXcaL BahuleyanS@pm.me",
+  "public_key_fingerprint": "SHA256:Dd4MRT//f4mjmLgJ6QQifVvTdEk7G5NkAr7lV8naR68",
+  "allowed_signers_file": "clinician-subas.allowed_signers",
+  "authority_scope": "authenticate an approval or rejection event for an already hash-bound clinical subject; grants no runtime, publication, production, deployment, or clinical-use authority"
+}
