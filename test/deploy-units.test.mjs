@@ -31,10 +31,10 @@ test('tracked crawler units reproduce the hardened non-root /opt deployment', ()
     assert.match(unit, new RegExp(`^Environment=HOME=/var/cache/aushadhi/${source}$`, 'm'), name);
     assert.match(unit, new RegExp(`^Environment=XDG_CACHE_HOME=/var/cache/aushadhi/${source}$`, 'm'), name);
     assert.match(unit, new RegExp(`^StateDirectory=aushadhi/data/raw/${source}$`, 'm'), name);
-    assert.match(unit, new RegExp(`^LogsDirectory=aushadhi/${source}$`, 'm'), name);
+    assert.doesNotMatch(unit, /^LogsDirectory=/m, name);
     assert.match(unit, new RegExp(`^CacheDirectory=aushadhi/${source}$`, 'm'), name);
     assert.match(unit, /^ReadOnlyPaths=\/opt\/aushadhi \/var\/lib\/aushadhi\/dist \/var\/lib\/aushadhi\/data\/raw$/m, name);
-    assert.match(unit, new RegExp(`^ReadWritePaths=/var/lib/aushadhi/data/raw/${source} /var/log/aushadhi/${source} /var/cache/aushadhi/${source}$`, 'm'), name);
+    assert.match(unit, new RegExp(`^ReadWritePaths=/var/lib/aushadhi/data/raw/${source} /var/log/aushadhi/${source}/${logName} /var/cache/aushadhi/${source}$`, 'm'), name);
     assert.match(unit, new RegExp(`^ExecStartPre=\\+/usr/local/libexec/aushadhi-network-hook ${name} start$`, 'm'), name);
     assert.match(unit, new RegExp(`^ExecStopPost=\\+/usr/local/libexec/aushadhi-network-hook ${name} stop$`, 'm'), name);
     assert.ok(unit.includes(
@@ -137,6 +137,7 @@ test('root helpers, log rotation, and a release receipt are tracked', () => {
     'release-receipt.mjs',
     'runtime-manifest.json',
     'sudoers-aushadhi-observer',
+    'tmpfiles-aushadhi.conf',
   ]) {
     assert.equal(fs.existsSync(path.join(DEPLOY, name)), true, name);
   }
@@ -228,6 +229,26 @@ test('root helpers, log rotation, and a release receipt are tracked', () => {
   const logrotate = read('logrotate-aushadhi');
   assert.match(logrotate, /\/var\/log\/aushadhi\/\*\/\*\.log/);
   assert.match(logrotate, /rotate 8/);
+
+  const tmpfiles = read('tmpfiles-aushadhi.conf');
+  assert.doesNotMatch(tmpfiles, /^f\+/m);
+  assert.match(tmpfiles, /^d \/var\/log\/aushadhi 0750 root aushadhi -$/m);
+  for (const [, , source, logName] of longRunningUnits) {
+    assert.match(tmpfiles, new RegExp(`^d /var/log/aushadhi/${source} 0750 root aushadhi -$`, 'm'));
+    assert.match(tmpfiles, new RegExp(`^f /var/log/aushadhi/${source}/${logName} 0640 aushadhi aushadhi -$`, 'm'));
+  }
+  assert.deepEqual(
+    manifest.release_receipt.privileged_files.find(
+      (mapping) => mapping.target === 'etc/tmpfiles.d/aushadhi.conf',
+    ),
+    {
+      source: 'deploy/dalekdefender/tmpfiles-aushadhi.conf',
+      target: 'etc/tmpfiles.d/aushadhi.conf',
+      mode: '0644',
+      uid: 0,
+      gid: 0,
+    },
+  );
 
   const sudoers = read('sudoers-aushadhi-observer');
   assert.doesNotMatch(sudoers, /sample-readonly|\*|\/bin\/(?:ba)?sh/);
