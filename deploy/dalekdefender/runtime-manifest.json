@@ -104,6 +104,13 @@
         "mode": "0644",
         "uid": 0,
         "gid": 0
+      },
+      {
+        "source": "deploy/dalekdefender/tmpfiles-aushadhi.conf",
+        "target": "etc/tmpfiles.d/aushadhi.conf",
+        "mode": "0644",
+        "uid": 0,
+        "gid": 0
       }
     ]
   },

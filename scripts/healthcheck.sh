@@ -44,7 +44,19 @@ active=$(systemctl is-active "$SVC" 2>/dev/null || true)
 enabled=$(systemctl is-enabled "$SVC" 2>/dev/null || true)
 substate=$(systemctl show "$SVC" -p SubState --value 2>/dev/null || true)
 restarts=$(systemctl show "$SVC" -p NRestarts --value 2>/dev/null || echo '?')
-last=$(tail -n 1 "$LOG" 2>/dev/null || true)
+if [ -L "$LOG" ] || [ ! -f "$LOG" ] || [ ! -r "$LOG" ]; then
+  if [ -L "$LOG" ]; then log_kind=symlink
+  elif [ ! -e "$LOG" ]; then log_kind=missing
+  elif [ ! -f "$LOG" ]; then log_kind=non-regular
+  else log_kind=unreadable
+  fi
+  echo "ALERT: $SOURCE log-unreadable kind=$log_kind path='$LOG' liveness=${active:-unknown}/${substate:-unknown} service=$SVC nrestarts=$restarts"
+  exit 1
+fi
+if ! last=$(tail -n 1 "$LOG" 2>/dev/null); then
+  echo "ALERT: $SOURCE log-read-failed path='$LOG' liveness=${active:-unknown}/${substate:-unknown} service=$SVC nrestarts=$restarts"
+  exit 1
+fi
 if [ -e "$HOLD_MARKER" ] || [ -L "$HOLD_MARKER" ]; then
   if [ -f "$HOLD_MARKER" ] && [ ! -L "$HOLD_MARKER" ]; then marker_kind=regular; else marker_kind=unsafe; fi
   echo "ALERT: $SOURCE operator-hold marker present human-hold required marker='$HOLD_MARKER' marker_kind=$marker_kind liveness=${active:-unknown}/${substate:-unknown} nrestarts=$restarts last='$last'"

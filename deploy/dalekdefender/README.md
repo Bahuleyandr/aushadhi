@@ -38,6 +38,8 @@ the raw, log, and cache roots. The build alone can write
 - `aushadhi-source-healthcheck.sh`: one-request 1mg egress diagnostic for use
   only while the 1mg service is inactive.
 - `logrotate-aushadhi`: bounded rotation for crawler and build logs.
+- `tmpfiles-aushadhi.conf`: no-follow creation and ownership policy for exact
+  health-observed crawler logs beneath root-owned source directories.
 - `runtime-manifest.json`: paths, authority boundary, restricted-source policy,
   and required `DEPLOYED-RELEASE.json` fields.
 - `release-receipt.mjs`: fail-closed generator and verifier for the immutable
@@ -93,6 +95,18 @@ The helper currently binds the host-specific LAN interface
 Proton route guard, and all four marks before any approved installation. Do not
 replace the fixed helper with shell commands assembled from unit parameters.
 
+Crawler log redirection is performed by the service shell after systemd drops
+to `aushadhi`; PID 1 must not create the files through `StandardOutput=append:`.
+`tmpfiles-aushadhi.conf` declares each source log directory root-owned and
+non-runtime-writable while its exact regular log is `aushadhi:aushadhi` `0640`.
+Each unit exposes only that file through `ReadWritePaths`. This lets the fixed
+observer read fail-closed parser and source-hold markers without granting root
+execution or allowing the crawler to replace an observed path. Before applying
+the tmpfiles policy to existing logs, require regular non-symlink files,
+preserve their bytes, and record prior owner, mode, size, mtime, and hash as
+rollback evidence. Type `f` does not truncate an existing file or follow a
+symlink; log rotation uses `copytruncate` and preserves established metadata.
+
 ## Release receipt and authority
 
 Every installation must write `/opt/aushadhi/DEPLOYED-RELEASE.json` containing
@@ -129,7 +143,11 @@ Before changing the host, an operator must:
 4. Install `/opt/aushadhi` and its dependency tree root:root with directories
    `0755`, tracked file modes preserved, and no group/other-writable entries;
    install the final receipt root:root `0644`. Confirm each source-specific
-   mutable subtree has the intended runtime ownership and mode.
+   mutable subtree has the intended runtime ownership and mode. Verify every
+   crawler log is a regular non-symlink and preserve its bytes before applying
+   the reviewed `/etc/tmpfiles.d/aushadhi.conf`. Confirm source log directories
+   are `root:aushadhi` `0750` and exact log files are `aushadhi:aushadhi` `0640`
+   before starting a crawler; never truncate a live log to repair ownership.
 5. Remove legacy Aushadhi systemd drop-ins, copy the reviewed base units and fixed
    helpers, run `systemd-analyze verify`, then inspect the effective units with
    `systemctl cat` before starting anything.

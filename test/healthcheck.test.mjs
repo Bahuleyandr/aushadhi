@@ -169,16 +169,22 @@ esac
   }
 });
 
-test('healthcheck fails closed when an active crawler state file is missing or invalid', () => {
+test('healthcheck fails closed on unsafe logs and invalid active-crawler state', () => {
   const root = fs.mkdtempSync('test/.tmp-healthcheck-state-');
   fs.mkdirSync(`${root}/bin`, { recursive: true });
   fs.writeFileSync(`${root}/bin/systemctl`, `#!/usr/bin/env sh
 case "$1" in
-  is-active) printf 'active\\n' ;;
-  is-enabled) printf 'enabled\\n' ;;
+  is-active)
+    if [ "$AUSHADHI_SERVICE" = aushadhi-crawl.service ]; then printf 'inactive\\n'; else printf 'active\\n'; fi
+    ;;
+  is-enabled)
+    if [ "$AUSHADHI_SERVICE" = aushadhi-crawl.service ]; then printf 'disabled\\n'; else printf 'enabled\\n'; fi
+    ;;
   show)
     case "$*" in
-      *SubState*) printf 'running\\n' ;;
+      *SubState*)
+        if [ "$AUSHADHI_SERVICE" = aushadhi-crawl.service ]; then printf 'dead\\n'; else printf 'running\\n'; fi
+        ;;
       *NRestarts*) printf '0\\n' ;;
       *Environment*) printf 'AUSHADHI_APOLLO_CAP=10000\\n' ;;
       *) printf '0\\n' ;;
@@ -196,26 +202,68 @@ esac
     'AUSHADHI_TEST_BIN', 'AUSHADHI_SERVICE', 'AUSHADHI_LOG',
     'AUSHADHI_STATE', 'AUSHADHI_OUTPUT', 'AUSHADHI_APOLLO_CAP',
   ];
+  const run = (service = 'aushadhi-apollo.service') => spawnSync('bash', [
+    '-c',
+    'PATH="$AUSHADHI_TEST_BIN:$PATH"; export PATH; exec bash scripts/healthcheck.sh',
+  ], {
+    cwd: '.',
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      WSLENV: [process.env.WSLENV, ...importedVariables].filter(Boolean).join(':'),
+      AUSHADHI_TEST_BIN: bashPath(`${root}/bin`),
+      AUSHADHI_SERVICE: service,
+      AUSHADHI_LOG: bashPath(log),
+      AUSHADHI_STATE: bashPath(state),
+      AUSHADHI_OUTPUT: bashPath(`${root}/normalized.jsonl`),
+      AUSHADHI_APOLLO_CAP: '10000',
+    },
+  });
+
   try {
-    const result = spawnSync('bash', [
-      '-c',
-      'PATH="$AUSHADHI_TEST_BIN:$PATH"; export PATH; exec bash scripts/healthcheck.sh',
-    ], {
-      cwd: '.',
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        WSLENV: [process.env.WSLENV, ...importedVariables].filter(Boolean).join(':'),
-        AUSHADHI_TEST_BIN: bashPath(`${root}/bin`),
-        AUSHADHI_SERVICE: 'aushadhi-apollo.service',
-        AUSHADHI_LOG: bashPath(log),
-        AUSHADHI_STATE: bashPath(state),
-        AUSHADHI_OUTPUT: bashPath(`${root}/normalized.jsonl`),
-        AUSHADHI_APOLLO_CAP: '10000',
-      },
-    });
-    assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
-    assert.match(result.stdout, /^ALERT: apollo state-invalid/);
+    fs.unlinkSync(log);
+    const disabledMissingLog = run('aushadhi-crawl.service');
+    assert.equal(
+      disabledMissingLog.status,
+      1,
+      `${disabledMissingLog.stdout}\n${disabledMissingLog.stderr}`,
+    );
+    assert.match(disabledMissingLog.stdout, /^ALERT: onemg log-unreadable kind=missing/);
+    assert.doesNotMatch(disabledMissingLog.stdout, /intentionally-disabled/);
+
+    const missingLog = run();
+    assert.equal(missingLog.status, 1, `${missingLog.stdout}\n${missingLog.stderr}`);
+    assert.match(missingLog.stdout, /^ALERT: apollo log-unreadable kind=missing/);
+
+    if (process.platform === 'linux') {
+      fs.symlinkSync(state, log);
+      const symlinkLog = run();
+      assert.equal(symlinkLog.status, 1, `${symlinkLog.stdout}\n${symlinkLog.stderr}`);
+      assert.match(symlinkLog.stdout, /^ALERT: apollo log-unreadable kind=symlink/);
+      assert.doesNotMatch(symlinkLog.stdout, /not-json/);
+      fs.unlinkSync(log);
+
+      fs.mkdirSync(log);
+      const directoryLog = run();
+      assert.equal(directoryLog.status, 1, `${directoryLog.stdout}\n${directoryLog.stderr}`);
+      assert.match(directoryLog.stdout, /^ALERT: apollo log-unreadable kind=non-regular/);
+      fs.rmdirSync(log);
+
+      if (process.getuid?.() !== 0) {
+        fs.writeFileSync(log, 'must not be read\n');
+        fs.chmodSync(log, 0o000);
+        const unreadableLog = run();
+        assert.equal(unreadableLog.status, 1, `${unreadableLog.stdout}\n${unreadableLog.stderr}`);
+        assert.match(unreadableLog.stdout, /^ALERT: apollo log-unreadable kind=unreadable/);
+        assert.doesNotMatch(unreadableLog.stdout, /must not be read/);
+        fs.unlinkSync(log);
+      }
+    }
+
+    fs.writeFileSync(log, '2026-08-06T00:00:00Z apollo-loop start\n');
+    const invalidState = run();
+    assert.equal(invalidState.status, 1, `${invalidState.stdout}\n${invalidState.stderr}`);
+    assert.match(invalidState.stdout, /^ALERT: apollo state-invalid/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
