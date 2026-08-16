@@ -14,12 +14,12 @@ Environment=AUSHADHI_RAW_ROOT=/var/lib/aushadhi/data/raw
 Environment=AUSHADHI_DIST_ROOT=/var/lib/aushadhi/dist
 Environment=AUSHADHI_PHARMEASY_CAP=20000
 ExecStartPre=+/usr/local/libexec/aushadhi-network-hook aushadhi-pharmeasy.service start
-ExecStart=/usr/bin/bash /opt/aushadhi/scripts/pharmeasy-loop.sh
+ExecStart=/usr/bin/bash -c 'exec /usr/bin/bash /opt/aushadhi/scripts/pharmeasy-loop.sh >>/var/log/aushadhi/pharmeasy/pharmeasy.log 2>&1'
 ExecStopPost=+/usr/local/libexec/aushadhi-network-hook aushadhi-pharmeasy.service stop
 Restart=always
 RestartSec=30
-StandardOutput=append:/var/log/aushadhi/pharmeasy/pharmeasy.log
-StandardError=append:/var/log/aushadhi/pharmeasy/pharmeasy.log
+StandardOutput=journal
+StandardError=journal
 UMask=0027
 NoNewPrivileges=true
 ProtectSystem=strict

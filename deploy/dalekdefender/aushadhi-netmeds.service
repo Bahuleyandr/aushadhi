@@ -14,12 +14,12 @@ Environment=AUSHADHI_RAW_ROOT=/var/lib/aushadhi/data/raw
 Environment=AUSHADHI_DIST_ROOT=/var/lib/aushadhi/dist
 Environment=AUSHADHI_NETMEDS_CAP=20000
 ExecStartPre=+/usr/local/libexec/aushadhi-network-hook aushadhi-netmeds.service start
-ExecStart=/usr/bin/bash /opt/aushadhi/scripts/netmeds-loop.sh
+ExecStart=/usr/bin/bash -c 'exec /usr/bin/bash /opt/aushadhi/scripts/netmeds-loop.sh >>/var/log/aushadhi/netmeds/netmeds.log 2>&1'
 ExecStopPost=+/usr/local/libexec/aushadhi-network-hook aushadhi-netmeds.service stop
 Restart=always
 RestartSec=30
-StandardOutput=append:/var/log/aushadhi/netmeds/netmeds.log
-StandardError=append:/var/log/aushadhi/netmeds/netmeds.log
+StandardOutput=journal
+StandardError=journal
 UMask=0027
 NoNewPrivileges=true
 ProtectSystem=strict

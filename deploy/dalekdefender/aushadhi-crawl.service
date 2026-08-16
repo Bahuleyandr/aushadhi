@@ -15,12 +15,12 @@ Environment=AUSHADHI_DIST_ROOT=/var/lib/aushadhi/dist
 Environment=AUSHADHI_DAILY_CAP=20000
 Environment=NODE_OPTIONS=--max-old-space-size=6144
 ExecStartPre=+/usr/local/libexec/aushadhi-network-hook aushadhi-crawl.service start
-ExecStart=/usr/bin/bash /opt/aushadhi/scripts/crawl-loop.sh
+ExecStart=/usr/bin/bash -c 'exec /usr/bin/bash /opt/aushadhi/scripts/crawl-loop.sh >>/var/log/aushadhi/onemg/crawl.log 2>&1'
 ExecStopPost=+/usr/local/libexec/aushadhi-network-hook aushadhi-crawl.service stop
 Restart=always
 RestartSec=30
-StandardOutput=append:/var/log/aushadhi/onemg/crawl.log
-StandardError=append:/var/log/aushadhi/onemg/crawl.log
+StandardOutput=journal
+StandardError=journal
 UMask=0027
 NoNewPrivileges=true
 ProtectSystem=strict

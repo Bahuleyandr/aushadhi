@@ -9,14 +9,14 @@ const DEPLOY = path.join(ROOT, 'deploy', 'dalekdefender');
 const read = (name) => fs.readFileSync(path.join(DEPLOY, name), 'utf8');
 
 const longRunningUnits = [
-  ['aushadhi-crawl.service', 'AUSHADHI_DAILY_CAP=20000', 'onemg', 'crawl.log'],
-  ['aushadhi-apollo.service', 'AUSHADHI_APOLLO_CAP=10000', 'apollo', 'apollo.log'],
-  ['aushadhi-pharmeasy.service', 'AUSHADHI_PHARMEASY_CAP=20000', 'pharmeasy', 'pharmeasy.log'],
-  ['aushadhi-netmeds.service', 'AUSHADHI_NETMEDS_CAP=20000', 'netmeds', 'netmeds.log'],
+  ['aushadhi-crawl.service', 'AUSHADHI_DAILY_CAP=20000', 'onemg', 'crawl.log', 'crawl-loop.sh'],
+  ['aushadhi-apollo.service', 'AUSHADHI_APOLLO_CAP=10000', 'apollo', 'apollo.log', 'apollo-loop.sh'],
+  ['aushadhi-pharmeasy.service', 'AUSHADHI_PHARMEASY_CAP=20000', 'pharmeasy', 'pharmeasy.log', 'pharmeasy-loop.sh'],
+  ['aushadhi-netmeds.service', 'AUSHADHI_NETMEDS_CAP=20000', 'netmeds', 'netmeds.log', 'netmeds-loop.sh'],
 ];
 
 test('tracked crawler units reproduce the hardened non-root /opt deployment', () => {
-  for (const [name, cap, source, logName] of longRunningUnits) {
+  for (const [name, cap, source, logName, loopName] of longRunningUnits) {
     const unit = read(name);
     assert.doesNotMatch(unit, /\/root\/aushadhi/);
     assert.match(unit, /^User=aushadhi$/m, name);
@@ -37,7 +37,12 @@ test('tracked crawler units reproduce the hardened non-root /opt deployment', ()
     assert.match(unit, new RegExp(`^ReadWritePaths=/var/lib/aushadhi/data/raw/${source} /var/log/aushadhi/${source} /var/cache/aushadhi/${source}$`, 'm'), name);
     assert.match(unit, new RegExp(`^ExecStartPre=\\+/usr/local/libexec/aushadhi-network-hook ${name} start$`, 'm'), name);
     assert.match(unit, new RegExp(`^ExecStopPost=\\+/usr/local/libexec/aushadhi-network-hook ${name} stop$`, 'm'), name);
-    assert.match(unit, new RegExp(`^StandardOutput=append:/var/log/aushadhi/${source}/${logName}$`, 'm'), name);
+    assert.ok(unit.includes(
+      `ExecStart=/usr/bin/bash -c 'exec /usr/bin/bash /opt/aushadhi/scripts/${loopName} >>/var/log/aushadhi/${source}/${logName} 2>&1'`,
+    ), name);
+    assert.match(unit, /^StandardOutput=journal$/m, name);
+    assert.match(unit, /^StandardError=journal$/m, name);
+    assert.doesNotMatch(unit, /^Standard(?:Output|Error)=append:/m, name);
   }
 });
 

@@ -60,6 +60,15 @@ if [ "$active" != active ] || [ "$substate" != running ]; then
   echo "ALERT: $SOURCE liveness=${active:-unknown}/${substate:-unknown} service=$SVC nrestarts=$restarts detail='$detail' last='$last'"
   exit 1
 fi
+if [ -L "$LOG" ] || [ ! -f "$LOG" ] || [ ! -r "$LOG" ]; then
+  if [ -L "$LOG" ]; then log_kind=symlink
+  elif [ ! -e "$LOG" ]; then log_kind=missing
+  elif [ ! -f "$LOG" ]; then log_kind=non-regular
+  else log_kind=unreadable
+  fi
+  echo "ALERT: $SOURCE log-unreadable kind=$log_kind path='$LOG' liveness=active/running service=$SVC nrestarts=$restarts"
+  exit 1
+fi
 
 state_fields=$(node - "$STATE" "$SOURCE" 2>/dev/null <<'NODE' || true
 const fs = require('node:fs');

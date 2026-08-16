@@ -196,26 +196,34 @@ esac
     'AUSHADHI_TEST_BIN', 'AUSHADHI_SERVICE', 'AUSHADHI_LOG',
     'AUSHADHI_STATE', 'AUSHADHI_OUTPUT', 'AUSHADHI_APOLLO_CAP',
   ];
+  const run = () => spawnSync('bash', [
+    '-c',
+    'PATH="$AUSHADHI_TEST_BIN:$PATH"; export PATH; exec bash scripts/healthcheck.sh',
+  ], {
+    cwd: '.',
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      WSLENV: [process.env.WSLENV, ...importedVariables].filter(Boolean).join(':'),
+      AUSHADHI_TEST_BIN: bashPath(`${root}/bin`),
+      AUSHADHI_SERVICE: 'aushadhi-apollo.service',
+      AUSHADHI_LOG: bashPath(log),
+      AUSHADHI_STATE: bashPath(state),
+      AUSHADHI_OUTPUT: bashPath(`${root}/normalized.jsonl`),
+      AUSHADHI_APOLLO_CAP: '10000',
+    },
+  });
+
   try {
-    const result = spawnSync('bash', [
-      '-c',
-      'PATH="$AUSHADHI_TEST_BIN:$PATH"; export PATH; exec bash scripts/healthcheck.sh',
-    ], {
-      cwd: '.',
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        WSLENV: [process.env.WSLENV, ...importedVariables].filter(Boolean).join(':'),
-        AUSHADHI_TEST_BIN: bashPath(`${root}/bin`),
-        AUSHADHI_SERVICE: 'aushadhi-apollo.service',
-        AUSHADHI_LOG: bashPath(log),
-        AUSHADHI_STATE: bashPath(state),
-        AUSHADHI_OUTPUT: bashPath(`${root}/normalized.jsonl`),
-        AUSHADHI_APOLLO_CAP: '10000',
-      },
-    });
-    assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
-    assert.match(result.stdout, /^ALERT: apollo state-invalid/);
+    fs.unlinkSync(log);
+    const missingLog = run();
+    assert.equal(missingLog.status, 1, `${missingLog.stdout}\n${missingLog.stderr}`);
+    assert.match(missingLog.stdout, /^ALERT: apollo log-unreadable kind=missing/);
+
+    fs.writeFileSync(log, '2026-08-06T00:00:00Z apollo-loop start\n');
+    const invalidState = run();
+    assert.equal(invalidState.status, 1, `${invalidState.stdout}\n${invalidState.stderr}`);
+    assert.match(invalidState.stdout, /^ALERT: apollo state-invalid/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

@@ -93,6 +93,15 @@ The helper currently binds the host-specific LAN interface
 Proton route guard, and all four marks before any approved installation. Do not
 replace the fixed helper with shell commands assembled from unit parameters.
 
+Crawler log redirection is performed by the service shell after systemd drops
+to `aushadhi`; PID 1 must not create the files through `StandardOutput=append:`.
+This keeps each current log `aushadhi:aushadhi` `0640`, allowing the fixed
+observer to read fail-closed parser and source-hold markers without granting it
+root execution. Before changing an existing log's metadata, require a regular,
+non-symlink file, preserve its bytes, and record its prior owner, mode, size,
+mtime, and hash as rollback evidence. Log rotation uses `copytruncate`, so it
+preserves the corrected ownership.
+
 ## Release receipt and authority
 
 Every installation must write `/opt/aushadhi/DEPLOYED-RELEASE.json` containing
@@ -129,7 +138,10 @@ Before changing the host, an operator must:
 4. Install `/opt/aushadhi` and its dependency tree root:root with directories
    `0755`, tracked file modes preserved, and no group/other-writable entries;
    install the final receipt root:root `0644`. Confirm each source-specific
-   mutable subtree has the intended runtime ownership and mode.
+   mutable subtree has the intended runtime ownership and mode. Verify every
+   crawler log is a regular non-symlink, preserve its bytes, and set it to
+   `aushadhi:aushadhi` `0640` before starting a crawler; never truncate a live
+   log to repair ownership.
 5. Remove legacy Aushadhi systemd drop-ins, copy the reviewed base units and fixed
    helpers, run `systemd-analyze verify`, then inspect the effective units with
    `systemctl cat` before starting anything.

@@ -14,12 +14,12 @@ Environment=AUSHADHI_RAW_ROOT=/var/lib/aushadhi/data/raw
 Environment=AUSHADHI_DIST_ROOT=/var/lib/aushadhi/dist
 Environment=AUSHADHI_APOLLO_CAP=10000
 ExecStartPre=+/usr/local/libexec/aushadhi-network-hook aushadhi-apollo.service start
-ExecStart=/usr/bin/bash /opt/aushadhi/scripts/apollo-loop.sh
+ExecStart=/usr/bin/bash -c 'exec /usr/bin/bash /opt/aushadhi/scripts/apollo-loop.sh >>/var/log/aushadhi/apollo/apollo.log 2>&1'
 ExecStopPost=+/usr/local/libexec/aushadhi-network-hook aushadhi-apollo.service stop
 Restart=always
 RestartSec=30
-StandardOutput=append:/var/log/aushadhi/apollo/apollo.log
-StandardError=append:/var/log/aushadhi/apollo/apollo.log
+StandardOutput=journal
+StandardError=journal
 UMask=0027
 NoNewPrivileges=true
 ProtectSystem=strict
