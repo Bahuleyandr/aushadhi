@@ -49,6 +49,11 @@ Legacy `*.service.d/splittunnel.conf` and build-memory drop-ins are deliberately
 not part of this topology. Their settings are now in the tracked base units, and
 leaving old copies installed would execute duplicate network hooks.
 
+The export-retention sandbox keeps the optional restricted CDCI path
+inaccessible when it exists. Its `InaccessiblePaths=` entry is prefixed with
+`-` so a host with no deployed CDCI tree can still run the dry-run retention
+check; absence never causes an empty restricted-data tree to be fabricated.
+
 Crawler loops collect and normalize source data only. They never publish a
 catalogue cohort. `aushadhi-build.service` is the sole runtime entry point that
 may publish `dist`; it reads the raw tree as immutable input, stages the entire

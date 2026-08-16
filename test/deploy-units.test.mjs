@@ -201,6 +201,15 @@ test('root helpers, log rotation, and a release receipt are tracked', () => {
   ]) {
     assert.equal(fs.existsSync(path.join(DEPLOY, name)), true, name);
   }
+  const exportRetentionUnit = read('aushadhi-export-retention.service');
+  assert.match(
+    exportRetentionUnit,
+    /^InaccessiblePaths=\/root \/var\/lib\/aushadhi\/dist -\/var\/lib\/aushadhi\/data\/restricted\/cdci$/m,
+  );
+  assert.doesNotMatch(
+    exportRetentionUnit,
+    /^InaccessiblePaths=.*(?:^|\s)\/var\/lib\/aushadhi\/data\/restricted\/cdci(?:\s|$)/m,
+  );
   assert.equal(fs.existsSync(path.join(ROOT, 'deploy', 'aushadhi_nonroot_v2_export_retention.sh')), true);
   assert.equal(
     fs.existsSync(path.join(ROOT, 'deploy', 'aushadhi_nonroot_source_generation_retention.py')),

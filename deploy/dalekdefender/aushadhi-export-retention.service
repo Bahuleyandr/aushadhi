@@ -38,5 +38,5 @@ AmbientCapabilities=
 RestrictAddressFamilies=AF_UNIX
 ReadOnlyPaths=/opt/aushadhi
 ReadWritePaths=/var/lib/aushadhi-export
-InaccessiblePaths=/root /var/lib/aushadhi/dist /var/lib/aushadhi/data/restricted/cdci
+InaccessiblePaths=/root /var/lib/aushadhi/dist -/var/lib/aushadhi/data/restricted/cdci
 MemoryMax=256M
